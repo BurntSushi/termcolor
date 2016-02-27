@@ -1,0 +1,21 @@
+[package]
+name = "rep"
+version = "0.1.0"  #:version
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = """
+Line oriented search tool using Rust's regex library.
+"""
+documentation = "https://github.com/BurntSushi/rep"
+homepage = "https://github.com/BurntSushi/rep"
+repository = "https://github.com/BurntSushi/rep"
+readme = "README.md"
+keywords = ["regex", "grep", "egrep", "search", "pattern"]
+license = "Unlicense/MIT"
+
+[dependencies]
+docopt = "0.6"
+regex = { version = "0.1", path = "/home/andrew/rust/regex" }
+rustc-serialize = "0.3"
+
+[profile.release]
+debug = true
