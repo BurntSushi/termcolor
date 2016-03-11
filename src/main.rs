@@ -1,7 +1,10 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_variables)]
 
 extern crate docopt;
+extern crate memchr;
+extern crate memmap;
 extern crate regex;
+extern crate regex_syntax as syntax;
 extern crate rustc_serialize;
 
 const USAGE: &'static str = "
@@ -14,9 +17,11 @@ use std::process;
 use std::result;
 
 use docopt::Docopt;
-use regex::internal::{ExecBuilder, Search};
+use regex::bytes::Regex;
 
-type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
+mod nonl;
+
+pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
 #[derive(RustcDecodable)]
 struct Args {
@@ -38,17 +43,26 @@ fn main() {
 }
 
 fn run(args: &Args) -> Result<u64> {
-    let _stdin = io::stdin();
-    let mut rdr = io::BufReader::new(_stdin.lock());
+    let expr = try!(parse(&args.arg_pattern));
+    let re = Regex::new(&expr.to_string()).unwrap();
+    if args.arg_file.is_empty() {
+        let _stdin = io::stdin();
+        let stdin = _stdin.lock();
+        run_by_line(args, &re, stdin)
+    } else {
+        run_mmap(args, &re)
+    }
+}
+
+fn run_by_line<B: BufRead>(
+    args: &Args,
+    re: &Regex,
+    mut rdr: B,
+) -> Result<u64> {
     let mut wtr = io::BufWriter::new(io::stdout());
     let mut count = 0;
     let mut nline = 0;
     let mut line = vec![];
-    let re = try!(ExecBuilder::new(&args.arg_pattern).only_utf8(false).build());
-    let mut search = Search {
-        captures: &mut [],
-        matches: &mut [false],
-    };
     loop {
         line.clear();
         let n = try!(rdr.read_until(b'\n', &mut line));
@@ -56,17 +70,44 @@ fn run(args: &Args) -> Result<u64> {
             break;
         }
         nline += 1;
-        if line.last().map_or(false, |&b| b == b'\n') {
-            line.pop().unwrap();
-        }
-        search.matches[0] = false;
-        if re.exec(&mut search, &line, 0) {
+        if re.is_match(&line) {
             count += 1;
-            try!(wtr.write(nline.to_string().as_bytes()));
-            try!(wtr.write(&[b':']));
             try!(wtr.write(&line));
-            try!(wtr.write(&[b'\n']));
         }
     }
     Ok(count)
+}
+
+fn run_mmap(args: &Args, re: &Regex) -> Result<u64> {
+    use memchr::{memchr, memrchr};
+    use memmap::{Mmap, Protection};
+
+    assert!(args.arg_file.len() == 1);
+    let mut wtr = io::BufWriter::new(io::stdout());
+    let mut count = 0;
+    let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
+    let text = unsafe { mmap.as_slice() };
+    let mut start = 0;
+    while let Some((s, e)) = re.find(&text[start..]) {
+        let (s, e) = (start + s, start + e);
+        let prevnl = memrchr(b'\n', &text[0..s]).map_or(0, |i| i + 1);
+        let nextnl = memchr(b'\n', &text[e..]).map_or(text.len(), |i| e + i);
+        try!(wtr.write(&text[prevnl..nextnl]));
+        try!(wtr.write(b"\n"));
+        start = nextnl + 1;
+        count += 1;
+        if start >= text.len() {
+            break;
+        }
+    }
+    Ok(count)
+}
+
+fn parse(re: &str) -> Result<syntax::Expr> {
+    let expr =
+        try!(syntax::ExprBuilder::new()
+             .allow_bytes(true)
+             .unicode(false)
+             .parse(re));
+    Ok(try!(nonl::remove(expr)))
 }

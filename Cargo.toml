@@ -14,7 +14,10 @@ license = "Unlicense/MIT"
 
 [dependencies]
 docopt = "0.6"
+memchr = "0.1"
+memmap = "0.2"
 regex = { version = "0.1", path = "/home/andrew/rust/regex" }
+regex-syntax = { version = "0.2", path = "/home/andrew/rust/regex/regex-syntax" }
 rustc-serialize = "0.3"
 
 [profile.release]
