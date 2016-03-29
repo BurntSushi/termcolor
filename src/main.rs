@@ -19,6 +19,9 @@ use std::result;
 use docopt::Docopt;
 use regex::bytes::Regex;
 
+use literals::LiteralSets;
+
+mod literals;
 mod nonl;
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
@@ -44,6 +47,9 @@ fn main() {
 
 fn run(args: &Args) -> Result<u64> {
     let expr = try!(parse(&args.arg_pattern));
+    let literals = LiteralSets::create(&expr);
+    // println!("{:?}", literals);
+    // println!("{:?}", literals.to_matcher());
     let re = Regex::new(&expr.to_string()).unwrap();
     if args.arg_file.is_empty() {
         let _stdin = io::stdin();
