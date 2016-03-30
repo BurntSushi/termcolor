@@ -1,12 +1,10 @@
 use std::cmp;
 use std::iter;
-use std::str;
 
-use regex::quote;
 use regex::bytes::Regex;
 use syntax::{
     Expr, Literals, Lit,
-    ByteClass, CharClass, Repeater, ClassRange, ByteRange,
+    Repeater,
 };
 
 #[derive(Debug)]
@@ -14,11 +12,6 @@ pub struct LiteralSets {
     prefixes: Literals,
     suffixes: Literals,
     required: Literals,
-}
-
-#[derive(Debug)]
-pub struct LiteralMatcher {
-    re: Regex,
 }
 
 impl LiteralSets {
@@ -32,7 +25,11 @@ impl LiteralSets {
         }
     }
 
-    pub fn to_matcher(&self) -> Option<LiteralMatcher> {
+    pub fn to_matcher(&self) -> Option<Regex> {
+        if self.prefixes.all_complete() && !self.prefixes.is_empty() {
+            // When this is true, the regex engine will do a literal scan.
+            return None;
+        }
         let pre_lcp = self.prefixes.longest_common_prefix();
         let pre_lcs = self.prefixes.longest_common_suffix();
         let suf_lcp = self.suffixes.longest_common_prefix();
@@ -60,8 +57,8 @@ impl LiteralSets {
         if lit.is_empty() {
             None
         } else {
-            let s = str::from_utf8(lit).unwrap();
-            Some(LiteralMatcher { re: Regex::new(&quote(s)).unwrap() })
+            // Literals always compile.
+            Some(Regex::new(&bytes_to_regex(lit)).unwrap())
         }
     }
 }
@@ -74,39 +71,19 @@ fn union_required(expr: &Expr, lits: &mut Literals) {
             lits.cross_add(s.as_bytes());
         }
         Literal { ref chars, casei: true } => {
-            for &c in chars {
-                let cls = CharClass::new(vec![
-                    ClassRange { start: c, end: c },
-                ]).case_fold();
-                if !lits.add_char_class(&cls) {
-                    lits.cut();
-                    return;
-                }
-            }
+            lits.cut();
         }
         LiteralBytes { ref bytes, casei: false } => {
             lits.cross_add(bytes);
         }
         LiteralBytes { ref bytes, casei: true } => {
-            for &b in bytes {
-                let cls = ByteClass::new(vec![
-                    ByteRange { start: b, end: b },
-                ]).case_fold();
-                if !lits.add_byte_class(&cls) {
-                    lits.cut();
-                    return;
-                }
-            }
+            lits.cut();
         }
         Class(ref cls) => {
-            if !lits.add_char_class(cls) {
-                lits.cut();
-            }
+            lits.cut();
         }
         ClassBytes(ref cls) => {
-            if !lits.add_byte_class(cls) {
-                lits.cut();
-            }
+            lits.cut();
         }
         Group { ref e, .. } => {
             union_required(&**e, lits);
@@ -211,4 +188,14 @@ fn alternate_literals<F: FnMut(&Expr, &mut Literals)>(
         lits.add(Lit::empty());
         lits.add(Lit::new(lcs.to_vec()));
     }
+}
+
+/// Converts an arbitrary sequence of bytes to a literal suitable for building
+/// a regular expression.
+fn bytes_to_regex(bs: &[u8]) -> String {
+    let mut s = String::with_capacity(bs.len());
+    for &b in bs {
+        s.push_str(&format!("\\x{:02x}", b));
+    }
+    s
 }

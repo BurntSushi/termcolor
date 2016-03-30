@@ -20,9 +20,11 @@ use docopt::Docopt;
 use regex::bytes::Regex;
 
 use literals::LiteralSets;
+use search::{LineSearcher, LineSearcherBuilder};
 
 mod literals;
 mod nonl;
+mod search;
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
@@ -46,18 +48,34 @@ fn main() {
 }
 
 fn run(args: &Args) -> Result<u64> {
-    let expr = try!(parse(&args.arg_pattern));
-    let literals = LiteralSets::create(&expr);
-    // println!("{:?}", literals);
-    // println!("{:?}", literals.to_matcher());
-    let re = Regex::new(&expr.to_string()).unwrap();
     if args.arg_file.is_empty() {
+        let expr = try!(parse(&args.arg_pattern));
+        let literals = LiteralSets::create(&expr);
+        let re = Regex::new(&expr.to_string()).unwrap();
         let _stdin = io::stdin();
         let stdin = _stdin.lock();
         run_by_line(args, &re, stdin)
     } else {
-        run_mmap(args, &re)
+        let searcher =
+            try!(LineSearcherBuilder::new(&args.arg_pattern).create());
+        run_mmap(args, &searcher)
     }
+}
+
+fn run_mmap(args: &Args, searcher: &LineSearcher) -> Result<u64> {
+    use memmap::{Mmap, Protection};
+
+    assert!(args.arg_file.len() == 1);
+    let mut wtr = io::BufWriter::new(io::stdout());
+    let mut count = 0;
+    let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
+    let text = unsafe { mmap.as_slice() };
+    for m in searcher.search(text) {
+        try!(wtr.write(&text[m.start..m.end]));
+        try!(wtr.write(b"\n"));
+        count += 1;
+    }
+    Ok(count)
 }
 
 fn run_by_line<B: BufRead>(
@@ -79,31 +97,6 @@ fn run_by_line<B: BufRead>(
         if re.is_match(&line) {
             count += 1;
             try!(wtr.write(&line));
-        }
-    }
-    Ok(count)
-}
-
-fn run_mmap(args: &Args, re: &Regex) -> Result<u64> {
-    use memchr::{memchr, memrchr};
-    use memmap::{Mmap, Protection};
-
-    assert!(args.arg_file.len() == 1);
-    let mut wtr = io::BufWriter::new(io::stdout());
-    let mut count = 0;
-    let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
-    let text = unsafe { mmap.as_slice() };
-    let mut start = 0;
-    while let Some((s, e)) = re.find(&text[start..]) {
-        let (s, e) = (start + s, start + e);
-        let prevnl = memrchr(b'\n', &text[0..s]).map_or(0, |i| i + 1);
-        let nextnl = memchr(b'\n', &text[e..]).map_or(text.len(), |i| e + i);
-        try!(wtr.write(&text[prevnl..nextnl]));
-        try!(wtr.write(b"\n"));
-        start = nextnl + 1;
-        count += 1;
-        if start >= text.len() {
-            break;
         }
     }
     Ok(count)
