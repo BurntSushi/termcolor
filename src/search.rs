@@ -101,12 +101,12 @@ impl<'b, 's> Iter<'b, 's> {
         }
         if let Some(ref req) = self.searcher.required {
             while self.start < self.buf.len() {
-                let (s, e) = match req.find(&self.buf[self.start..]) {
+                let e = match req.shortest_match(&self.buf[self.start..]) {
                     None => return None,
-                    Some((s, e)) => (self.start + s, self.start + e),
+                    Some(e) => self.start + e,
                 };
-                let (prevnl, nextnl) = self.find_line(s, e);
-                match self.searcher.re.find(&self.buf[prevnl..nextnl]) {
+                let (prevnl, nextnl) = self.find_line(e, e);
+                match self.searcher.re.shortest_match(&self.buf[prevnl..nextnl]) {
                     None => {
                         self.start = nextnl + 1;
                         continue;
@@ -116,11 +116,11 @@ impl<'b, 's> Iter<'b, 's> {
             }
             None
         } else {
-            let (s, e) = match self.searcher.re.find(&self.buf[self.start..]) {
+            let e = match self.searcher.re.shortest_match(&self.buf[self.start..]) {
                 None => return None,
-                Some((s, e)) => (self.start + s, self.start + e),
+                Some(e) => self.start + e,
             };
-            Some(self.find_line(s, e))
+            Some(self.find_line(e, e))
         }
     }
 
