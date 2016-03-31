@@ -9,6 +9,9 @@ extern crate rustc_serialize;
 
 const USAGE: &'static str = "
 Usage: rep [options] <pattern> [<file> ...]
+
+Options:
+    -c, --count   Suppress normal output and show count of matches.
 ";
 
 use std::error::Error;
@@ -32,6 +35,7 @@ pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 struct Args {
     arg_pattern: String,
     arg_file: Vec<String>,
+    flag_count: bool,
 }
 
 fn main() {
@@ -71,9 +75,14 @@ fn run_mmap(args: &Args, searcher: &LineSearcher) -> Result<u64> {
     let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
     let text = unsafe { mmap.as_slice() };
     for m in searcher.search(text) {
-        try!(wtr.write(&text[m.start..m.end]));
-        try!(wtr.write(b"\n"));
+        if !args.flag_count {
+            try!(wtr.write(&text[m.start..m.end]));
+            try!(wtr.write(b"\n"));
+        }
         count += 1;
+    }
+    if args.flag_count {
+        try!(writeln!(wtr, "{}", count));
     }
     Ok(count)
 }

@@ -125,11 +125,15 @@ impl<'b, 's> Iter<'b, 's> {
     }
 
     fn find_line(&self, s: usize, e: usize) -> (usize, usize) {
-        let prevnl =
-            memrchr(b'\n', &self.buf[0..s]).map_or(0, |i| i + 1);
-        let nextnl =
-            memchr(b'\n', &self.buf[e..]).map_or(self.buf.len(), |i| e + i);
-        (prevnl, nextnl)
+        (self.find_line_start(s), self.find_line_end(e))
+    }
+
+    fn find_line_start(&self, pos: usize) -> usize {
+        memrchr(b'\n', &self.buf[0..pos]).map_or(0, |i| i + 1)
+    }
+
+    fn find_line_end(&self, pos: usize) -> usize {
+        memchr(b'\n', &self.buf[pos..]).map_or(self.buf.len(), |i| pos + i)
     }
 }
 
