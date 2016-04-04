@@ -62,28 +62,42 @@ fn run(args: &Args) -> Result<u64> {
     } else {
         let searcher =
             try!(LineSearcherBuilder::new(&args.arg_pattern).create());
-        run_mmap(args, &searcher)
+        if args.flag_count {
+            run_mmap_count_only(args, &searcher)
+        } else {
+            run_mmap(args, &searcher)
+        }
     }
 }
 
+#[inline(never)]
 fn run_mmap(args: &Args, searcher: &LineSearcher) -> Result<u64> {
     use memmap::{Mmap, Protection};
 
     assert!(args.arg_file.len() == 1);
     let mut wtr = io::BufWriter::new(io::stdout());
-    let mut count = 0;
     let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
     let text = unsafe { mmap.as_slice() };
+
+    let mut count = 0;
     for m in searcher.search(text) {
-        if !args.flag_count {
-            try!(wtr.write(&text[m.start..m.end]));
-            try!(wtr.write(b"\n"));
-        }
+        try!(wtr.write(&text[m.start..m.end]));
+        try!(wtr.write(b"\n"));
         count += 1;
     }
-    if args.flag_count {
-        try!(writeln!(wtr, "{}", count));
-    }
+    Ok(count)
+}
+
+#[inline(never)]
+fn run_mmap_count_only(args: &Args, searcher: &LineSearcher) -> Result<u64> {
+    use memmap::{Mmap, Protection};
+
+    assert!(args.arg_file.len() == 1);
+    let mut wtr = io::BufWriter::new(io::stdout());
+    let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
+    let text = unsafe { mmap.as_slice() };
+    let count = searcher.search(text).last().map_or(0, |m| m.count + 1);
+    try!(writeln!(wtr, "{}", count));
     Ok(count)
 }
 

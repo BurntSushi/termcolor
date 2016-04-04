@@ -1,3 +1,5 @@
+use std::cmp;
+
 use memchr::{memchr, memrchr};
 use regex::bytes::Regex;
 use syntax;
@@ -82,7 +84,7 @@ impl LineSearcher {
 pub struct Match {
     pub start: usize,
     pub end: usize,
-    pub count: usize,
+    pub count: u64,
     pub line: Option<usize>,
     pub locations: Vec<(usize, usize)>,
 }
@@ -91,14 +93,12 @@ pub struct Iter<'b, 's> {
     searcher: &'s LineSearcher,
     buf: &'b [u8],
     start: usize,
-    count: usize,
+    count: u64,
 }
 
 impl<'b, 's> Iter<'b, 's> {
+    #[inline(always)] // reduces constant overhead
     fn next_line_match(&mut self) -> Option<(usize, usize)> {
-        if self.start >= self.buf.len() {
-            return None;
-        }
         if let Some(ref req) = self.searcher.required {
             while self.start < self.buf.len() {
                 let e = match req.shortest_match(&self.buf[self.start..]) {
@@ -116,11 +116,9 @@ impl<'b, 's> Iter<'b, 's> {
             }
             None
         } else {
-            let e = match self.searcher.re.shortest_match(&self.buf[self.start..]) {
-                None => return None,
-                Some(e) => self.start + e,
-            };
-            Some(self.find_line(e, e))
+            self.searcher.re
+                .shortest_match(&self.buf[self.start..])
+                .map(|e| self.find_line(self.start + e, self.start + e))
         }
     }
 
@@ -140,21 +138,23 @@ impl<'b, 's> Iter<'b, 's> {
 impl<'b, 's> Iterator for Iter<'b, 's> {
     type Item = Match;
 
+    #[inline(always)] // reduces constant overhead
     fn next(&mut self) -> Option<Match> {
-        let (prevnl, nextnl) = match self.next_line_match() {
-            None => return None,
-            Some((s, e)) => (s, e),
-        };
-        let count = self.count;
-        self.start = nextnl + 1;
-        self.count += 1;
-        Some(Match {
-            start: prevnl,
-            end: nextnl,
-            count: count,
-            line: None,
-            locations: vec![],
-        })
+        match self.next_line_match() {
+            None => None,
+            Some((prevnl, nextnl)) => {
+                let count = self.count;
+                self.start = cmp::min(self.buf.len(), nextnl + 1);
+                self.count += 1;
+                Some(Match {
+                    start: prevnl,
+                    end: nextnl,
+                    count: count,
+                    line: None,
+                    locations: vec![],
+                })
+            }
+        }
     }
 }
 
