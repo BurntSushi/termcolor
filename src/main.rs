@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_variables)]
 
 extern crate docopt;
+extern crate grep;
 extern crate memchr;
 extern crate memmap;
 extern crate regex;
@@ -15,19 +16,13 @@ Options:
 ";
 
 use std::error::Error;
-use std::io::{self, BufRead, Write};
+use std::io::{self, Write};
 use std::process;
 use std::result;
 
 use docopt::Docopt;
-use regex::bytes::Regex;
 
-use literals::LiteralSets;
-use search::{LineSearcher, LineSearcherBuilder};
-
-mod literals;
-mod nonl;
-mod search;
+use grep::{Grep, GrepBuilder};
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
@@ -53,36 +48,20 @@ fn main() {
 
 fn run(args: &Args) -> Result<u64> {
     if args.arg_file.is_empty() {
-        let expr = try!(parse(&args.arg_pattern));
-        let literals = LiteralSets::create(&expr);
-        let re = Regex::new(&expr.to_string()).unwrap();
-        let _stdin = io::stdin();
-        let stdin = _stdin.lock();
-        run_by_line(args, &re, stdin)
+        unimplemented!()
     } else {
         let searcher =
-            try!(LineSearcherBuilder::new(&args.arg_pattern).create());
-        if args.flag_count {
-            run_mmap_count_only(args, &searcher)
-        } else {
-            run_mmap(args, &searcher)
-        }
+            try!(GrepBuilder::new(&args.arg_pattern).create());
+        run_mmap(args, &searcher)
     }
 }
 
-#[inline(never)]
-fn run_mmap(args: &Args, searcher: &LineSearcher) -> Result<u64> {
-    use memmap::{Mmap, Protection};
-
-    assert!(args.arg_file.len() == 1);
-    let mut wtr = io::BufWriter::new(io::stdout());
-    let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
-    let text = unsafe { mmap.as_slice() };
-
-    let mut count = 0;
-    for m in searcher.search(text) {
-        try!(wtr.write(&text[m.start..m.end]));
-        try!(wtr.write(b"\n"));
+fn run_mmap(args: &Args, searcher: &Grep) -> Result<u64> {
+    for m in searcher.iter(text) {
+        if !args.flag_count {
+            try!(wtr.write(&text[m.start()..m.end()]));
+            try!(wtr.write(b"\n"));
+        }
         count += 1;
     }
     Ok(count)
@@ -99,37 +78,4 @@ fn run_mmap_count_only(args: &Args, searcher: &LineSearcher) -> Result<u64> {
     let count = searcher.search(text).last().map_or(0, |m| m.count + 1);
     try!(writeln!(wtr, "{}", count));
     Ok(count)
-}
-
-fn run_by_line<B: BufRead>(
-    args: &Args,
-    re: &Regex,
-    mut rdr: B,
-) -> Result<u64> {
-    let mut wtr = io::BufWriter::new(io::stdout());
-    let mut count = 0;
-    let mut nline = 0;
-    let mut line = vec![];
-    loop {
-        line.clear();
-        let n = try!(rdr.read_until(b'\n', &mut line));
-        if n == 0 {
-            break;
-        }
-        nline += 1;
-        if re.is_match(&line) {
-            count += 1;
-            try!(wtr.write(&line));
-        }
-    }
-    Ok(count)
-}
-
-fn parse(re: &str) -> Result<syntax::Expr> {
-    let expr =
-        try!(syntax::ExprBuilder::new()
-             .allow_bytes(true)
-             .unicode(false)
-             .parse(re));
-    Ok(try!(nonl::remove(expr)))
 }

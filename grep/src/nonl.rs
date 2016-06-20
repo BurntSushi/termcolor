@@ -1,0 +1,65 @@
+use syntax::Expr;
+
+use {Error, Result};
+
+/// Returns a new expression that is guaranteed to never match the given
+/// ASCII character.
+///
+/// If the expression contains the literal byte, then an error is returned.
+///
+/// If `byte` is not an ASCII character (i.e., greater than `0x7F`), then this
+/// function panics.
+pub fn remove(expr: Expr, byte: u8) -> Result<Expr> {
+    use syntax::Expr::*;
+    assert!(byte <= 0x7F);
+    let chr = byte as char;
+    assert!(chr.len_utf8() == 1);
+
+    Ok(match expr {
+        Literal { chars, casei } => {
+            if chars.iter().position(|&c| c == chr).is_some() {
+                return Err(Error::LiteralNotAllowed(chr));
+            }
+            Literal { chars: chars, casei: casei }
+        }
+        LiteralBytes { bytes, casei } => {
+            if bytes.iter().position(|&b| b == byte).is_some() {
+                return Err(Error::LiteralNotAllowed(chr));
+            }
+            LiteralBytes { bytes: bytes, casei: casei }
+        }
+        AnyChar => AnyCharNoNL,
+        AnyByte => AnyByteNoNL,
+        Class(mut cls) => {
+            cls.remove(chr);
+            Class(cls)
+        }
+        ClassBytes(mut cls) => {
+            cls.remove(byte);
+            ClassBytes(cls)
+        }
+        Group { e, i, name } => {
+            Group {
+                e: Box::new(try!(remove(*e, byte))),
+                i: i,
+                name: name,
+            }
+        }
+        Repeat { e, r, greedy } => {
+            Repeat {
+                e: Box::new(try!(remove(*e, byte))),
+                r: r,
+                greedy: greedy,
+            }
+        }
+        Concat(exprs) => {
+            Concat(try!(
+                exprs.into_iter().map(|e| remove(e, byte)).collect()))
+        }
+        Alternate(exprs) => {
+            Alternate(try!(
+                exprs.into_iter().map(|e| remove(e, byte)).collect()))
+        }
+        e => e,
+    })
+}

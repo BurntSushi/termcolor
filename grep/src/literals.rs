@@ -25,11 +25,16 @@ impl LiteralSets {
         }
     }
 
-    pub fn to_matcher(&self) -> Option<Regex> {
+    pub fn to_regex(&self) -> Option<Regex> {
         if self.prefixes.all_complete() && !self.prefixes.is_empty() {
             // When this is true, the regex engine will do a literal scan.
             return None;
         }
+
+        // Out of inner required literals, prefixes and suffixes, which one
+        // is the longest? We pick the longest to do fast literal scan under
+        // the assumption that a longer literal will have a lower false
+        // positive rate.
         let pre_lcp = self.prefixes.longest_common_prefix();
         let pre_lcs = self.prefixes.longest_common_suffix();
         let suf_lcp = self.suffixes.longest_common_prefix();
@@ -70,32 +75,33 @@ fn union_required(expr: &Expr, lits: &mut Literals) {
             let s: String = chars.iter().cloned().collect();
             lits.cross_add(s.as_bytes());
         }
-        Literal { ref chars, casei: true } => {
+        Literal { casei: true, .. } => {
             lits.cut();
         }
         LiteralBytes { ref bytes, casei: false } => {
             lits.cross_add(bytes);
         }
-        LiteralBytes { ref bytes, casei: true } => {
+        LiteralBytes { casei: true, .. } => {
             lits.cut();
         }
-        Class(ref cls) => {
+        Class(_) => {
             lits.cut();
         }
-        ClassBytes(ref cls) => {
+        ClassBytes(_) => {
             lits.cut();
         }
         Group { ref e, .. } => {
             union_required(&**e, lits);
         }
-        Repeat { ref e, r: Repeater::ZeroOrOne, .. } => lits.cut(),
-        Repeat { ref e, r: Repeater::ZeroOrMore, .. } => lits.cut(),
+        Repeat { r: Repeater::ZeroOrOne, .. } => lits.cut(),
+        Repeat { r: Repeater::ZeroOrMore, .. } => lits.cut(),
         Repeat { ref e, r: Repeater::OneOrMore, .. } => {
             union_required(&**e, lits);
             lits.cut();
         }
         Repeat { ref e, r: Repeater::Range { min, max }, greedy } => {
-            repeat_range_literals(&**e, min, max, greedy, lits, union_required);
+            repeat_range_literals(
+                &**e, min, max, greedy, lits, union_required);
         }
         Concat(ref es) if es.is_empty() => {}
         Concat(ref es) if es.len() == 1 => union_required(&es[0], lits),
@@ -131,7 +137,7 @@ fn repeat_range_literals<F: FnMut(&Expr, &mut Literals)>(
     e: &Expr,
     min: u32,
     max: Option<u32>,
-    greedy: bool,
+    _greedy: bool,
     lits: &mut Literals,
     mut f: F,
 ) {

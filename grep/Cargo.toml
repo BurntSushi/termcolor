@@ -1,10 +1,10 @@
 [package]
 publish = false
-name = "xrep"
+name = "grep"
 version = "0.1.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
-Line oriented search tool using Rust's regex library.
+Fast line oriented regex searching as a library.
 """
 documentation = "https://github.com/BurntSushi/xrep"
 homepage = "https://github.com/BurntSushi/xrep"
@@ -14,13 +14,7 @@ keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"
 
 [dependencies]
-docopt = "0.6"
-grep = { version = "0.1", path = "grep" }
 memchr = "0.1"
 memmap = "0.2"
 regex = { version = "0.1", path = "/home/andrew/rust/regex" }
 regex-syntax = { version = "0.3.1", path = "/home/andrew/rust/regex/regex-syntax" }
-rustc-serialize = "0.3"
-
-[profile.release]
-debug = true
