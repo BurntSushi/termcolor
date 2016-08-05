@@ -50,13 +50,18 @@ fn run(args: &Args) -> Result<u64> {
     if args.arg_file.is_empty() {
         unimplemented!()
     } else {
-        let searcher =
-            try!(GrepBuilder::new(&args.arg_pattern).create());
-        run_mmap(args, &searcher)
+        let searcher = try!(GrepBuilder::new(&args.arg_pattern).create());
+        if args.flag_count {
+            run_mmap_count_only(args, &searcher)
+        } else {
+            run_mmap(args, &searcher)
+        }
     }
 }
 
 fn run_mmap(args: &Args, searcher: &Grep) -> Result<u64> {
+    unimplemented!()
+    /*
     for m in searcher.iter(text) {
         if !args.flag_count {
             try!(wtr.write(&text[m.start()..m.end()]));
@@ -65,17 +70,18 @@ fn run_mmap(args: &Args, searcher: &Grep) -> Result<u64> {
         count += 1;
     }
     Ok(count)
+    */
 }
 
 #[inline(never)]
-fn run_mmap_count_only(args: &Args, searcher: &LineSearcher) -> Result<u64> {
+fn run_mmap_count_only(args: &Args, searcher: &Grep) -> Result<u64> {
     use memmap::{Mmap, Protection};
 
     assert!(args.arg_file.len() == 1);
     let mut wtr = io::BufWriter::new(io::stdout());
     let mmap = try!(Mmap::open_path(&args.arg_file[0], Protection::Read));
     let text = unsafe { mmap.as_slice() };
-    let count = searcher.search(text).last().map_or(0, |m| m.count + 1);
+    let count = searcher.iter(text).count() as u64;
     try!(writeln!(wtr, "{}", count));
     Ok(count)
 }

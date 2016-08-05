@@ -366,7 +366,6 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
         let nread = try!(self.rdr.read(&mut self.b.buf[self.b.tmp.len()..]));
         // Now update our various positions.
         self.pos += self.start;
-        println!("start: {:?}, pos: {:?}", self.start, self.pos);
         self.start = 0;
         // The end is the total number of bytes read plus whatever we had for
         // leftovers.
@@ -460,18 +459,31 @@ fn s(bytes: &[u8]) -> String {
 mod tests {
     #![allow(unused_imports)]
 
+    use memchr::{memchr, memrchr};
+    use regex::bytes::Regex;
+
     use super::{Buffer, GrepBuilder, s};
 
     static SHERLOCK: &'static [u8] = include_bytes!("./data/sherlock.txt");
 
     #[test]
     fn buffered() {
+        // Find the expected number of matches and the position of the last
+        // match.
+        let re = Regex::new("Sherlock Holmes").unwrap();
+        let ms: Vec<_> = re.find_iter(SHERLOCK).collect();
+        let expected_count = ms.len();
+        let (start, end) = *ms.last().unwrap();
+        let start = memrchr(b'\n', &SHERLOCK[..start]).unwrap() + 1;
+        let end = memchr(b'\n', &SHERLOCK[end..]).unwrap() + end;
+
+        // Now compare it with what Grep finds.
         let g = GrepBuilder::new("Sherlock Holmes").create().unwrap();
         let mut bg = g.buffered_reader(Buffer::new(), SHERLOCK);
         let ms: Vec<_> = bg.iter().map(|r| r.unwrap()).collect();
         let m = ms.last().unwrap();
-        assert_eq!(91, ms.len());
-        assert_eq!(575707, m.start());
-        assert_eq!(575784, m.end());
+        assert_eq!(expected_count, ms.len());
+        assert_eq!(start, m.start());
+        assert_eq!(end, m.end());
     }
 }
