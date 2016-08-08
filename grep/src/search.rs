@@ -105,7 +105,7 @@ impl GrepBuilder {
     /// Sets whether line numbers are reported for each match.
     ///
     /// When enabled (disabled by default), every matching line is tagged with
-    /// its corresponding line number accoring to the line terminator that is
+    /// its corresponding line number according to the line terminator that is
     /// set. Note that this requires extra processing which can slow down
     /// search.
     pub fn line_numbers(mut self, yes: bool) -> GrepBuilder {
@@ -326,6 +326,8 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
         mat: &mut Match,
     ) -> Result<bool> {
         loop {
+            // If the starting position is equal to the end of the last search,
+            // then it's time to refill the buffer for more searching.
             if self.start == self.lastnl {
                 if !try!(self.fill()) {
                     return Ok(false);
@@ -334,6 +336,8 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
             let ok = self.grep.read_match(
                 mat, &self.b.buf[..self.lastnl], self.start);
             if !ok {
+                // This causes the next iteration to refill the buffer with
+                // more bytes to search.
                 self.start = self.lastnl;
                 continue;
             }
@@ -364,7 +368,7 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
         self.b.buf[0..self.b.tmp.len()].copy_from_slice(&self.b.tmp);
         // Fill the rest with fresh bytes.
         let nread = try!(self.rdr.read(&mut self.b.buf[self.b.tmp.len()..]));
-        // Now update our various positions.
+        // Now update our position in all of the bytes searched.
         self.pos += self.start;
         self.start = 0;
         // The end is the total number of bytes read plus whatever we had for
@@ -374,7 +378,7 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
         // at this position since any proceding bytes may correspond to a
         // partial line.
         //
-        // This is a little complicated because must handle the case where
+        // This is a little complicated because we must handle the case where
         // the buffer is not full and no new line character could be found.
         // We detect this case because this could potentially be a partial
         // line. If we fill our buffer and still can't find a `\n`, then we
@@ -397,7 +401,7 @@ impl<'g, R: io::Read> GrepBuffered<'g, R> {
                     // Otherwise we try to ask for more bytes and look again.
                     let nread = try!(
                         self.rdr.read(&mut self.b.buf[self.end..]));
-                    // If we got nothing than we're at EOF and we no longer
+                    // If we got nothing then we're at EOF and we no longer
                     // need to care about leftovers.
                     if nread == 0 {
                         self.lastnl = self.end;
@@ -466,24 +470,30 @@ mod tests {
 
     static SHERLOCK: &'static [u8] = include_bytes!("./data/sherlock.txt");
 
-    #[test]
-    fn buffered() {
-        // Find the expected number of matches and the position of the last
-        // match.
-        let re = Regex::new("Sherlock Holmes").unwrap();
-        let ms: Vec<_> = re.find_iter(SHERLOCK).collect();
-        let expected_count = ms.len();
-        let (start, end) = *ms.last().unwrap();
-        let start = memrchr(b'\n', &SHERLOCK[..start]).unwrap() + 1;
-        let end = memchr(b'\n', &SHERLOCK[end..]).unwrap() + end;
+    fn find_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
+        let re = Regex::new(pat).unwrap();
+        let mut lines = vec![];
+        for (s, e) in re.find_iter(haystack) {
+            let start = memrchr(b'\n', &haystack[..s])
+                        .map_or(0, |i| i + 1);
+            let end = memchr(b'\n', &haystack[e..])
+                      .map_or(haystack.len(), |i| e + i);
+            lines.push((start, end));
+        }
+        lines
+    }
 
-        // Now compare it with what Grep finds.
-        let g = GrepBuilder::new("Sherlock Holmes").create().unwrap();
-        let mut bg = g.buffered_reader(Buffer::new(), SHERLOCK);
-        let ms: Vec<_> = bg.iter().map(|r| r.unwrap()).collect();
-        let m = ms.last().unwrap();
-        assert_eq!(expected_count, ms.len());
-        assert_eq!(start, m.start());
-        assert_eq!(end, m.end());
+    fn grep_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
+        let g = GrepBuilder::new(pat).create().unwrap();
+        let mut bg = g.buffered_reader(Buffer::new(), haystack);
+        bg.iter().map(|r| r.unwrap()).map(|m| (m.start(), m.end())).collect()
+    }
+
+    #[test]
+    fn buffered_literal() {
+        let expected = find_lines("Sherlock Holmes", SHERLOCK);
+        let got = grep_lines("Sherlock Holmes", SHERLOCK);
+        assert_eq!(expected.len(), got.len());
+        assert_eq!(expected, got);
     }
 }
