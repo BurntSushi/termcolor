@@ -6,15 +6,15 @@ use literals::LiteralSets;
 use nonl;
 use Result;
 
+/// A matched line.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Match {
     start: usize,
     end: usize,
-    line: Option<usize>,
-    locations: Vec<(usize, usize)>,
 }
 
 impl Match {
+    /// Create a new empty match value.
     pub fn new() -> Match {
         Match::default()
     }
@@ -30,27 +30,9 @@ impl Match {
     pub fn end(&self) -> usize {
         self.end
     }
-
-    /// Return the line number that this match corresponds to.
-    ///
-    /// Note that this is `None` if line numbers aren't being computed. Line
-    /// number tracking can be enabled using `GrepBuilder`.
-    #[inline]
-    pub fn line(&self) -> Option<usize> {
-        self.line
-    }
-
-    /// Return the exact start and end locations (in byte offsets) of every
-    /// regex match in this line.
-    ///
-    /// Note that this always returns an empty slice if exact locations aren't
-    /// computed. Exact location tracking can be enabled using `GrepBuilder`.
-    #[inline]
-    pub fn locations(&self) -> &[(usize, usize)] {
-        &self.locations
-    }
 }
 
+/// A fast line oriented regex searcher.
 #[derive(Clone, Debug)]
 pub struct Grep {
     re: Regex,
@@ -58,6 +40,7 @@ pub struct Grep {
     opts: Options,
 }
 
+/// A builder for a grep searcher.
 #[derive(Clone, Debug)]
 pub struct GrepBuilder {
     pattern: String,
@@ -67,8 +50,6 @@ pub struct GrepBuilder {
 #[derive(Clone, Debug)]
 struct Options {
     case_insensitive: bool,
-    lines: bool,
-    locations: bool,
     line_terminator: u8,
     size_limit: usize,
     dfa_size_limit: usize,
@@ -78,8 +59,6 @@ impl Default for Options {
     fn default() -> Options {
         Options {
             case_insensitive: false,
-            lines: false,
-            locations: false,
             line_terminator: b'\n',
             size_limit: 10 * (1 << 20),
             dfa_size_limit: 10 * (1 << 20),
@@ -97,28 +76,6 @@ impl GrepBuilder {
             pattern: pattern.to_string(),
             opts: Options::default(),
         }
-    }
-
-    /// Sets whether line numbers are reported for each match.
-    ///
-    /// When enabled (disabled by default), every matching line is tagged with
-    /// its corresponding line number according to the line terminator that is
-    /// set. Note that this requires extra processing which can slow down
-    /// search.
-    pub fn line_numbers(mut self, yes: bool) -> GrepBuilder {
-        self.opts.lines = yes;
-        self
-    }
-
-    /// Set whether precise match locations are reported for each matching
-    /// line.
-    ///
-    /// When enabled (disabled by default), every match of the regex on each
-    /// matchling line is reported via byte offsets. Note that this requires
-    /// extra processing which can slow down search.
-    pub fn locations(mut self, yes: bool) -> GrepBuilder {
-        self.opts.locations = yes;
-        self
     }
 
     /// Set the line terminator.
@@ -167,7 +124,7 @@ impl GrepBuilder {
     ///
     /// If there was a problem parsing or compiling the regex with the given
     /// options, then an error is returned.
-    pub fn create(self) -> Result<Grep> {
+    pub fn build(self) -> Result<Grep> {
         let expr = try!(self.parse());
         let literals = LiteralSets::create(&expr);
         let re = try!(
@@ -199,6 +156,12 @@ impl GrepBuilder {
 }
 
 impl Grep {
+    /// Returns a reference to the underlying regex used by the searcher.
+    pub fn regex(&self) -> &Regex {
+        &self.re
+    }
+
+    /// Returns an iterator over all matches in the given buffer.
     pub fn iter<'b, 's>(&'s self, buf: &'b [u8]) -> Iter<'b, 's> {
         Iter {
             searcher: self,
@@ -207,6 +170,11 @@ impl Grep {
         }
     }
 
+    /// Fills in the next line that matches in the given buffer starting at
+    /// the position given.
+    ///
+    /// If no match could be found, `false` is returned, otherwise, `true` is
+    /// returned.
     pub fn read_match(
         &self,
         mat: &mut Match,
@@ -265,6 +233,10 @@ impl Grep {
     }
 }
 
+/// An iterator over all matches in a particular buffer.
+///
+/// `'b` refers to the lifetime of the buffer, and `'s` refers to the lifetime
+/// of the searcher.
 pub struct Iter<'b, 's> {
     searcher: &'s Grep,
     buf: &'b [u8],
@@ -292,7 +264,7 @@ mod tests {
     use memchr::{memchr, memrchr};
     use regex::bytes::Regex;
 
-    use super::GrepBuilder;
+    use super::{GrepBuilder, Match};
 
     static SHERLOCK: &'static [u8] = include_bytes!("./data/sherlock.txt");
 
@@ -301,7 +273,7 @@ mod tests {
         String::from_utf8(bytes.to_vec()).unwrap()
     }
 
-    fn find_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
+    fn find_lines(pat: &str, haystack: &[u8]) -> Vec<Match> {
         let re = Regex::new(pat).unwrap();
         let mut lines = vec![];
         for (s, e) in re.find_iter(haystack) {
@@ -309,15 +281,17 @@ mod tests {
                         .map_or(0, |i| i + 1);
             let end = memchr(b'\n', &haystack[e..])
                       .map_or(haystack.len(), |i| e + i);
-            lines.push((start, end));
+            lines.push(Match {
+                start: start,
+                end: end,
+            });
         }
         lines
     }
 
-    fn grep_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
-        let g = GrepBuilder::new(pat).create().unwrap();
-        let it = g.iter(haystack);
-        it.map(|m| (m.start(), m.end())).collect()
+    fn grep_lines(pat: &str, haystack: &[u8]) -> Vec<Match> {
+        let g = GrepBuilder::new(pat).build().unwrap();
+        g.iter(haystack).collect()
     }
 
     #[test]
