@@ -1,13 +1,10 @@
-use std::cmp;
-use std::io;
-
 use memchr::{memchr, memrchr};
 use regex::bytes::{Regex, RegexBuilder};
 use syntax;
 
 use literals::LiteralSets;
 use nonl;
-use {Error, Result};
+use Result;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Match {
@@ -210,22 +207,6 @@ impl Grep {
         }
     }
 
-    pub fn buffered_reader<'g, R: io::Read>(
-        &'g self,
-        buf: Buffer,
-        rdr: R,
-    ) -> GrepBuffered<'g, R> {
-        GrepBuffered {
-            grep: self,
-            rdr: rdr,
-            b: buf,
-            pos: 0,
-            start: 0,
-            lastnl: 0,
-            end: 0,
-        }
-    }
-
     pub fn read_match(
         &self,
         mat: &mut Match,
@@ -284,139 +265,6 @@ impl Grep {
     }
 }
 
-pub struct Buffer {
-    buf: Vec<u8>,
-    tmp: Vec<u8>,
-}
-
-impl Buffer {
-    pub fn new() -> Buffer {
-        Buffer::with_capacity(16 * (1<<10))
-    }
-
-    pub fn with_capacity(cap: usize) -> Buffer {
-        Buffer {
-            buf: vec![0; cap],
-            tmp: Vec::new(),
-        }
-    }
-}
-
-pub struct GrepBuffered<'g, R> {
-    grep: &'g Grep,
-    rdr: R,
-    b: Buffer,
-    pos: usize,
-    start: usize,
-    lastnl: usize,
-    end: usize,
-}
-
-impl<'g, R: io::Read> GrepBuffered<'g, R> {
-    pub fn into_buffer(self) -> Buffer {
-        self.b
-    }
-
-    pub fn iter<'b>(&'b mut self) -> IterBuffered<'b, 'g, R> {
-        IterBuffered { grep: self }
-    }
-
-    pub fn read_match(
-        &mut self,
-        mat: &mut Match,
-    ) -> Result<bool> {
-        loop {
-            // If the starting position is equal to the end of the last search,
-            // then it's time to refill the buffer for more searching.
-            if self.start == self.lastnl {
-                if !try!(self.fill()) {
-                    return Ok(false);
-                }
-            }
-            let ok = self.grep.read_match(
-                mat, &self.b.buf[..self.lastnl], self.start);
-            if !ok {
-                // This causes the next iteration to refill the buffer with
-                // more bytes to search.
-                self.start = self.lastnl;
-                continue;
-            }
-            // Move start to the first possible byte of the next line.
-            self.start = cmp::min(
-                self.lastnl, mat.end.checked_add(1).unwrap());
-            mat.start += self.pos;
-            mat.end += self.pos;
-            return Ok(true);
-        }
-    }
-
-    fn fill(&mut self) -> Result<bool> {
-        {
-            // The buffer might have leftover bytes that have not been
-            // searched yet. Leftovers correspond to all bytes proceding the
-            // final \n in the current buffer.
-            //
-            // TODO(ag): Seems like we should be able to memmove from the end
-            // of the buffer to the beginning, but let's do it the stupid (but
-            // safe) way for now.
-            let leftovers = &self.b.buf[self.lastnl..self.end];
-            self.b.tmp.clear();
-            self.b.tmp.resize(leftovers.len(), 0);
-            self.b.tmp.copy_from_slice(leftovers);
-        }
-        // Move the leftovers to the beginning of our buffer.
-        self.b.buf[0..self.b.tmp.len()].copy_from_slice(&self.b.tmp);
-        // Fill the rest with fresh bytes.
-        let nread = try!(self.rdr.read(&mut self.b.buf[self.b.tmp.len()..]));
-        // Now update our position in all of the bytes searched.
-        self.pos += self.start;
-        self.start = 0;
-        // The end is the total number of bytes read plus whatever we had for
-        // leftovers.
-        self.end = self.b.tmp.len() + nread;
-        // Find the last new line. All searches on this buffer will be capped
-        // at this position since any proceding bytes may correspond to a
-        // partial line.
-        //
-        // This is a little complicated because we must handle the case where
-        // the buffer is not full and no new line character could be found.
-        // We detect this case because this could potentially be a partial
-        // line. If we fill our buffer and still can't find a `\n`, then we
-        // give up.
-        let mut start = 0;
-        let term = self.grep.opts.line_terminator;
-        loop {
-            match memrchr(term, &self.b.buf[start..self.end]) {
-                Some(i) => {
-                    self.lastnl = start + i + 1;
-                    break;
-                }
-                None => {
-                    // If we couldn't find a new line and our buffer is
-                    // completely full, then this line is terribly long and we
-                    // return an error.
-                    if self.end == self.b.buf.len() {
-                        return Err(Error::LineTooLong(self.b.buf.len()));
-                    }
-                    // Otherwise we try to ask for more bytes and look again.
-                    let nread = try!(
-                        self.rdr.read(&mut self.b.buf[self.end..]));
-                    // If we got nothing then we're at EOF and we no longer
-                    // need to care about leftovers.
-                    if nread == 0 {
-                        self.lastnl = self.end;
-                        break;
-                    }
-                    start = self.end;
-                    self.end += nread;
-                }
-            }
-        }
-        // If end is zero, then we've hit EOF and we have no leftovers.
-        Ok(self.end > 0)
-    }
-}
-
 pub struct Iter<'b, 's> {
     searcher: &'s Grep,
     buf: &'b [u8],
@@ -437,28 +285,6 @@ impl<'b, 's> Iterator for Iter<'b, 's> {
     }
 }
 
-pub struct IterBuffered<'b, 'g: 'b, R: 'b> {
-    grep: &'b mut GrepBuffered<'g, R>,
-}
-
-impl<'b, 'g, R: io::Read> Iterator for IterBuffered<'b, 'g, R> {
-    type Item = Result<Match>;
-
-    fn next(&mut self) -> Option<Result<Match>> {
-        let mut mat = Match::default();
-        match self.grep.read_match(&mut mat) {
-            Err(err) => Some(Err(err)),
-            Ok(false) => None,
-            Ok(true) => Some(Ok(mat)),
-        }
-    }
-}
-
-#[allow(dead_code)]
-fn s(bytes: &[u8]) -> String {
-    String::from_utf8(bytes.to_vec()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(unused_imports)]
@@ -466,9 +292,14 @@ mod tests {
     use memchr::{memchr, memrchr};
     use regex::bytes::Regex;
 
-    use super::{Buffer, GrepBuilder, s};
+    use super::GrepBuilder;
 
     static SHERLOCK: &'static [u8] = include_bytes!("./data/sherlock.txt");
+
+    #[allow(dead_code)]
+    fn s(bytes: &[u8]) -> String {
+        String::from_utf8(bytes.to_vec()).unwrap()
+    }
 
     fn find_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
         let re = Regex::new(pat).unwrap();
@@ -485,8 +316,8 @@ mod tests {
 
     fn grep_lines(pat: &str, haystack: &[u8]) -> Vec<(usize, usize)> {
         let g = GrepBuilder::new(pat).create().unwrap();
-        let mut bg = g.buffered_reader(Buffer::new(), haystack);
-        bg.iter().map(|r| r.unwrap()).map(|m| (m.start(), m.end())).collect()
+        let it = g.iter(haystack);
+        it.map(|m| (m.start(), m.end())).collect()
     }
 
     #[test]
