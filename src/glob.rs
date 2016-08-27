@@ -20,7 +20,7 @@ use std::path;
 use std::str;
 
 use regex;
-use regex::bytes::{RegexSet, SetMatches};
+use regex::bytes::{Regex, RegexSet, SetMatches};
 
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -63,7 +63,8 @@ impl fmt::Display for Error {
 /// pass.
 #[derive(Clone, Debug)]
 pub struct Set {
-    re: RegexSet,
+    re: Regex,
+    set: RegexSet,
 }
 
 impl Set {
@@ -76,21 +77,12 @@ impl Set {
     /// Returns every glob pattern (by sequence number) that matches the given
     /// path.
     pub fn matches<T: AsRef<[u8]>>(&self, path: T) -> SetMatches {
-        self.re.matches(path.as_ref())
-    }
-
-    /// Populates the given slice with corresponding patterns that matched.
-    pub fn matches_with<T: AsRef<[u8]>>(
-        &self,
-        path: T,
-        matches: &mut [bool],
-    ) -> bool {
-        self.re.matches_with(path.as_ref(), matches)
+        self.set.matches(path.as_ref())
     }
 
     /// Returns the number of glob patterns in this set.
     pub fn len(&self) -> usize {
-        self.re.len()
+        self.set.len()
     }
 }
 
@@ -113,8 +105,18 @@ impl SetBuilder {
     /// Once a matcher is built, no new patterns can be added to it.
     pub fn build(&self) -> Result<Set, regex::Error> {
         let it = self.pats.iter().map(|&(ref p, ref o)| p.to_regex_with(o));
-        let re = try!(RegexSet::new(it));
-        Ok(Set { re: re })
+        let set = try!(RegexSet::new(it));
+
+        let mut joined = String::new();
+        for &(ref p, ref o) in &self.pats {
+            let part = format!("(?:{})", p.to_regex_with(o));
+            if !joined.is_empty() {
+                joined.push('|');
+            }
+            joined.push_str(&part);
+        }
+        let re = try!(Regex::new(&joined));
+        Ok(Set { re: re, set: set })
     }
 
     /// Add a new pattern to this set.
@@ -151,10 +153,10 @@ pub struct Pattern {
 #[derive(Clone, Debug, Default)]
 pub struct MatchOptions {
     /// When true, matching is done case insensitively.
-    case_insensitive: bool,
+    pub case_insensitive: bool,
     /// When true, neither `*` nor `?` match the current system's path
     /// separator.
-    require_literal_separator: bool,
+    pub require_literal_separator: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -199,6 +201,7 @@ impl Pattern {
     pub fn to_regex_with(&self, options: &MatchOptions) -> String {
         let sep = path::MAIN_SEPARATOR.to_string();
         let mut re = String::new();
+        re.push_str("(?-u)");
         if options.case_insensitive {
             re.push_str("(?i)");
         }
@@ -457,7 +460,6 @@ mod tests {
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                // println!("{:?}", re);
                 assert!(!re.is_match($path));
             }
         };

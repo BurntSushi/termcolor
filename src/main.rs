@@ -30,6 +30,8 @@ use docopt::Docopt;
 use grep::Grep;
 use walkdir::{WalkDir, WalkDirIterator};
 
+use ignore::Ignore;
+
 macro_rules! errored {
     ($($tt:tt)*) => {
         return Err(From::from(format!($($tt)*)));
@@ -43,7 +45,9 @@ macro_rules! eprintln {
     }}
 }
 
+mod gitignore;
 mod glob;
+mod ignore;
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
@@ -72,24 +76,40 @@ impl Args {
         if self.arg_path.is_empty() {
             return errored!("Searching stdin is not currently supported.");
         }
+        let mut stdout = io::BufWriter::new(io::stdout());
+        let mut ig = Ignore::new();
         for p in &self.arg_path {
-            let mut it = WalkDir::new(p).into_iter();
+            let mut it = WalkEventIter::from(WalkDir::new(p));
             loop {
-                let ent = match it.next() {
+                let ev = match it.next() {
                     None => break,
+                    Some(Ok(ev)) => ev,
                     Some(Err(err)) => {
                         eprintln!("{}", err);
                         continue;
                     }
-                    Some(Ok(ent)) => ent,
                 };
-                if is_hidden(&ent) {
-                    if ent.file_type().is_dir() {
-                        it.skip_current_dir();
+                match ev {
+                    WalkEvent::Exit => {
+                        ig.pop();
                     }
-                    continue;
+                    WalkEvent::Dir(ent) => {
+                        try!(ig.push(ent.path()));
+                        if is_hidden(&ent) || ig.ignored(ent.path(), true) {
+                        // if is_hidden(&ent) {
+                            it.it.skip_current_dir();
+                            continue;
+                        }
+                    }
+                    WalkEvent::File(ent) => {
+                        if is_hidden(&ent) || ig.ignored(ent.path(), false) {
+                        // if is_hidden(&ent) {
+                            continue;
+                        }
+                        let _ = writeln!(
+                            &mut stdout, "{}", ent.path().display());
+                    }
                 }
-                println!("{}", ent.path().display());
             }
         }
         Ok(0)
@@ -105,6 +125,60 @@ impl Args {
         let count = searcher.iter(text).count() as u64;
         try!(writeln!(wtr, "{}", count));
         Ok(count)
+    }
+}
+
+/// WalkEventIter transforms a WalkDir iterator into an iterator that more
+/// accurately describes the directory tree. Namely, it emits events that are
+/// one of three types: directory, file or "exit." An "exit" event means that
+/// the entire contents of a directory have been enumerated.
+struct WalkEventIter {
+    depth: usize,
+    it: walkdir::Iter,
+    next: Option<result::Result<walkdir::DirEntry, walkdir::Error>>,
+}
+
+#[derive(Debug)]
+enum WalkEvent {
+    Dir(walkdir::DirEntry),
+    File(walkdir::DirEntry),
+    Exit,
+}
+
+impl From<walkdir::WalkDir> for WalkEventIter {
+    fn from(it: walkdir::WalkDir) -> WalkEventIter {
+        WalkEventIter { depth: 0, it: it.into_iter(), next: None }
+    }
+}
+
+impl Iterator for WalkEventIter {
+    type Item = io::Result<WalkEvent>;
+
+    fn next(&mut self) -> Option<io::Result<WalkEvent>> {
+        let dent = self.next.take().or_else(|| self.it.next());
+        let depth = match dent {
+            None => 0,
+            Some(Ok(ref dent)) => dent.depth(),
+            Some(Err(ref err)) => err.depth(),
+        };
+        if depth < self.depth {
+            self.depth -= 1;
+            self.next = dent;
+            return Some(Ok(WalkEvent::Exit));
+        }
+        self.depth = depth;
+        match dent {
+            None => None,
+            Some(Err(err)) => Some(Err(From::from(err))),
+            Some(Ok(dent)) => {
+                if dent.file_type().is_dir() {
+                    self.depth += 1;
+                    Some(Ok(WalkEvent::Dir(dent)))
+                } else {
+                    Some(Ok(WalkEvent::File(dent)))
+                }
+            }
+        }
     }
 }
 

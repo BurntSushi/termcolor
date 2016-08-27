@@ -29,6 +29,9 @@ regex-syntax = { version = "0.3.1", path = "/home/andrew/rust/regex/regex-syntax
 rustc-serialize = "0.3"
 walkdir = "0.1"
 
+[features]
+simd-accel = ["regex/simd-accel"]
+
 [dev-dependencies]
 glob = "0.2"
 lazy_static = "0.2"
