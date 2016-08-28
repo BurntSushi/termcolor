@@ -1,7 +1,7 @@
 /*!
-The glob submodule provides standard shell globbing, but is specifically
-implemented by converting glob syntax to regular expressions. The reasoning
-is two fold:
+The glob module provides standard shell globbing, but is specifically
+implemented by converting glob syntax to regular expressions. The reasoning is
+two fold:
 
 1. The regex library is *really* fast. Regaining performance in a distinct
    implementation of globbing is non-trivial.

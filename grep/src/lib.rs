@@ -12,7 +12,7 @@ use std::error;
 use std::fmt;
 use std::result;
 
-pub use search::{Grep, GrepBuilder};
+pub use search::{Grep, GrepBuilder, Iter, Match};
 
 mod literals;
 mod nonl;

@@ -56,19 +56,40 @@ pub struct Ignore {
     /// A stack of ignore patterns at each directory level of traversal.
     /// A directory that contributes no ignore patterns is `None`.
     stack: Vec<Option<IgnoreDir>>,
-    // TODO(burntsushi): Add other patterns from the command line here.
+    ignore_hidden: bool,
 }
 
 impl Ignore {
     /// Create an empty set of ignore patterns.
     pub fn new() -> Ignore {
-        Ignore { stack: vec![] }
+        Ignore {
+            stack: vec![],
+            ignore_hidden: true,
+        }
+    }
+
+    /// Set whether hidden files/folders should be ignored (defaults to true).
+    pub fn ignore_hidden(&mut self, yes: bool) -> &mut Ignore {
+        self.ignore_hidden = yes;
+        self
     }
 
     /// Add a directory to the stack.
+    ///
+    /// Note that even if this returns an error, the directory is added to the
+    /// stack (and therefore should be popped).
     pub fn push<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
-        self.stack.push(try!(IgnoreDir::new(path)));
-        Ok(())
+        match IgnoreDir::new(path) {
+            Ok(id) => {
+                self.stack.push(id);
+                Ok(())
+            }
+            Err(err) => {
+                // Don't leave the stack in an inconsistent state.
+                self.stack.push(None);
+                Err(err)
+            }
+        }
     }
 
     /// Pop a directory from the stack.
@@ -81,10 +102,19 @@ impl Ignore {
     /// Returns true if and only if the given file path should be ignored.
     pub fn ignored<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
         let path = path.as_ref();
+        if self.ignore_hidden && is_hidden(&path) {
+            return true;
+        }
         for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
             match id.matched(path, is_dir) {
-                Match::Whitelist => return false,
-                Match::Ignored => return true,
+                Match::Whitelist(ref pat) => {
+                    debug!("{} whitelisted by {:?}", path.display(), pat);
+                    return false;
+                }
+                Match::Ignored(ref pat) => {
+                    debug!("{} ignored by {:?}", path.display(), pat);
+                    return true;
+                }
                 Match::None => {}
             }
         }
@@ -147,6 +177,14 @@ impl IgnoreDir {
         self.gi.as_ref()
             .map(|gi| gi.matched(path, is_dir))
             .unwrap_or(Match::None)
+    }
+}
+
+fn is_hidden<P: AsRef<Path>>(path: P) -> bool {
+    if let Some(name) = path.as_ref().file_name() {
+        name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+    } else {
+        false
     }
 }
 

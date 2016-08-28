@@ -19,8 +19,11 @@ path = "src/main.rs"
 name = "xrep"
 
 [dependencies]
+crossbeam = "0.2"
 docopt = "0.6"
+env_logger = "0.3"
 grep = { version = "0.1", path = "grep" }
+log = "0.3"
 memchr = "0.1"
 memmap = "0.2"
 num_cpus = "1"

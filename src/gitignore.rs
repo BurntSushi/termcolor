@@ -136,7 +136,8 @@ impl Gitignore {
     pub fn matched_utf8(&self, path: &str, is_dir: bool) -> Match {
         // A single regex with a bunch of alternations of glob patterns is
         // unfortunately typically faster than a regex, so we use it as a
-        // first pass filter.
+        // first pass filter. We still need to run the RegexSet to most
+        // recently defined glob that matched.
         if !self.set.is_match(path) {
             return Match::None;
         }
@@ -145,9 +146,9 @@ impl Gitignore {
             Some(i) => &self.patterns[i],
         };
         if pat.whitelist {
-            Match::Whitelist
+            Match::Whitelist(&pat)
         } else if !pat.only_dir || is_dir {
-            Match::Ignored
+            Match::Ignored(&pat)
         } else {
             Match::None
         }
@@ -155,22 +156,25 @@ impl Gitignore {
 }
 
 /// The result of a glob match.
+///
+/// The lifetime `'a` refers to the lifetime of the pattern that resulted in
+/// a match (whether ignored or whitelisted).
 #[derive(Clone, Debug)]
-pub enum Match {
+pub enum Match<'a> {
     /// The path didn't match any glob in the gitignore file.
     None,
     /// The last glob matched indicates the path should be ignored.
-    Ignored,
+    Ignored(&'a Pattern),
     /// The last glob matched indicates the path should be whitelisted.
-    Whitelist,
+    Whitelist(&'a Pattern),
 }
 
-impl Match {
+impl<'a> Match<'a> {
     /// Returns true if the match result implies the path should be ignored.
     pub fn is_ignored(&self) -> bool {
         match *self {
-            Match::Ignored => true,
-            Match::None | Match::Whitelist => false,
+            Match::Ignored(_) => true,
+            Match::None | Match::Whitelist(_) => false,
         }
     }
 }
@@ -186,11 +190,18 @@ pub struct GitignoreBuilder {
 /// Pattern represents a single pattern in a gitignore file. It doesn't
 /// know how to do glob matching directly, but it does store additional
 /// options on a pattern, such as whether it's whitelisted.
-#[derive(Clone, Debug, Default)]
-struct Pattern {
-    pat: String,
-    whitelist: bool, // prefix of '!'
-    only_dir: bool, // suffix of '/'
+#[derive(Clone, Debug)]
+pub struct Pattern {
+    /// The file path that this pattern was extracted from (may be empty).
+    pub from: PathBuf,
+    /// The original glob pattern string.
+    pub original: String,
+    /// The actual glob pattern string used to convert to a regex.
+    pub pat: String,
+    /// Whether this is a whitelisted pattern or not.
+    pub whitelist: bool,
+    /// Whether this pattern should only match directories or not.
+    pub only_dir: bool,
 }
 
 impl GitignoreBuilder {
@@ -222,7 +233,7 @@ impl GitignoreBuilder {
         let rdr = io::BufReader::new(try!(File::open(&path)));
         // println!("adding ignores from: {}", path.as_ref().display());
         for line in rdr.lines() {
-            try!(self.add(&try!(line)));
+            try!(self.add(&path, &try!(line)));
         }
         Ok(())
     }
@@ -230,7 +241,7 @@ impl GitignoreBuilder {
     /// Add each pattern line from the string given.
     pub fn add_str(&mut self, gitignore: &str) -> Result<(), Error> {
         for line in gitignore.lines() {
-            try!(self.add(line));
+            try!(self.add("", line));
         }
         Ok(())
     }
@@ -238,11 +249,21 @@ impl GitignoreBuilder {
     /// Add a line from a gitignore file to this builder.
     ///
     /// If the line could not be parsed as a glob, then an error is returned.
-    pub fn add(&mut self, mut line: &str) -> Result<(), Error> {
+    pub fn add<P: AsRef<Path>>(
+        &mut self,
+        from: P,
+        mut line: &str,
+    ) -> Result<(), Error> {
         if line.is_empty() {
             return Ok(());
         }
-        let mut pat = Pattern::default();
+        let mut pat = Pattern {
+            from: from.as_ref().to_path_buf(),
+            original: line.to_string(),
+            pat: String::new(),
+            whitelist: false,
+            only_dir: false,
+        };
         let mut opts = glob::MatchOptions::default();
         let has_slash = line.chars().any(|c| c == '/');
         // If the line starts with an escaped '!', then remove the escape.
@@ -352,6 +373,7 @@ mod tests {
     ignored!(ig22, ROOT, r"\#foo", "#foo");
     ignored!(ig23, ROOT, "foo", "./foo");
     ignored!(ig24, ROOT, "target", "grep/target");
+    ignored!(ig25, ROOT, "Cargo.lock", "./tabwriter-bin/Cargo.lock");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
