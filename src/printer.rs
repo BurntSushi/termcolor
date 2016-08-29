@@ -28,6 +28,10 @@ impl<W: io::Write> Printer<W> {
         wln!(&mut self.wtr, "{}", path.as_ref().display());
     }
 
+    pub fn path_count<P: AsRef<Path>>(&mut self, path: P, count: u64) {
+        wln!(&mut self.wtr, "{}:{}", path.as_ref().display(), count);
+    }
+
     pub fn count(&mut self, count: u64) {
         wln!(&mut self.wtr, "{}", count);
     }

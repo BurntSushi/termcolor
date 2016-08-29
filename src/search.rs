@@ -6,15 +6,15 @@ matches.
 use std::cmp;
 use std::error::Error as StdError;
 use std::fmt;
-use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use grep::Grep;
-use memchr::memchr;
-use memmap::{Mmap, Protection};
+use grep::{Grep, Match};
+use memchr::{memchr, memrchr};
 
 use printer::Printer;
+
+const READ_SIZE: usize = 8 * (1<<10);
 
 /// Error describes errors that can occur while searching.
 #[derive(Debug)]
@@ -56,89 +56,121 @@ impl fmt::Display for Error {
     }
 }
 
-/// Searcher searches a memory mapped buffer.
-///
-/// The `'g` lifetime refers to the lifetime of the underlying matcher.
-pub struct Searcher<'g> {
-    grep: &'g Grep,
-    path: PathBuf,
-    mmap: Option<Mmap>,
+pub struct Searcher<'a, R, W: 'a> {
+    pub grep: &'a Grep,
+    pub path: &'a Path,
+    pub haystack: R,
+    pub inp: &'a mut InputBuffer,
+    pub printer: &'a mut Printer<W>,
 }
 
-impl<'g> Searcher<'g> {
-    /// Create a new memory map based searcher using the given matcher for the
-    /// file path given.
-    pub fn new<P: AsRef<Path>>(
-        grep: &'g Grep,
-        path: P,
-    ) -> Result<Searcher<'g>, Error> {
-        let file = try!(File::open(&path).map_err(|err| {
-            Error::from_io(err, &path)
-        }));
-        let md = try!(file.metadata().map_err(|err| {
-            Error::from_io(err, &path)
-        }));
-        let mmap =
-            if md.len() == 0 {
-                None
-            } else {
-                Some(try!(Mmap::open(&file, Protection::Read).map_err(|err| {
-                    Error::from_io(err, &path)
-                })))
-            };
-        Ok(Searcher {
-            grep: grep,
-            path: path.as_ref().to_path_buf(),
-            mmap: mmap,
-        })
-    }
-
-    /// Execute the search, writing the results to the printer given and
-    /// returning the underlying buffer.
-    pub fn search<W: io::Write>(&self, printer: Printer<W>) -> W {
-        Search {
-            grep: &self.grep,
-            path: &*self.path,
-            buf: self.buf(),
-            printer: printer,
-        }.run()
-    }
-
-    /// Execute the search, returning a count of the number of hits.
-    pub fn count(&self) -> u64 {
-        self.grep.iter(self.buf()).count() as u64
-    }
-
-    fn buf(&self) -> &[u8] {
-        self.mmap.as_ref().map(|m| unsafe { m.as_slice() }).unwrap_or(&[])
+impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
+    #[inline(never)]
+    pub fn run(mut self) -> Result<(), Error> {
+        self.inp.reset();
+        let mut mat = Match::default();
+        loop {
+            let ok = try!(self.inp.fill(&mut self.haystack).map_err(|err| {
+                Error::from_io(err, &self.path)
+            }));
+            if !ok {
+                return Ok(());
+            }
+            loop {
+                let ok = self.grep.read_match(
+                    &mut mat,
+                    &mut self.inp.buf[..self.inp.lastnl],
+                    self.inp.pos);
+                if !ok {
+                    break;
+                }
+                self.inp.pos = mat.end() + 1;
+                self.printer.matched(self.path, &self.inp.buf, &mat);
+            }
+        }
     }
 }
 
-struct Search<'a, W> {
-    grep: &'a Grep,
-    path: &'a Path,
-    buf: &'a [u8],
-    printer: Printer<W>,
+pub struct InputBuffer {
+    buf: Vec<u8>,
+    tmp: Vec<u8>,
+    pos: usize,
+    lastnl: usize,
+    end: usize,
+    first: bool,
+    is_binary: bool,
 }
 
-impl<'a, W: io::Write> Search<'a, W> {
-    fn run(mut self) -> W {
-        let is_binary = self.is_binary();
-        let mut it = self.grep.iter(self.buf).peekable();
-        if is_binary && it.peek().is_some() {
-            self.printer.binary_matched(self.path);
-            return self.printer.into_inner();
+impl InputBuffer {
+    pub fn new() -> InputBuffer {
+        InputBuffer {
+            buf: vec![0; READ_SIZE],
+            tmp: vec![],
+            pos: 0,
+            lastnl: 0,
+            end: 0,
+            first: true,
+            is_binary: false,
         }
-        for m in it {
-            self.printer.matched(self.path, self.buf, &m);
-        }
-        self.printer.into_inner()
     }
 
-    fn is_binary(&self) -> bool {
-        if self.buf.len() >= 4 && &self.buf[0..4] == b"%PDF" {
-            return true;
-        }
-        memchr(b'\x00', &self.buf[0..cmp::min(1024, self.buf.len())]).is_some()
+    fn reset(&mut self) {
+        self.pos = 0;
+        self.lastnl = 0;
+        self.end = 0;
+        self.first = true;
+        self.is_binary = false;
     }
+
+    fn fill<R: io::Read>(&mut self, rdr: &mut R) -> Result<bool, io::Error> {
+        if self.lastnl < self.end {
+            self.tmp.clear();
+            self.tmp.extend_from_slice(&self.buf[self.lastnl..self.end]);
+            self.buf[0..self.tmp.len()].copy_from_slice(&self.tmp);
+            self.end = self.tmp.len();
+        } else {
+            self.end = 0;
+        }
+        self.pos = 0;
+        self.lastnl = 0;
+        while self.lastnl == 0 {
+            if self.buf.len() - self.end < READ_SIZE {
+                let min_len = READ_SIZE + self.buf.len() - self.end;
+                let new_len = cmp::max(min_len, self.buf.len() * 2);
+                self.buf.resize(new_len, 0);
+            }
+            let n = try!(rdr.read(
+                &mut self.buf[self.end..self.end + READ_SIZE]));
+            if self.first {
+                if is_binary(&self.buf[self.end..self.end + n]) {
+                    return Ok(false);
+                }
+            }
+            self.first = false;
+            if n == 0 {
+                if self.end == 0 {
+                    return Ok(false);
+                }
+                self.lastnl = self.end;
+                break;
+            }
+            // We know there is no nl between self.start..self.end since:
+            //   1) If this is the first iteration, then any bytes preceding
+            //      self.end do not contain nl by construction.
+            //   2) Subsequent iterations only occur if no nl could be found.
+            self.lastnl =
+                memrchr(b'\n', &self.buf[self.end..self.end + n])
+                .map(|i| self.end + i)
+                .unwrap_or(0);
+            self.end += n;
+        }
+        Ok(true)
+    }
+}
+
+fn is_binary(buf: &[u8]) -> bool {
+    if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
+        return true;
+    }
+    memchr(b'\x00', &buf[0..cmp::min(1024, buf.len())]).is_some()
 }

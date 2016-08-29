@@ -27,9 +27,11 @@ log = "0.3"
 memchr = "0.1"
 memmap = "0.2"
 num_cpus = "1"
+parking_lot = "0.3"
 regex = { version = "0.1", path = "/home/andrew/rust/regex" }
 regex-syntax = { version = "0.3.1", path = "/home/andrew/rust/regex/regex-syntax" }
 rustc-serialize = "0.3"
+thread_local = "0.2"
 walkdir = "0.1"
 
 [features]
@@ -41,3 +43,4 @@ lazy_static = "0.2"
 
 [profile.release]
 debug = true
+panic = "abort"
