@@ -69,11 +69,13 @@ Options:
     --debug             Show debug messages.
     --files             Print each file that would be searched
                         (but don't search).
-    -L, --follow        Follow symlinks.
     --hidden            Search hidden directories and files.
     -i, --ignore-case   Case insensitive search.
+    -L, --follow        Follow symlinks.
+    -n, --line-number   Show line numbers (1-based).
     -t, --threads ARG   The number of threads to use. Defaults to the number
                         of logical CPUs. [default: 0]
+    -v, --invert-match  Invert matching.
 ";
 
 #[derive(RustcDecodable)]
@@ -86,6 +88,8 @@ struct Args {
     flag_follow: bool,
     flag_hidden: bool,
     flag_ignore_case: bool,
+    flag_invert_match: bool,
+    flag_line_number: bool,
     flag_threads: usize,
 }
 
@@ -224,13 +228,16 @@ impl Worker {
             outbuf.clear();
             let mut printer = self.args.printer(outbuf);
             {
-                let searcher = Searcher {
-                    grep: &self.grep,
-                    path: &path,
-                    haystack: file,
-                    inp: &mut self.inpbuf,
-                    printer: &mut printer,
-                };
+                let mut searcher = Searcher::new(
+                    &mut self.inpbuf,
+                    &mut printer,
+                    &self.grep,
+                    &path,
+                    file,
+                );
+                searcher = searcher.count(self.args.flag_count);
+                searcher = searcher.line_number(self.args.flag_line_number);
+                searcher = searcher.invert_match(self.args.flag_invert_match);
                 if let Err(err) = searcher.run() {
                     eprintln!("{}", err);
                 }

@@ -150,6 +150,7 @@ impl GrepBuilder {
             try!(syntax::ExprBuilder::new()
                  .allow_bytes(true)
                  .unicode(true)
+                 .case_insensitive(self.opts.case_insensitive)
                  .parse(&self.pattern));
         Ok(try!(nonl::remove(expr, self.opts.line_terminator)))
     }

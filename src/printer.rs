@@ -1,11 +1,15 @@
 use std::io;
 use std::path::Path;
 
-use grep::Match;
-
 macro_rules! wln {
     ($($tt:tt)*) => {
         let _ = writeln!($($tt)*);
+    }
+}
+
+macro_rules! w {
+    ($($tt:tt)*) => {
+        let _ = write!($($tt)*);
     }
 }
 
@@ -40,15 +44,25 @@ impl<W: io::Write> Printer<W> {
         &mut self,
         path: P,
         buf: &[u8],
-        m: &Match,
+        start: usize,
+        end: usize,
+        line_number: Option<u64>,
     ) {
-        let _ = self.wtr.write(path.as_ref().to_string_lossy().as_bytes());
-        let _ = self.wtr.write(b":");
-        let _ = self.wtr.write(&buf[m.start()..m.end()]);
-        let _ = self.wtr.write(b"\n");
+        self.write(path.as_ref().to_string_lossy().as_bytes());
+        self.write(b":");
+        if let Some(line_number) = line_number {
+            self.write(line_number.to_string().as_bytes());
+            self.write(b":");
+        }
+        self.write(&buf[start..end]);
+        self.write(b"\n");
     }
 
     pub fn binary_matched<P: AsRef<Path>>(&mut self, path: P) {
         wln!(&mut self.wtr, "binary file {} matches", path.as_ref().display());
+    }
+
+    fn write(&mut self, buf: &[u8]) {
+        let _ = self.wtr.write_all(buf);
     }
 }
