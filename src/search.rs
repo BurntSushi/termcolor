@@ -63,6 +63,9 @@ pub struct Searcher<'a, R, W: 'a> {
     grep: &'a Grep,
     path: &'a Path,
     haystack: R,
+    match_count: u64,
+    line_count: Option<u64>,
+    last_match: Match,
     count: bool,
     invert_match: bool,
     line_number: bool,
@@ -94,6 +97,9 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             grep: grep,
             path: path,
             haystack: haystack,
+            match_count: 0,
+            line_count: None,
+            last_match: Match::default(),
             count: false,
             invert_match: false,
             line_number: false,
@@ -127,9 +133,9 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
     #[inline(never)]
     pub fn run(mut self) -> Result<u64, Error> {
         self.inp.reset();
-        let mut match_count = 0;
-        let mut line_count = if self.line_number { Some(0) } else { None };
-        let mut mat = Match::default();
+        self.match_count = 0;
+        self.line_count = if self.line_number { Some(0) } else { None };
+        self.last_match = Match::default();
         loop {
             let ok = try!(self.inp.fill(&mut self.haystack).map_err(|err| {
                 Error::from_io(err, &self.path)
@@ -139,88 +145,88 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             }
             while self.inp.pos < self.inp.lastnl {
                 let ok = self.grep.read_match(
-                    &mut mat,
+                    &mut self.last_match,
                     &mut self.inp.buf[..self.inp.lastnl],
                     self.inp.pos);
                 if !ok {
+                    let upto = self.inp.lastnl;
                     if self.invert_match {
-                        while let Some(pos) = memchr(b'\n', &self.inp.buf[self.inp.pos..self.inp.lastnl]) {
-                            if let Some(ref mut line_count) = line_count {
-                                *line_count += 1;
-                            }
-                            self.printer.matched(
-                                &self.path,
-                                &self.inp.buf,
-                                self.inp.pos,
-                                self.inp.pos + pos,
-                                line_count,
-                            );
-                            self.inp.pos += pos + 1;
-                            match_count += 1;
-                            if self.inp.pos >= self.inp.lastnl {
-                                break;
-                            }
-                        }
-                        self.inp.pos = self.inp.lastnl;
-                    } else if let Some(ref mut line_count) = line_count {
-                        *line_count += count_lines(
-                            &self.inp.buf[self.inp.pos..self.inp.lastnl]);
+                        self.find_inverted_matches(upto);
+                    } else {
+                        self.count_lines(upto);
                     }
+                    self.inp.pos = upto;
                     break;
                 }
                 if self.invert_match {
-                    while let Some(pos) = memchr(b'\n', &self.inp.buf[self.inp.pos..mat.start()]) {
-                        if let Some(ref mut line_count) = line_count {
-                            *line_count += 1;
-                        }
-                        self.printer.matched(
-                            &self.path,
-                            &self.inp.buf,
-                            self.inp.pos,
-                            self.inp.pos + pos,
-                            line_count,
-                        );
-                        self.inp.pos += pos + 1;
-                        match_count += 1;
-                    }
-                    if let Some(ref mut line_count) = line_count {
+                    let inverted_upto = self.last_match.start();
+                    self.find_inverted_matches(inverted_upto);
+                    // Add a line to account for the match...
+                    if let Some(ref mut line_count) = self.line_count {
                         *line_count += 1;
                     }
-                    self.inp.pos = mat.end() + 1;
+                    // ... and skip over the match.
+                    self.inp.pos = self.last_match.end() + 1;
                 } else {
-                    if let Some(ref mut line_count) = line_count {
-                        // mat.end() always points immediately after the end
-                        // of a match, which could be *at* a nl or past our
-                        // current search buffer. Either way, count it as one
-                        // more line.
-                        *line_count += 1 + count_lines(
-                            &self.inp.buf[self.inp.pos..mat.end()]);
-                    }
-                    match_count += 1;
+                    self.match_count += 1;
                     if !self.count {
+                        let upto = cmp::min(
+                            self.inp.lastnl, self.last_match.end() + 1);
+                        self.count_lines(upto);
                         self.printer.matched(
                             self.path,
                             &self.inp.buf,
-                            mat.start(),
-                            mat.end(),
-                            line_count,
+                            self.last_match.start(),
+                            self.last_match.end(),
+                            self.line_count,
                         );
                     }
                     // Move the position one past the end of the match so that
                     // the next search starts after the nl. If we're at EOF,
                     // then pos will be past EOF.
-                    self.inp.pos = mat.end() + 1;
+                    self.inp.pos = self.last_match.end() + 1;
                 }
             }
         }
-        if self.count && match_count > 0 {
-            self.printer.path_count(self.path, match_count);
+        if self.count && self.match_count > 0 {
+            self.printer.path_count(self.path, self.match_count);
         }
-        Ok(match_count)
+        Ok(self.match_count)
+    }
+
+    #[inline(always)]
+    fn find_inverted_matches(&mut self, upto: usize) {
+        debug_assert!(self.invert_match);
+        while self.inp.pos < upto {
+            let pos = memchr(b'\n', &self.inp.buf[self.inp.pos..upto])
+                      .unwrap_or(upto);
+            if !self.count {
+                if let Some(ref mut line_count) = self.line_count {
+                    *line_count += 1;
+                }
+                self.printer.matched(
+                    &self.path,
+                    &self.inp.buf,
+                    self.inp.pos,
+                    self.inp.pos + pos,
+                    self.line_count,
+                );
+            }
+            self.inp.pos += pos + 1;
+            self.match_count += 1;
+        }
+    }
+
+    #[inline(always)]
+    fn count_lines(&mut self, upto: usize) {
+        if let Some(ref mut line_count) = self.line_count {
+            *line_count += count_lines(&self.inp.buf[self.inp.pos..upto]);
+        }
     }
 }
 
 pub struct InputBuffer {
+    read_size: usize,
     buf: Vec<u8>,
     tmp: Vec<u8>,
     pos: usize,
@@ -240,8 +246,12 @@ impl InputBuffer {
     ///
     /// The capacity determines the size of each read from the underlying
     /// reader.
-    pub fn with_capacity(cap: usize) -> InputBuffer {
+    pub fn with_capacity(mut cap: usize) -> InputBuffer {
+        if cap == 0 {
+            cap = 1;
+        }
         InputBuffer {
+            read_size: cap,
             buf: vec![0; cap],
             tmp: vec![],
             pos: 0,
@@ -272,13 +282,13 @@ impl InputBuffer {
         self.pos = 0;
         self.lastnl = 0;
         while self.lastnl == 0 {
-            if self.buf.len() - self.end < READ_SIZE {
-                let min_len = READ_SIZE + self.buf.len() - self.end;
+            if self.buf.len() - self.end < self.read_size {
+                let min_len = self.read_size + self.buf.len() - self.end;
                 let new_len = cmp::max(min_len, self.buf.len() * 2);
                 self.buf.resize(new_len, 0);
             }
             let n = try!(rdr.read(
-                &mut self.buf[self.end..self.end + READ_SIZE]));
+                &mut self.buf[self.end..self.end + self.read_size]));
             if self.first {
                 if is_binary(&self.buf[self.end..self.end + n]) {
                     return Ok(false);
@@ -306,6 +316,7 @@ impl InputBuffer {
     }
 }
 
+#[inline(always)]
 fn is_binary(buf: &[u8]) -> bool {
     if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
         return true;
@@ -313,6 +324,7 @@ fn is_binary(buf: &[u8]) -> bool {
     memchr(b'\x00', &buf[0..cmp::min(1024, buf.len())]).is_some()
 }
 
+#[inline(always)]
 fn count_lines(mut buf: &[u8]) -> u64 {
     let mut count = 0;
     while let Some(pos) = memchr(b'\n', buf) {
@@ -320,4 +332,182 @@ fn count_lines(mut buf: &[u8]) -> u64 {
         buf = &buf[pos + 1..];
     }
     count
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+    use std::path::Path;
+
+    use grep::{Grep, GrepBuilder};
+
+    use printer::Printer;
+
+    use super::{InputBuffer, Searcher};
+
+    fn hay(s: &str) -> io::Cursor<Vec<u8>> {
+        io::Cursor::new(s.to_string().into_bytes())
+    }
+
+    fn matcher(pat: &str) -> Grep {
+        GrepBuilder::new(pat).build().unwrap()
+    }
+
+    fn test_path() -> &'static Path {
+        &Path::new("/baz.rs")
+    }
+
+    #[test]
+    fn basic_search() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.run().unwrap()
+        };
+        assert_eq!(2, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
+");
+    }
+
+    #[test]
+    fn line_numbers() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.line_number(true).run().unwrap()
+        };
+        assert_eq!(2, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "\
+/baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
+");
+    }
+
+    #[test]
+    fn count() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.count(true).run().unwrap()
+        };
+        assert_eq!(2, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "/baz.rs:2\n");
+    }
+
+    #[test]
+    fn invert_match() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.invert_match(true).run().unwrap()
+        };
+        assert_eq!(4, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "\
+/baz.rs:Holmeses, success in the province of detective work must always
+/baz.rs:can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs:but Doctor Watson has to have it taken out for him and dusted,
+/baz.rs:and exhibited clearly, with a label attached.
+");
+    }
+
+    #[test]
+    fn invert_match_line_numbers() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.invert_match(true).line_number(true).run().unwrap()
+        };
+        assert_eq!(4, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "\
+/baz.rs:2:Holmeses, success in the province of detective work must always
+/baz.rs:4:can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
+/baz.rs:6:and exhibited clearly, with a label attached.
+");
+    }
+
+    #[test]
+    fn invert_match_count() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.invert_match(true).count(true).run().unwrap()
+        };
+        assert_eq!(4, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "/baz.rs:4\n");
+    }
 }
