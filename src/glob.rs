@@ -399,7 +399,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use regex::Regex;
+    use regex::bytes::Regex;
 
     use super::{Error, Pattern, MatchOptions, SetBuilder, Token};
     use super::Token::*;
@@ -432,7 +432,8 @@ mod tests {
             #[test]
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
-                assert_eq!($re, pat.to_regex_with(&$options));
+                assert_eq!(
+                    format!("(?-u){}", $re), pat.to_regex_with(&$options));
             }
         };
     }
@@ -446,7 +447,7 @@ mod tests {
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                assert!(re.is_match($path));
+                assert!(re.is_match($path.as_bytes()));
             }
         };
     }
@@ -460,7 +461,7 @@ mod tests {
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                assert!(!re.is_match($path));
+                assert!(!re.is_match($path.as_bytes()));
             }
         };
     }
