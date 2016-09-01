@@ -66,9 +66,13 @@ pub struct Searcher<'a, R, W: 'a> {
     match_count: u64,
     line_count: Option<u64>,
     last_match: Match,
+    last_printed: (usize, usize),
+    after_context_remaining: usize,
     count: bool,
     invert_match: bool,
     line_number: bool,
+    before_context: usize,
+    after_context: usize,
 }
 
 impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
@@ -100,9 +104,13 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             match_count: 0,
             line_count: None,
             last_match: Match::default(),
+            last_printed: (0, 0),
+            after_context_remaining: 0,
             count: false,
             invert_match: false,
             line_number: false,
+            before_context: 0,
+            after_context: 0,
         }
     }
 
@@ -128,6 +136,20 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         self
     }
 
+    /// The number of contextual lines to show before each match. The default
+    /// is zero.
+    pub fn before_context(mut self, count: usize) -> Self {
+        self.before_context = count;
+        self
+    }
+
+    /// The number of contextual lines to show after each match. The default
+    /// is zero.
+    pub fn after_context(mut self, count: usize) -> Self {
+        self.after_context = count;
+        self
+    }
+
     /// Execute the search. Results are written to the printer and the total
     /// number of matches is returned.
     #[inline(never)]
@@ -136,8 +158,19 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         self.match_count = 0;
         self.line_count = if self.line_number { Some(0) } else { None };
         self.last_match = Match::default();
+        self.last_printed = (0, 0);
+        self.after_context_remaining = 0;
         loop {
-            let ok = try!(self.inp.fill(&mut self.haystack).map_err(|err| {
+            let mut keep_from = self.inp.lastnl;
+            if self.before_context > 0 {
+                let start_of_keep = cmp::min(
+                    self.inp.lastnl, self.last_printed.1 + 2);
+                keep_from = start_of_previous_lines(
+                    &self.inp.buf[start_of_keep..],
+                    self.inp.lastnl - start_of_keep,
+                    self.before_context);
+            }
+            let ok = try!(self.inp.fill(&mut self.haystack, keep_from).map_err(|err| {
                 Error::from_io(err, &self.path)
             }));
             if !ok {
@@ -173,13 +206,19 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
                         let upto = cmp::min(
                             self.inp.lastnl, self.last_match.end() + 1);
                         self.count_lines(upto);
-                        self.printer.matched(
-                            self.path,
-                            &self.inp.buf,
-                            self.last_match.start(),
-                            self.last_match.end(),
-                            self.line_count,
-                        );
+                        let start = self.last_match.start();
+                        let end = self.last_match.end();
+
+                        if self.before_context > 0 {
+                            let start = start.saturating_sub(1);
+                            let before_context_start = start_of_previous_lines(
+                                &self.inp.buf, start, self.before_context);
+                            let mut it = IterLines::new(before_context_start);
+                            while let Some((s, e)) = it.next(&self.inp.buf[..start]) {
+                                self.print_context(s, e);
+                            }
+                        }
+                        self.print_match(start, end);
                     }
                     // Move the position one past the end of the match so that
                     // the next search starts after the nl. If we're at EOF,
@@ -197,22 +236,15 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
     #[inline(always)]
     fn find_inverted_matches(&mut self, upto: usize) {
         debug_assert!(self.invert_match);
-        while self.inp.pos < upto {
-            let pos = memchr(b'\n', &self.inp.buf[self.inp.pos..upto])
-                      .unwrap_or(upto);
+        let mut it = IterLines::new(self.inp.pos);
+        while let Some((start, end)) = it.next(&self.inp.buf[..upto]) {
             if !self.count {
                 if let Some(ref mut line_count) = self.line_count {
                     *line_count += 1;
                 }
-                self.printer.matched(
-                    &self.path,
-                    &self.inp.buf,
-                    self.inp.pos,
-                    self.inp.pos + pos,
-                    self.line_count,
-                );
+                self.print_match(start, end);
             }
-            self.inp.pos += pos + 1;
+            self.inp.pos = end + 1;
             self.match_count += 1;
         }
     }
@@ -223,12 +255,28 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             *line_count += count_lines(&self.inp.buf[self.inp.pos..upto]);
         }
     }
+
+    #[inline(always)]
+    fn print_match(&mut self, start: usize, end: usize) {
+        self.printer.matched(
+            &self.path, &self.inp.buf, start, end, self.line_count);
+        self.last_printed = (start, end);
+        self.after_context_remaining = self.after_context;
+    }
+
+    #[inline(always)]
+    fn print_context(&mut self, start: usize, end: usize) {
+        self.printer.context(
+            &self.path, &self.inp.buf, start, end, self.line_count);
+        self.last_printed = (start, end);
+    }
 }
 
 pub struct InputBuffer {
     read_size: usize,
     buf: Vec<u8>,
-    tmp: Vec<u8>,
+    tmp1: Vec<u8>,
+    tmp2: Vec<u8>,
     pos: usize,
     lastnl: usize,
     end: usize,
@@ -246,6 +294,8 @@ impl InputBuffer {
     ///
     /// The capacity determines the size of each read from the underlying
     /// reader.
+    ///
+    /// `cap` must be a minimum of `1`.
     pub fn with_capacity(mut cap: usize) -> InputBuffer {
         if cap == 0 {
             cap = 1;
@@ -253,7 +303,8 @@ impl InputBuffer {
         InputBuffer {
             read_size: cap,
             buf: vec![0; cap],
-            tmp: vec![],
+            tmp1: vec![],
+            tmp2: vec![],
             pos: 0,
             lastnl: 0,
             end: 0,
@@ -270,16 +321,34 @@ impl InputBuffer {
         self.is_binary = false;
     }
 
-    fn fill<R: io::Read>(&mut self, rdr: &mut R) -> Result<bool, io::Error> {
-        if self.lastnl < self.end {
-            self.tmp.clear();
-            self.tmp.extend_from_slice(&self.buf[self.lastnl..self.end]);
-            self.buf[0..self.tmp.len()].copy_from_slice(&self.tmp);
-            self.end = self.tmp.len();
-        } else {
-            self.end = 0;
-        }
+    fn fill<R: io::Read>(
+        &mut self,
+        rdr: &mut R,
+        keep_from: usize,
+    ) -> Result<bool, io::Error> {
         self.pos = 0;
+        self.tmp1.clear();
+        self.tmp2.clear();
+
+        // Save the leftovers from the previous fill before anything else.
+        if self.lastnl < self.end {
+            self.tmp1.extend_from_slice(&self.buf[self.lastnl..self.end]);
+        }
+        // If we need to save lines to account for context, do that here.
+        // These context lines have already been searched, but make up the
+        // first bytes of this buffer.
+        if keep_from < self.lastnl {
+            self.tmp2.extend_from_slice(&self.buf[keep_from..self.lastnl]);
+            self.buf[0..self.tmp2.len()].copy_from_slice(&self.tmp2);
+            self.pos = self.tmp2.len();
+        }
+        if !self.tmp1.is_empty() {
+            let (start, end) = (self.pos, self.pos + self.tmp1.len());
+            self.buf[start..end].copy_from_slice(&self.tmp1);
+            self.end = end;
+        } else {
+            self.end = self.pos;
+        }
         self.lastnl = 0;
         while self.lastnl == 0 {
             if self.buf.len() - self.end < self.read_size {
@@ -296,7 +365,7 @@ impl InputBuffer {
             }
             self.first = false;
             if n == 0 {
-                if self.end == 0 {
+                if self.end - self.pos == 0 {
                     return Ok(false);
                 }
                 self.lastnl = self.end;
@@ -316,6 +385,10 @@ impl InputBuffer {
     }
 }
 
+/// Returns true if and only if the given buffer is determined to be "binary"
+/// or otherwise not contain text data that is usefully searchable.
+///
+/// Note that this may return both false positives and false negatives!
 #[inline(always)]
 fn is_binary(buf: &[u8]) -> bool {
     if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
@@ -324,6 +397,7 @@ fn is_binary(buf: &[u8]) -> bool {
     memchr(b'\x00', &buf[0..cmp::min(1024, buf.len())]).is_some()
 }
 
+/// Count the number of lines in the given buffer.
 #[inline(always)]
 fn count_lines(mut buf: &[u8]) -> u64 {
     let mut count = 0;
@@ -332,6 +406,96 @@ fn count_lines(mut buf: &[u8]) -> u64 {
         buf = &buf[pos + 1..];
     }
     count
+}
+
+/// An "iterator" over lines in a particular buffer.
+///
+/// Idiomatic Rust would borrow the buffer and use it as internal state to
+/// advance over the positions of each line. We neglect that approach to avoid
+/// the borrow in the search code. (Because the borrow prevents composition
+/// through other mutable methods.)
+struct IterLines {
+    pos: usize,
+}
+
+impl IterLines {
+    /// Creates a new iterator over lines starting at the position given.
+    ///
+    /// The buffer is passed to the `next` method.
+    #[inline(always)]
+    fn new(start: usize) -> IterLines {
+        IterLines {
+            pos: start,
+        }
+    }
+
+    /// Return the start and end position of the next line in the buffer. The
+    /// buffer given should be the same on every call.
+    #[inline(always)]
+    fn next(&mut self, buf: &[u8]) -> Option<(usize, usize)> {
+        match memchr(b'\n', &buf[self.pos..]) {
+            None => {
+                if self.pos < buf.len() {
+                    let start = self.pos;
+                    self.pos = buf.len();
+                    Some((start, buf.len()))
+                } else {
+                    None
+                }
+            }
+            Some(end) => {
+                let start = self.pos;
+                let end = self.pos + end;
+                self.pos = end + 1;
+                Some((start, end))
+            }
+        }
+    }
+}
+
+/// Returns the starting index of the Nth line preceding `end`.
+///
+/// If `buf` is empty, then `0` is returned. If `count` is `0`, then `end` is
+/// returned.
+///
+/// If `end` points at a new line in `buf`, then searching starts as if `end`
+/// pointed immediately before the new line.
+///
+/// The position returned corresponds to the first byte in the given line.
+#[inline(always)]
+fn start_of_previous_lines(
+    buf: &[u8],
+    mut end: usize,
+    mut count: usize,
+) -> usize {
+    if buf.is_empty() {
+        return 0;
+    }
+    if count == 0 {
+        return end;
+    }
+    if end == buf.len() {
+        end -= 1;
+    }
+    if buf[end] == b'\n' {
+        end -= 1;
+    }
+    while count > 0 {
+        match memrchr(b'\n', &buf[..end]) {
+            None => {
+                return 0;
+            }
+            Some(i) => {
+                count -= 1;
+                end = i;
+                if end == 0 {
+                    return end;
+                }
+                end -= 1;
+            }
+        }
+    }
+    end + 2
 }
 
 #[cfg(test)]
@@ -343,7 +507,7 @@ mod tests {
 
     use printer::Printer;
 
-    use super::{InputBuffer, Searcher};
+    use super::{InputBuffer, Searcher, start_of_previous_lines};
 
     fn hay(s: &str) -> io::Cursor<Vec<u8>> {
         io::Cursor::new(s.to_string().into_bytes())
@@ -355,6 +519,88 @@ mod tests {
 
     fn test_path() -> &'static Path {
         &Path::new("/baz.rs")
+    }
+
+    #[test]
+    fn previous_lines() {
+        let text = &b"\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+"[..];
+        assert_eq!(366, text.len());
+
+        assert_eq!(0, start_of_previous_lines(text, 366, 100));
+        assert_eq!(366, start_of_previous_lines(text, 366, 0));
+
+        assert_eq!(321, start_of_previous_lines(text, 366, 1));
+        assert_eq!(321, start_of_previous_lines(text, 365, 1));
+        assert_eq!(321, start_of_previous_lines(text, 364, 1));
+        assert_eq!(321, start_of_previous_lines(text, 322, 1));
+        assert_eq!(321, start_of_previous_lines(text, 321, 1));
+        assert_eq!(258, start_of_previous_lines(text, 320, 1));
+
+        assert_eq!(258, start_of_previous_lines(text, 366, 2));
+        assert_eq!(258, start_of_previous_lines(text, 365, 2));
+        assert_eq!(258, start_of_previous_lines(text, 364, 2));
+        assert_eq!(258, start_of_previous_lines(text, 322, 2));
+        assert_eq!(258, start_of_previous_lines(text, 321, 2));
+        assert_eq!(193, start_of_previous_lines(text, 320, 2));
+
+        assert_eq!(65, start_of_previous_lines(text, 66, 1));
+        assert_eq!(0, start_of_previous_lines(text, 66, 2));
+        assert_eq!(64, start_of_previous_lines(text, 64, 0));
+        assert_eq!(0, start_of_previous_lines(text, 64, 1));
+        assert_eq!(0, start_of_previous_lines(text, 64, 2));
+
+        assert_eq!(0, start_of_previous_lines(text, 0, 2));
+        assert_eq!(0, start_of_previous_lines(text, 0, 1));
+    }
+
+    #[test]
+    fn previous_lines_short() {
+        let text = &b"a\nb\nc\nd\ne\nf\n"[..];
+        assert_eq!(12, text.len());
+
+        assert_eq!(10, start_of_previous_lines(text, 12, 1));
+        assert_eq!(8, start_of_previous_lines(text, 12, 2));
+        assert_eq!(6, start_of_previous_lines(text, 12, 3));
+        assert_eq!(4, start_of_previous_lines(text, 12, 4));
+        assert_eq!(2, start_of_previous_lines(text, 12, 5));
+        assert_eq!(0, start_of_previous_lines(text, 12, 6));
+        assert_eq!(0, start_of_previous_lines(text, 12, 7));
+        assert_eq!(10, start_of_previous_lines(text, 11, 1));
+        assert_eq!(8, start_of_previous_lines(text, 11, 2));
+        assert_eq!(6, start_of_previous_lines(text, 11, 3));
+        assert_eq!(4, start_of_previous_lines(text, 11, 4));
+        assert_eq!(2, start_of_previous_lines(text, 11, 5));
+        assert_eq!(0, start_of_previous_lines(text, 11, 6));
+        assert_eq!(0, start_of_previous_lines(text, 11, 7));
+        assert_eq!(10, start_of_previous_lines(text, 10, 1));
+        assert_eq!(8, start_of_previous_lines(text, 10, 2));
+        assert_eq!(6, start_of_previous_lines(text, 10, 3));
+        assert_eq!(4, start_of_previous_lines(text, 10, 4));
+        assert_eq!(2, start_of_previous_lines(text, 10, 5));
+        assert_eq!(0, start_of_previous_lines(text, 10, 6));
+        assert_eq!(0, start_of_previous_lines(text, 10, 7));
+
+        assert_eq!(8, start_of_previous_lines(text, 9, 1));
+        assert_eq!(8, start_of_previous_lines(text, 8, 1));
+
+        assert_eq!(6, start_of_previous_lines(text, 7, 1));
+        assert_eq!(6, start_of_previous_lines(text, 6, 1));
+
+        assert_eq!(4, start_of_previous_lines(text, 5, 1));
+        assert_eq!(4, start_of_previous_lines(text, 4, 1));
+
+        assert_eq!(2, start_of_previous_lines(text, 3, 1));
+        assert_eq!(2, start_of_previous_lines(text, 2, 1));
+
+        assert_eq!(0, start_of_previous_lines(text, 1, 1));
+        assert_eq!(0, start_of_previous_lines(text, 0, 1));
     }
 
     #[test]
@@ -509,5 +755,32 @@ and exhibited clearly, with a label attached.\
         assert_eq!(4, count);
         let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "/baz.rs:4\n");
+    }
+
+    #[test]
+    fn before_context_one() {
+        let text = hay("\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+");
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = matcher("Sherlock");
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), text);
+            searcher.before_context(1).run().unwrap()
+        };
+        assert_eq!(2, count);
+        let out = String::from_utf8(pp.into_inner()).unwrap();
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs-Holmeses, success in the province of detective work must always
+/baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
+");
     }
 }
