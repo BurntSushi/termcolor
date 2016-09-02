@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export RUSTFLAGS="-C target-feature=+ssse3"
+cargo build --release --features simd-accel

@@ -65,23 +65,30 @@ xrep is like the silver searcher and grep, but faster than both.
 WARNING: Searching stdin isn't yet supported.
 
 Options:
-    -c, --count         Suppress normal output and show count of line matches.
-    --debug             Show debug messages.
-    --files             Print each file that would be searched
-                        (but don't search).
-    --hidden            Search hidden directories and files.
-    -i, --ignore-case   Case insensitive search.
-    -L, --follow        Follow symlinks.
-    -n, --line-number   Show line numbers (1-based).
-    -t, --threads ARG   The number of threads to use. Defaults to the number
-                        of logical CPUs. [default: 0]
-    -v, --invert-match  Invert matching.
+    -c, --count                Suppress normal output and show count of line
+                               matches.
+    -A, --after-context NUM    Show NUM lines after each match.
+    -B, --before-context NUM   Show NUM lines before each match.
+    -C, --context NUM          Show NUM lines before and after each match.
+    --debug                    Show debug messages.
+    --files                    Print each file that would be searched
+                               (but don't search).
+    --hidden                   Search hidden directories and files.
+    -i, --ignore-case          Case insensitive search.
+    -L, --follow               Follow symlinks.
+    -n, --line-number          Show line numbers (1-based).
+    -t, --threads ARG          The number of threads to use. Defaults to the
+                               number of logical CPUs. [default: 0]
+    -v, --invert-match         Invert matching.
 ";
 
 #[derive(RustcDecodable)]
 struct Args {
     arg_pattern: String,
     arg_path: Vec<String>,
+    flag_after_context: usize,
+    flag_before_context: usize,
+    flag_context: usize,
     flag_count: bool,
     flag_debug: bool,
     flag_files: bool,
@@ -238,6 +245,8 @@ impl Worker {
                 searcher = searcher.count(self.args.flag_count);
                 searcher = searcher.line_number(self.args.flag_line_number);
                 searcher = searcher.invert_match(self.args.flag_invert_match);
+                searcher = searcher.before_context(
+                    self.args.flag_before_context);
                 if let Err(err) = searcher.run() {
                     eprintln!("{}", err);
                 }

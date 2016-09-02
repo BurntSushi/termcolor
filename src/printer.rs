@@ -15,13 +15,19 @@ macro_rules! w {
 
 pub struct Printer<W> {
     wtr: W,
+    has_printed: bool,
 }
 
 impl<W: io::Write> Printer<W> {
     pub fn new(wtr: W) -> Printer<W> {
         Printer {
             wtr: wtr,
+            has_printed: false,
         }
+    }
+
+    pub fn has_printed(&self) -> bool {
+        self.has_printed
     }
 
     pub fn into_inner(self) -> W {
@@ -38,6 +44,10 @@ impl<W: io::Write> Printer<W> {
 
     pub fn count(&mut self, count: u64) {
         wln!(&mut self.wtr, "{}", count);
+    }
+
+    pub fn context_separator(&mut self) {
+        wln!(&mut self.wtr, "--");
     }
 
     pub fn matched<P: AsRef<Path>>(
@@ -81,6 +91,7 @@ impl<W: io::Write> Printer<W> {
     }
 
     fn write(&mut self, buf: &[u8]) {
+        self.has_printed = true;
         let _ = self.wtr.write_all(buf);
     }
 }
