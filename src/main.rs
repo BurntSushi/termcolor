@@ -245,6 +245,8 @@ impl Worker {
                 searcher = searcher.count(self.args.flag_count);
                 searcher = searcher.line_number(self.args.flag_line_number);
                 searcher = searcher.invert_match(self.args.flag_invert_match);
+                searcher = searcher.after_context(
+                    self.args.flag_after_context);
                 searcher = searcher.before_context(
                     self.args.flag_before_context);
                 if let Err(err) = searcher.run() {
