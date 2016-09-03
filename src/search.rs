@@ -66,7 +66,8 @@ pub struct Searcher<'a, R, W: 'a> {
     match_count: u64,
     line_count: Option<u64>,
     last_match: Match,
-    last_printed: Option<(usize, usize)>,
+    last_printed: usize,
+    last_line: usize,
     after_context_remaining: usize,
     count: bool,
     invert_match: bool,
@@ -104,7 +105,8 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             match_count: 0,
             line_count: None,
             last_match: Match::default(),
-            last_printed: None,
+            last_printed: 0,
+            last_line: 0,
             after_context_remaining: 0,
             count: false,
             invert_match: false,
@@ -158,85 +160,41 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         self.match_count = 0;
         self.line_count = if self.line_number { Some(0) } else { None };
         self.last_match = Match::default();
-        self.last_printed = None;
         self.after_context_remaining = 0;
         loop {
-            let mut keep_from = self.inp.lastnl;
-            if self.before_context > 0 {
-                let start_of_keep = cmp::min(
-                    self.inp.lastnl,
-                    self.last_printed.map(|(_, end)| end).unwrap_or(0));
-                keep_from = start_of_keep + start_of_previous_lines(
-                    &self.inp.buf[start_of_keep..],
-                    (self.inp.lastnl - start_of_keep).saturating_sub(1),
-                    self.before_context);
-                // println!("start_of_keep: {}, lastnl: {}, last_printed: {:?}",
-                         // start_of_keep, self.inp.lastnl, self.last_printed);
-                // println!("keep_from: {}", keep_from);
-                // println!(
-                    // "KEEPING: {}",
-                    // show(&self.inp.buf[keep_from..self.inp.lastnl]));
-            }
-            let ok = try!(self.inp.fill(&mut self.haystack, keep_from).map_err(|err| {
-                Error::from_io(err, &self.path)
-            }));
-            if !ok {
+            if !try!(self.fill()) {
                 break;
             }
-            self.last_printed = None;
             while self.inp.pos < self.inp.lastnl {
-                let ok = self.grep.read_match(
+                let matched = self.grep.read_match(
                     &mut self.last_match,
                     &mut self.inp.buf[..self.inp.lastnl],
                     self.inp.pos);
-                if !ok {
-                    let upto = self.inp.lastnl;
-                    if self.invert_match {
-                        self.find_inverted_matches(upto);
-                    } else {
-                        self.count_lines(upto);
-                    }
-                    self.inp.pos = upto;
-                    break;
-                }
-                if self.before_context > 0 {
-                    let start = self.last_printed.map(|(_, e)| e).unwrap_or(0);
-                    let end = self.last_match.start().saturating_sub(1);
-                    if end > start {
-                        let before_context_start =
-                            start + start_of_previous_lines(
-                                &self.inp.buf[start..],
-                                end - start,
-                                self.before_context);
-                        let mut it = IterLines::new(before_context_start);
-                        while let Some((s, e)) = it.next(&self.inp.buf[..end]) {
-                            self.print_context(s, e);
-                        }
-                    }
-                }
                 if self.invert_match {
-                    let inverted_upto = self.last_match.start();
-                    self.find_inverted_matches(inverted_upto);
-                    // Add a line to account for the match...
-                    if let Some(ref mut line_count) = self.line_count {
-                        *line_count += 1;
+                    let upto =
+                        if matched {
+                            self.last_match.start()
+                        } else {
+                            self.inp.lastnl
+                        };
+                    if upto > self.inp.pos {
+                        let upto_context = self.inp.pos;
+                        self.print_before_context(upto_context);
+                        self.print_inverted_matches(upto);
                     }
-                    // ... and skip over the match.
-                    self.inp.pos = self.last_match.end() + 1;
-                } else {
+                } else if matched {
                     self.match_count += 1;
                     if !self.count {
-                        let upto = cmp::min(
-                            self.inp.lastnl, self.last_match.end() + 1);
-                        self.count_lines(upto);
                         let start = self.last_match.start();
                         let end = self.last_match.end();
+                        self.print_before_context(start);
                         self.print_match(start, end);
                     }
-                    // Move the position one past the end of the match so that
-                    // the next search starts after the nl. If we're at EOF,
-                    // then pos will be past EOF.
+                }
+                if matched {
                     self.inp.pos = self.last_match.end() + 1;
+                } else {
+                    self.inp.pos = self.inp.lastnl;
                 }
             }
         }
@@ -246,15 +204,37 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         Ok(self.match_count)
     }
 
+    fn fill(&mut self) -> Result<bool, Error> {
+        let mut keep_from = self.inp.lastnl;
+        if self.before_context > 0 {
+            keep_from = start_of_previous_lines(
+                &self.inp.buf,
+                self.inp.lastnl.saturating_sub(1),
+                self.before_context + 1);
+        }
+        if keep_from < self.last_printed {
+            self.last_printed = self.last_printed - keep_from;
+        } else {
+            self.last_printed = 0;
+        }
+        if keep_from < self.last_line {
+            self.last_line = self.last_line - keep_from;
+        } else {
+            self.count_lines(keep_from);
+            self.last_line = 0;
+        }
+        let ok = try!(self.inp.fill(&mut self.haystack, keep_from).map_err(|err| {
+            Error::from_io(err, &self.path)
+        }));
+        Ok(ok)
+    }
+
     #[inline(always)]
-    fn find_inverted_matches(&mut self, upto: usize) {
+    fn print_inverted_matches(&mut self, upto: usize) {
         debug_assert!(self.invert_match);
         let mut it = IterLines::new(self.inp.pos);
         while let Some((start, end)) = it.next(&self.inp.buf[..upto]) {
             if !self.count {
-                if let Some(ref mut line_count) = self.line_count {
-                    *line_count += 1;
-                }
                 self.print_match(start, end);
             }
             self.inp.pos = end + 1;
@@ -263,33 +243,67 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
     }
 
     #[inline(always)]
-    fn count_lines(&mut self, upto: usize) {
-        if let Some(ref mut line_count) = self.line_count {
-            *line_count += count_lines(&self.inp.buf[self.inp.pos..upto]);
+    fn print_before_context(&mut self, upto: usize) {
+        // Never print contexts if we're only counting.
+        if self.count {
+            return;
+        }
+        if self.before_context > 0 {
+            let start = self.last_printed;
+            let end = upto.saturating_sub(1);
+            if end > start {
+                let before_context_start =
+                    start + start_of_previous_lines(
+                        &self.inp.buf[start..],
+                        end - start,
+                        self.before_context);
+                let mut it = IterLines::new(before_context_start);
+                while let Some((s, e)) = it.next(&self.inp.buf[..end]) {
+                    self.print_context(s, e);
+                }
+            }
         }
     }
 
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
+        let last_printed = cmp::min(end + 1, self.inp.lastnl);
+        self.count_lines(start);
+        self.add_line(last_printed);
         self.printer.matched(
             &self.path, &self.inp.buf, start, end, self.line_count);
-        self.last_printed = Some((start, cmp::min(end + 1, self.inp.lastnl)));
+        self.last_printed = last_printed;
         self.after_context_remaining = self.after_context;
     }
 
     #[inline(always)]
     fn print_context(&mut self, start: usize, end: usize) {
-        // println!("has_printed: {}, last_printed: {:?}, this: {:?}",
-                 // self.printer.has_printed(),
-                 // self.last_printed,
-                 // (start, end));
         if self.printer.has_printed()
-            && self.last_printed.map(|(_, end)| start > end).unwrap_or(true) {
+            && (self.last_printed == 0 || self.last_printed < start) {
             self.printer.context_separator();
         }
+        let last_printed = cmp::min(end + 1, self.inp.lastnl);
+        self.count_lines(start);
+        self.add_line(last_printed);
         self.printer.context(
             &self.path, &self.inp.buf, start, end, self.line_count);
-        self.last_printed = Some((start, cmp::min(end + 1, self.inp.lastnl)));
+        self.last_printed = last_printed;
+    }
+
+    #[inline(always)]
+    fn count_lines(&mut self, upto: usize) {
+        if let Some(ref mut line_count) = self.line_count {
+            *line_count += count_lines(&self.inp.buf[self.last_line..upto]);
+            self.last_line = upto;
+        }
+    }
+
+    #[inline(always)]
+    fn add_line(&mut self, line_end: usize) {
+        if let Some(ref mut line_count) = self.line_count {
+            *line_count += 1;
+            self.last_line = line_end;
+        }
     }
 }
 
@@ -499,6 +513,9 @@ fn start_of_previous_lines(
         end -= 1;
     }
     if buf[end] == b'\n' {
+        if end == 0 {
+            return end + 1;
+        }
         end -= 1;
     }
     while count > 0 {
@@ -783,7 +800,10 @@ and exhibited clearly, with a label attached.\
     }
 
     macro_rules! before_context {
-        ($name:ident, $query:expr, $num:expr, $expected:expr) => {
+        ($name:ident, $query:expr, $num:expr, $expect:expr) => {
+            before_context!($name, $query, $num, $expect, false);
+        };
+        ($name:ident, $query:expr, $num:expr, $expect:expr, $invert:expr) => {
             #[test]
             fn $name() {
                 let text = hay("\
@@ -798,46 +818,66 @@ and exhibited clearly, with a label attached.\
                 let mut pp = Printer::new(vec![]);
                 let grep = matcher($query);
                 let count = {
-                    let searcher = Searcher::new(
+                    let mut searcher = Searcher::new(
                         &mut inp, &mut pp, &grep, test_path(), text);
-                    searcher.before_context($num).run().unwrap()
+                    searcher = searcher.line_number(true);
+                    searcher = searcher.before_context($num);
+                    searcher = searcher.invert_match($invert);
+                    searcher.run().unwrap()
                 };
                 let out = String::from_utf8(pp.into_inner()).unwrap();
-                assert_eq!(out, $expected);
+                assert_eq!(out, $expect);
             }
-        }
+        };
     }
 
     before_context!(before_context_one, "Sherlock", 1, "\
-/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
-/baz.rs-Holmeses, success in the province of detective work must always
-/baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
+/baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs-2-Holmeses, success in the province of detective work must always
+/baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
 
+    before_context!(before_context_invert_one1, "Sherlock", 1, "\
+/baz.rs-1-For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs:2:Holmeses, success in the province of detective work must always
+/baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
+/baz.rs:4:can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
+/baz.rs:6:and exhibited clearly, with a label attached.
+", true);
+
+    before_context!(before_context_invert_one2, " a ", 1, "\
+/baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs:2:Holmeses, success in the province of detective work must always
+--
+/baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
+", true);
+
     before_context!(before_context_two1, "Sherlock", 2, "\
-/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
-/baz.rs-Holmeses, success in the province of detective work must always
-/baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
+/baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs-2-Holmeses, success in the province of detective work must always
+/baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
 
     before_context!(before_context_two2, "dusted", 2, "\
-/baz.rs-be, to a very large extent, the result of luck. Sherlock Holmes
-/baz.rs-can extract a clew from a wisp of straw or a flake of cigar ash;
-/baz.rs:but Doctor Watson has to have it taken out for him and dusted,
+/baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
+/baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 ");
 
     before_context!(before_context_two3, "success|attached", 2, "\
-/baz.rs-For the Doctor Watsons of this world, as opposed to the Sherlock
-/baz.rs:Holmeses, success in the province of detective work must always
+/baz.rs-1-For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs:2:Holmeses, success in the province of detective work must always
 --
-/baz.rs-can extract a clew from a wisp of straw or a flake of cigar ash;
-/baz.rs-but Doctor Watson has to have it taken out for him and dusted,
-/baz.rs:and exhibited clearly, with a label attached.
+/baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
+/baz.rs-5-but Doctor Watson has to have it taken out for him and dusted,
+/baz.rs:6:and exhibited clearly, with a label attached.
 ");
 
     before_context!(before_context_three, "Sherlock", 3, "\
-/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
-/baz.rs-Holmeses, success in the province of detective work must always
-/baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
+/baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+/baz.rs-2-Holmeses, success in the province of detective work must always
+/baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
 }
