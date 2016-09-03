@@ -26,7 +26,7 @@ use std::result;
 use std::sync::Arc;
 use std::thread;
 
-use crossbeam::sync::SegQueue;
+use crossbeam::sync::chase_lev::{self, Steal, Stealer};
 use docopt::Docopt;
 use grep::{Grep, GrepBuilder};
 use parking_lot::Mutex;
@@ -138,8 +138,8 @@ fn run(mut args: Args) -> Result<()> {
     let mut workers = vec![];
     let stdout = Arc::new(Mutex::new(io::BufWriter::new(io::stdout())));
 
-    let chan_work_send = {
-        let chan_work = Arc::new(SegQueue::new());
+    let mut chan_work_send = {
+        let (worker, stealer) = chase_lev::deque();
         for _ in 0..args.num_workers() {
             let grepb =
                 GrepBuilder::new(&args.arg_pattern)
@@ -147,14 +147,14 @@ fn run(mut args: Args) -> Result<()> {
             let worker = Worker {
                 args: args.clone(),
                 stdout: stdout.clone(),
-                chan_work: chan_work.clone(),
+                chan_work: stealer.clone(),
                 inpbuf: InputBuffer::new(),
                 outbuf: Some(vec![]),
                 grep: try!(grepb.build()),
             };
             workers.push(thread::spawn(move || worker.run()));
         }
-        chan_work
+        worker
     };
 
     for p in &args.arg_path {
@@ -210,7 +210,7 @@ enum Message<T> {
 struct Worker {
     args: Arc<Args>,
     stdout: Arc<Mutex<io::BufWriter<io::Stdout>>>,
-    chan_work: Arc<SegQueue<Message<PathBuf>>>,
+    chan_work: Stealer<Message<PathBuf>>,
     inpbuf: InputBuffer,
     outbuf: Option<Vec<u8>>,
     grep: Grep,
@@ -219,10 +219,10 @@ struct Worker {
 impl Worker {
     fn run(mut self) {
         loop {
-            let path = match self.chan_work.try_pop() {
-                None => continue,
-                Some(Message::Quit) => break,
-                Some(Message::Some(path)) => path,
+            let path = match self.chan_work.steal() {
+                Steal::Empty | Steal::Abort => continue,
+                Steal::Data(Message::Quit) => break,
+                Steal::Data(Message::Some(path)) => path,
             };
             let file = match File::open(&path) {
                 Ok(file) => file,
