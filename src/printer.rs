@@ -65,7 +65,9 @@ impl<W: io::Write> Printer<W> {
             self.write(b":");
         }
         self.write(&buf[start..end]);
-        self.write(b"\n");
+        if buf[start..end].last() != Some(&b'\n') {
+            self.write(b"\n");
+        }
     }
 
     pub fn context<P: AsRef<Path>>(
@@ -83,11 +85,13 @@ impl<W: io::Write> Printer<W> {
             self.write(b"-");
         }
         self.write(&buf[start..end]);
-        self.write(b"\n");
+        if buf[start..end].last() != Some(&b'\n') {
+            self.write(b"\n");
+        }
     }
 
     pub fn binary_matched<P: AsRef<Path>>(&mut self, path: P) {
-        wln!(&mut self.wtr, "binary file {} matches", path.as_ref().display());
+        wln!(&mut self.wtr, "Binary file {} matches", path.as_ref().display());
     }
 
     fn write(&mut self, buf: &[u8]) {

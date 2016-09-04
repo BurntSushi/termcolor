@@ -164,6 +164,9 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             let upto = self.inp.lastnl;
             self.print_after_context(upto);
             if !try!(self.fill()) {
+                if self.inp.is_binary {
+                    self.printer.binary_matched(self.path);
+                }
                 break;
             }
             while self.inp.pos < self.inp.lastnl {
@@ -195,7 +198,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
                     }
                 }
                 if matched {
-                    self.inp.pos = self.last_match.end() + 1;
+                    self.inp.pos = self.last_match.end();
                 } else {
                     self.inp.pos = self.inp.lastnl;
                 }
@@ -220,7 +223,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         } else {
             self.last_printed = 0;
         }
-        if keep_from < self.last_line {
+        if keep_from <= self.last_line {
             self.last_line = self.last_line - keep_from;
         } else {
             self.count_lines(keep_from);
@@ -240,7 +243,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             if !self.count {
                 self.print_match(start, end);
             }
-            self.inp.pos = end + 1;
+            self.inp.pos = end;
             self.match_count += 1;
         }
     }
@@ -251,14 +254,14 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             return;
         }
         let start = self.last_printed;
-        let end = upto.saturating_sub(1);
+        let end = upto;
         if start >= end {
             return;
         }
         let before_context_start =
             start + start_of_previous_lines(
                 &self.inp.buf[start..],
-                end - start,
+                end - start - 1,
                 self.before_context);
         let mut it = IterLines::new(before_context_start);
         while let Some((s, e)) = it.next(&self.inp.buf[..end]) {
@@ -286,24 +289,22 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
-        let last_printed = cmp::min(end + 1, self.inp.lastnl);
         self.print_separator(start);
         self.count_lines(start);
-        self.add_line(last_printed);
+        self.add_line(end);
         self.printer.matched(
             &self.path, &self.inp.buf, start, end, self.line_count);
-        self.last_printed = last_printed;
+        self.last_printed = end;
         self.after_context_remaining = self.after_context;
     }
 
     #[inline(always)]
     fn print_context(&mut self, start: usize, end: usize) {
-        let last_printed = cmp::min(end + 1, self.inp.lastnl);
         self.count_lines(start);
-        self.add_line(last_printed);
+        self.add_line(end);
         self.printer.context(
             &self.path, &self.inp.buf, start, end, self.line_count);
-        self.last_printed = last_printed;
+        self.last_printed = end;
     }
 
     #[inline(always)]
@@ -424,6 +425,7 @@ impl InputBuffer {
                 &mut self.buf[self.end..self.end + self.read_size]));
             if self.first {
                 if is_binary(&self.buf[self.end..self.end + n]) {
+                    self.is_binary = true;
                     return Ok(false);
                 }
             }
@@ -435,10 +437,6 @@ impl InputBuffer {
                 self.lastnl = self.end;
                 break;
             }
-            // We know there is no nl between self.start..self.end since:
-            //   1) If this is the first iteration, then any bytes preceding
-            //      self.end do not contain nl by construction.
-            //   2) Subsequent iterations only occur if no nl could be found.
             self.lastnl =
                 memrchr(b'\n', &self.buf[self.end..self.end + n])
                 .map(|i| self.end + i + 1)
@@ -495,6 +493,8 @@ impl IterLines {
 
     /// Return the start and end position of the next line in the buffer. The
     /// buffer given should be the same on every call.
+    ///
+    /// The range returned includes the new line.
     #[inline(always)]
     fn next(&mut self, buf: &[u8]) -> Option<(usize, usize)> {
         match memchr(b'\n', &buf[self.pos..]) {
@@ -509,8 +509,8 @@ impl IterLines {
             }
             Some(end) => {
                 let start = self.pos;
-                let end = self.pos + end;
-                self.pos = end + 1;
+                let end = self.pos + end + 1;
+                self.pos = end;
                 Some((start, end))
             }
         }
@@ -532,7 +532,7 @@ fn start_of_previous_lines(
     mut end: usize,
     mut count: usize,
 ) -> usize {
-    if buf.is_empty() {
+    if buf[..end].is_empty() {
         return 0;
     }
     if count == 0 {
@@ -567,6 +567,9 @@ fn start_of_previous_lines(
                 count -= 1;
                 end = i;
                 if end == 0 {
+                    if buf[end] == b'\n' && count == 0 {
+                        end += 1;
+                    }
                     return end;
                 }
                 end -= 1;
@@ -591,6 +594,32 @@ mod tests {
 
     use super::{InputBuffer, Searcher, start_of_previous_lines};
 
+    lazy_static! {
+        static ref SHERLOCK: &'static str = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.\
+";
+        static ref CODE: &'static str = "\
+extern crate snap;
+
+use std::io;
+
+fn main() {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+
+    // Wrap the stdin reader in a Snappy reader.
+    let mut rdr = snap::Reader::new(stdin.lock());
+    let mut wtr = stdout.lock();
+    io::copy(&mut rdr, &mut wtr).expect(\"I/O operation failed\");
+}
+";
+    }
+
     fn hay(s: &str) -> io::Cursor<Vec<u8>> {
         io::Cursor::new(s.to_string().into_bytes())
     }
@@ -603,16 +632,43 @@ mod tests {
         &Path::new("/baz.rs")
     }
 
+    type TestSearcher<'a> = Searcher<'a, io::Cursor<Vec<u8>>, Vec<u8>>;
+
+    fn search_smallcap<F: FnMut(TestSearcher) -> TestSearcher>(
+        pat: &str,
+        haystack: &str,
+        mut map: F,
+    ) -> (u64, String) {
+        let mut inp = InputBuffer::with_capacity(1);
+        let mut pp = Printer::new(vec![]);
+        let grep = GrepBuilder::new(pat).build().unwrap();
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), hay(haystack));
+            map(searcher).run().unwrap()
+        };
+        (count, String::from_utf8(pp.into_inner()).unwrap())
+    }
+
+    fn search<F: FnMut(TestSearcher) -> TestSearcher>(
+        pat: &str,
+        haystack: &str,
+        mut map: F,
+    ) -> (u64, String) {
+        let mut inp = InputBuffer::with_capacity(4096);
+        let mut pp = Printer::new(vec![]);
+        let grep = GrepBuilder::new(pat).build().unwrap();
+        let count = {
+            let searcher = Searcher::new(
+                &mut inp, &mut pp, &grep, test_path(), hay(haystack));
+            map(searcher).run().unwrap()
+        };
+        (count, String::from_utf8(pp.into_inner()).unwrap())
+    }
+
     #[test]
     fn previous_lines() {
-        let text = &b"\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-"[..];
+        let text = SHERLOCK.as_bytes();
         assert_eq!(366, text.len());
 
         assert_eq!(0, start_of_previous_lines(text, 366, 100));
@@ -712,24 +768,8 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn basic_search() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.run().unwrap()
-        };
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s|s);
         assert_eq!(2, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "\
 /baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
@@ -738,24 +778,9 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn line_numbers() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.line_number(true).run().unwrap()
-        };
+        let (count, out) = search_smallcap(
+            "Sherlock", &*SHERLOCK, |s| s.line_number(true));
         assert_eq!(2, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
@@ -764,47 +789,17 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn count() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.count(true).run().unwrap()
-        };
+        let (count, out) = search_smallcap(
+            "Sherlock", &*SHERLOCK, |s| s.count(true));
         assert_eq!(2, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "/baz.rs:2\n");
     }
 
     #[test]
     fn invert_match() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.invert_match(true).run().unwrap()
-        };
+        let (count, out) = search_smallcap(
+            "Sherlock", &*SHERLOCK, |s| s.invert_match(true));
         assert_eq!(4, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "\
 /baz.rs:Holmeses, success in the province of detective work must always
 /baz.rs:can extract a clew from a wisp of straw or a flake of cigar ash;
@@ -815,24 +810,10 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn invert_match_line_numbers() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.invert_match(true).line_number(true).run().unwrap()
-        };
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.invert_match(true).line_number(true)
+        });
         assert_eq!(4, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "\
 /baz.rs:2:Holmeses, success in the province of detective work must always
 /baz.rs:4:can extract a clew from a wisp of straw or a flake of cigar ash;
@@ -843,95 +824,91 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn invert_match_count() {
-        let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-        let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
-        let grep = matcher("Sherlock");
-        let count = {
-            let searcher = Searcher::new(
-                &mut inp, &mut pp, &grep, test_path(), text);
-            searcher.invert_match(true).count(true).run().unwrap()
-        };
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.invert_match(true).count(true)
+        });
         assert_eq!(4, count);
-        let out = String::from_utf8(pp.into_inner()).unwrap();
         assert_eq!(out, "/baz.rs:4\n");
     }
 
-    macro_rules! before_context {
-        ($name:ident, $query:expr, $num:expr, $expect:expr) => {
-            before_context!($name, $query, $num, $expect, false);
-        };
-        ($name:ident, $query:expr, $num:expr, $expect:expr, $invert:expr) => {
-            #[test]
-            fn $name() {
-                let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-                let mut inp = InputBuffer::with_capacity(4096);
-                let mut pp = Printer::new(vec![]);
-                let grep = matcher($query);
-                let count = {
-                    let mut searcher = Searcher::new(
-                        &mut inp, &mut pp, &grep, test_path(), text);
-                    searcher = searcher.line_number(true);
-                    searcher = searcher.before_context($num);
-                    searcher = searcher.invert_match($invert);
-                    searcher.run().unwrap()
-                };
-                let out = String::from_utf8(pp.into_inner()).unwrap();
-                assert_eq!(out, $expect);
-            }
-        };
-    }
-
-    before_context!(before_context_one, "Sherlock", 1, "\
+    #[test]
+    fn before_context_one1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).before_context(1)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
+    }
 
-    before_context!(before_context_invert_one1, "Sherlock", 1, "\
+    #[test]
+    fn before_context_invert_one1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).before_context(1).invert_match(true)
+        });
+        assert_eq!(4, count);
+        assert_eq!(out, "\
 /baz.rs-1-For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:2:Holmeses, success in the province of detective work must always
 /baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs:4:can extract a clew from a wisp of straw or a flake of cigar ash;
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs:6:and exhibited clearly, with a label attached.
-", true);
+");
+    }
 
-    before_context!(before_context_invert_one2, " a ", 1, "\
+    #[test]
+    fn before_context_invert_one2() {
+        let (count, out) = search_smallcap(" a ", &*SHERLOCK, |s| {
+            s.line_number(true).before_context(1).invert_match(true)
+        });
+        assert_eq!(3, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:2:Holmeses, success in the province of detective work must always
 --
 /baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
-", true);
+");
+    }
 
-    before_context!(before_context_two1, "Sherlock", 2, "\
+    #[test]
+    fn before_context_two1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).before_context(2)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
+    }
 
-    before_context!(before_context_two2, "dusted", 2, "\
+    #[test]
+    fn before_context_two2() {
+        let (count, out) = search_smallcap("dusted", &*SHERLOCK, |s| {
+            s.line_number(true).before_context(2)
+        });
+        assert_eq!(1, count);
+        assert_eq!(out, "\
 /baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 ");
+    }
 
-    before_context!(before_context_two3, "success|attached", 2, "\
+    #[test]
+    fn before_context_two3() {
+        let (count, out) = search_smallcap(
+            "success|attached", &*SHERLOCK, |s| {
+                s.line_number(true).before_context(2)
+            });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs-1-For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:2:Holmeses, success in the province of detective work must always
 --
@@ -939,91 +916,150 @@ and exhibited clearly, with a label attached.\
 /baz.rs-5-but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs:6:and exhibited clearly, with a label attached.
 ");
+    }
 
-    before_context!(before_context_three, "Sherlock", 3, "\
+    #[test]
+    fn before_context_two4() {
+        let (count, out) = search("stdin", &*CODE, |s| {
+            s.line_number(true).before_context(2)
+        });
+        assert_eq!(3, count);
+        assert_eq!(out, "\
+/baz.rs-4-
+/baz.rs-5-fn main() {
+/baz.rs:6:    let stdin = io::stdin();
+/baz.rs-7-    let stdout = io::stdout();
+/baz.rs-8-
+/baz.rs:9:    // Wrap the stdin reader in a Snappy reader.
+/baz.rs:10:    let mut rdr = snap::Reader::new(stdin.lock());
+");
+    }
+
+    #[test]
+    fn before_context_two5() {
+        let (count, out) = search("stdout", &*CODE, |s| {
+            s.line_number(true).before_context(2)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
+/baz.rs-5-fn main() {
+/baz.rs-6-    let stdin = io::stdin();
+/baz.rs:7:    let stdout = io::stdout();
+--
+/baz.rs-9-    // Wrap the stdin reader in a Snappy reader.
+/baz.rs-10-    let mut rdr = snap::Reader::new(stdin.lock());
+/baz.rs:11:    let mut wtr = stdout.lock();
+");
+    }
+
+    #[test]
+    fn before_context_three1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+                s.line_number(true).before_context(3)
+            });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
-
-    macro_rules! after_context {
-        ($name:ident, $query:expr, $num:expr, $expect:expr) => {
-            after_context!($name, $query, $num, $expect, false);
-        };
-        ($name:ident, $query:expr, $num:expr, $expect:expr, $invert:expr) => {
-            #[test]
-            fn $name() {
-                let text = hay("\
-For the Doctor Watsons of this world, as opposed to the Sherlock
-Holmeses, success in the province of detective work must always
-be, to a very large extent, the result of luck. Sherlock Holmes
-can extract a clew from a wisp of straw or a flake of cigar ash;
-but Doctor Watson has to have it taken out for him and dusted,
-and exhibited clearly, with a label attached.\
-");
-                let mut inp = InputBuffer::with_capacity(4096);
-                let mut pp = Printer::new(vec![]);
-                let grep = matcher($query);
-                let count = {
-                    let mut searcher = Searcher::new(
-                        &mut inp, &mut pp, &grep, test_path(), text);
-                    searcher = searcher.line_number(true);
-                    searcher = searcher.after_context($num);
-                    searcher = searcher.invert_match($invert);
-                    searcher.run().unwrap()
-                };
-                let out = String::from_utf8(pp.into_inner()).unwrap();
-                assert_eq!(out, $expect);
-            }
-        };
     }
 
-    after_context!(after_context_one, "Sherlock", 1, "\
+    #[test]
+    fn after_context_one1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(1)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
 ");
+    }
 
-    after_context!(after_context_invert_one1, "Sherlock", 1, "\
+    #[test]
+    fn after_context_invert_one1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(1).invert_match(true)
+        });
+        assert_eq!(4, count);
+        assert_eq!(out, "\
 /baz.rs:2:Holmeses, success in the province of detective work must always
 /baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs:4:can extract a clew from a wisp of straw or a flake of cigar ash;
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs:6:and exhibited clearly, with a label attached.
-", true);
+");
+    }
 
-    after_context!(after_context_invert_one2, " a ", 1, "\
+    #[test]
+    fn after_context_invert_one2() {
+        let (count, out) = search_smallcap(" a ", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(1).invert_match(true)
+        });
+        assert_eq!(3, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:2:Holmeses, success in the province of detective work must always
 /baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
 --
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs-6-and exhibited clearly, with a label attached.
-", true);
+");
+    }
 
-    after_context!(after_context_two1, "Sherlock", 2, "\
+    #[test]
+    fn after_context_two1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(2)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
 /baz.rs-5-but Doctor Watson has to have it taken out for him and dusted,
 ");
+    }
 
-    after_context!(after_context_two2, "dusted", 2, "\
+    #[test]
+    fn after_context_two2() {
+        let (count, out) = search_smallcap("dusted", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(2)
+        });
+        assert_eq!(1, count);
+        assert_eq!(out, "\
 /baz.rs:5:but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs-6-and exhibited clearly, with a label attached.
 ");
+    }
 
-    after_context!(after_context_two3, "success|attached", 2, "\
+    #[test]
+    fn after_context_two3() {
+        let (count, out) = search_smallcap(
+            "success|attached", &*SHERLOCK, |s| {
+                s.line_number(true).after_context(2)
+            });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:2:Holmeses, success in the province of detective work must always
 /baz.rs-3-be, to a very large extent, the result of luck. Sherlock Holmes
 /baz.rs-4-can extract a clew from a wisp of straw or a flake of cigar ash;
 --
 /baz.rs:6:and exhibited clearly, with a label attached.
 ");
+    }
 
-    after_context!(after_context_three, "Sherlock", 3, "\
+    #[test]
+    fn after_context_three1() {
+        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+            s.line_number(true).after_context(3)
+        });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs-2-Holmeses, success in the province of detective work must always
 /baz.rs:3:be, to a very large extent, the result of luck. Sherlock Holmes
@@ -1031,4 +1067,26 @@ and exhibited clearly, with a label attached.\
 /baz.rs-5-but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs-6-and exhibited clearly, with a label attached.
 ");
+    }
+
+    #[test]
+    fn before_after_context_two1() {
+        let (count, out) = search(
+            r"fn main|let mut rdr", &*CODE, |s| {
+                s.line_number(true).after_context(2).before_context(2)
+            });
+        assert_eq!(2, count);
+        assert_eq!(out, "\
+/baz.rs-3-use std::io;
+/baz.rs-4-
+/baz.rs:5:fn main() {
+/baz.rs-6-    let stdin = io::stdin();
+/baz.rs-7-    let stdout = io::stdout();
+/baz.rs-8-
+/baz.rs-9-    // Wrap the stdin reader in a Snappy reader.
+/baz.rs:10:    let mut rdr = snap::Reader::new(stdin.lock());
+/baz.rs-11-    let mut wtr = stdout.lock();
+/baz.rs-12-    io::copy(&mut rdr, &mut wtr).expect(\"I/O operation failed\");
+");
+    }
 }

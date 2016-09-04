@@ -230,7 +230,7 @@ impl Grep {
 
     fn find_line_end(&self, buf: &[u8], pos: usize) -> usize {
         memchr(self.opts.line_terminator, &buf[pos..])
-            .map_or(buf.len(), |i| pos + i)
+            .map_or(buf.len(), |i| pos + i + 1)
     }
 }
 
@@ -281,7 +281,7 @@ mod tests {
             let start = memrchr(b'\n', &haystack[..s])
                         .map_or(0, |i| i + 1);
             let end = memchr(b'\n', &haystack[e..])
-                      .map_or(haystack.len(), |i| e + i);
+                      .map_or(haystack.len(), |i| e + i + 1);
             lines.push(Match {
                 start: start,
                 end: end,

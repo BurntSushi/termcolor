@@ -4,6 +4,9 @@ extern crate crossbeam;
 extern crate docopt;
 extern crate env_logger;
 extern crate grep;
+#[cfg(test)]
+#[macro_use]
+extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate memchr;
@@ -136,7 +139,7 @@ fn run(mut args: Args) -> Result<()> {
     }
     let args = Arc::new(args);
     let mut workers = vec![];
-    let stdout = Arc::new(Mutex::new(io::BufWriter::new(io::stdout())));
+    let out = Arc::new(Mutex::new(Out::new(args.clone(), io::stdout())));
 
     let mut chan_work_send = {
         let (worker, stealer) = chase_lev::deque();
@@ -146,7 +149,7 @@ fn run(mut args: Args) -> Result<()> {
                 .case_insensitive(args.flag_ignore_case);
             let worker = Worker {
                 args: args.clone(),
-                stdout: stdout.clone(),
+                out: out.clone(),
                 chan_work: stealer.clone(),
                 inpbuf: InputBuffer::new(),
                 outbuf: Some(vec![]),
@@ -200,6 +203,26 @@ impl Args {
         ig.ignore_hidden(!self.flag_hidden);
         walk::Iter::new(ig, wd)
     }
+
+    fn before_context(&self) -> usize {
+        if self.flag_context > 0 {
+            self.flag_context
+        } else {
+            self.flag_before_context
+        }
+    }
+
+    fn after_context(&self) -> usize {
+        if self.flag_context > 0 {
+            self.flag_context
+        } else {
+            self.flag_after_context
+        }
+    }
+
+    fn has_context(&self) -> bool {
+        self.before_context() > 0 || self.after_context() > 0
+    }
 }
 
 enum Message<T> {
@@ -209,7 +232,7 @@ enum Message<T> {
 
 struct Worker {
     args: Arc<Args>,
-    stdout: Arc<Mutex<io::BufWriter<io::Stdout>>>,
+    out: Arc<Mutex<Out<io::Stdout>>>,
     chan_work: Stealer<Message<PathBuf>>,
     inpbuf: InputBuffer,
     outbuf: Option<Vec<u8>>,
@@ -245,21 +268,43 @@ impl Worker {
                 searcher = searcher.count(self.args.flag_count);
                 searcher = searcher.line_number(self.args.flag_line_number);
                 searcher = searcher.invert_match(self.args.flag_invert_match);
-                searcher = searcher.after_context(
-                    self.args.flag_after_context);
-                searcher = searcher.before_context(
-                    self.args.flag_before_context);
+                searcher = searcher.after_context(self.args.after_context());
+                searcher = searcher.before_context(self.args.before_context());
                 if let Err(err) = searcher.run() {
                     eprintln!("{}", err);
                 }
             }
             let outbuf = printer.into_inner();
             if !outbuf.is_empty() {
-                let mut stdout = self.stdout.lock();
-                let _ = stdout.write_all(&outbuf);
-                let _ = stdout.flush();
+                let mut out = self.out.lock();
+                out.write_file_matches(&outbuf);
             }
             self.outbuf = Some(outbuf);
         }
+    }
+}
+
+struct Out<W: io::Write> {
+    args: Arc<Args>,
+    wtr: io::BufWriter<W>,
+    printed: bool,
+}
+
+impl<W: io::Write> Out<W> {
+    fn new(args: Arc<Args>, wtr: W) -> Out<W> {
+        Out {
+            args: args,
+            wtr: io::BufWriter::new(wtr),
+            printed: false,
+        }
+    }
+
+    fn write_file_matches(&mut self, buf: &[u8]) {
+        if self.printed && self.args.has_context() {
+            let _ = self.wtr.write_all(b"--\n");
+        }
+        let _ = self.wtr.write_all(buf);
+        let _ = self.wtr.flush();
+        self.printed = true;
     }
 }
