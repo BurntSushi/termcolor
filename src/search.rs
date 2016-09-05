@@ -98,7 +98,7 @@ impl Default for Options {
     }
 }
 
-impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
+impl<'a, R: io::Read, W: Send + io::Write> Searcher<'a, R, W> {
     /// Create a new searcher.
     ///
     /// `inp` is a reusable input buffer that is used as scratch space by this
@@ -329,7 +329,8 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         self.count_lines(start);
         self.add_line(end);
         self.printer.matched(
-            &self.path, &self.inp.buf, start, end, self.line_count);
+            &self.grep.regex(), &self.path,
+            &self.inp.buf, start, end, self.line_count);
         self.last_printed = end;
         self.after_context_remaining = self.opts.after_context;
     }
@@ -739,7 +740,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]).with_filename(true);
+        let mut pp = Printer::new(vec![], false).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
             let searcher = Searcher::new(
@@ -755,7 +756,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(4096);
-        let mut pp = Printer::new(vec![]).with_filename(true);
+        let mut pp = Printer::new(vec![], false).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
             let searcher = Searcher::new(

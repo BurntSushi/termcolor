@@ -84,6 +84,8 @@ pub struct Gitignore {
     set: glob::Set,
     root: PathBuf,
     patterns: Vec<Pattern>,
+    num_ignores: u64,
+    num_whitelist: u64,
 }
 
 impl Gitignore {
@@ -151,6 +153,16 @@ impl Gitignore {
             }
         }
         Match::None
+    }
+
+    /// Returns the total number of ignore patterns.
+    pub fn num_ignores(&self) -> u64 {
+        self.num_ignores
+    }
+
+    /// Returns the total number of whitelisted patterns.
+    pub fn num_whitelist(&self) -> u64 {
+        self.num_whitelist
     }
 }
 
@@ -238,10 +250,14 @@ impl GitignoreBuilder {
     ///
     /// Once a matcher is built, no new glob patterns can be added to it.
     pub fn build(self) -> Result<Gitignore, Error> {
+        let nignores = self.patterns.iter().filter(|p| !p.whitelist).count();
+        let nwhitelist = self.patterns.iter().filter(|p| p.whitelist).count();
         Ok(Gitignore {
             set: try!(self.builder.build()),
             root: self.root,
             patterns: self.patterns,
+            num_ignores: nignores as u64,
+            num_whitelist: nwhitelist as u64,
         })
     }
 

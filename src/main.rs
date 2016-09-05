@@ -4,9 +4,11 @@ extern crate crossbeam;
 extern crate docopt;
 extern crate env_logger;
 extern crate grep;
-#[cfg(test)]
+#[cfg(windows)]
+extern crate kernel32;
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate memchr;
@@ -16,12 +18,15 @@ extern crate parking_lot;
 extern crate regex;
 extern crate regex_syntax as syntax;
 extern crate rustc_serialize;
+extern crate term;
 extern crate thread_local;
 extern crate walkdir;
+#[cfg(windows)]
+extern crate winapi;
 
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io;
 use std::path::Path;
 use std::process;
 use std::result;
@@ -58,6 +63,7 @@ mod ignore;
 mod out;
 mod printer;
 mod search;
+mod sys;
 mod types;
 mod walk;
 
@@ -68,7 +74,7 @@ fn main() {
         Ok(count) if count == 0 => process::exit(1),
         Ok(count) => process::exit(0),
         Err(err) => {
-            let _ = writeln!(&mut io::stderr(), "{}", err);
+            eprintln!("{}", err);
             process::exit(1);
         }
     }
@@ -105,7 +111,7 @@ fn run(args: Args) -> Result<u64> {
         if p == Path::new("-") {
             workq.push(Work::Stdin)
         } else {
-            for ent in args.walker(p) {
+            for ent in try!(args.walker(p)) {
                 workq.push(Work::File(ent));
             }
         }
@@ -121,14 +127,14 @@ fn run(args: Args) -> Result<u64> {
 }
 
 fn run_files(args: Args) -> Result<u64> {
-    let mut printer = Printer::new(io::BufWriter::new(io::stdout()));
+    let mut printer = args.printer(io::BufWriter::new(io::stdout()));
     let mut file_count = 0;
     for p in args.paths() {
         if p == Path::new("-") {
             printer.path(&Path::new("<stdin>"));
             file_count += 1;
         } else {
-            for ent in args.walker(p) {
+            for ent in try!(args.walker(p)) {
                 printer.path(ent.path());
                 file_count += 1;
             }
@@ -138,7 +144,7 @@ fn run_files(args: Args) -> Result<u64> {
 }
 
 fn run_types(args: Args) -> Result<u64> {
-    let mut printer = Printer::new(io::BufWriter::new(io::stdout()));
+    let mut printer = args.printer(io::BufWriter::new(io::stdout()));
     let mut ty_count = 0;
     for def in args.type_defs() {
         printer.type_def(def);
@@ -200,7 +206,7 @@ impl Worker {
         self.match_count
     }
 
-    fn do_work<W: io::Write>(
+    fn do_work<W: Send + io::Write>(
         &mut self,
         printer: &mut Printer<W>,
         work: WorkReady,
@@ -229,7 +235,7 @@ impl Worker {
         }
     }
 
-    fn search<R: io::Read, W: io::Write>(
+    fn search<R: io::Read, W: Send + io::Write>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,

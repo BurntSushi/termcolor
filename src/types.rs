@@ -163,6 +163,11 @@ impl Types {
         }
     }
 
+    /// Creates a new file type matcher that never matches.
+    pub fn empty() -> Types {
+        Types::new(None, false)
+    }
+
     /// Returns a match for the given path against this file type matcher.
     ///
     /// The path is considered whitelisted if it matches a selected file type.

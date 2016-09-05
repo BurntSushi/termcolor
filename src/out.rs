@@ -9,7 +9,7 @@ use std::io::{self, Write};
 pub struct Out<W: io::Write> {
     wtr: io::BufWriter<W>,
     printed: bool,
-    file_separator: Vec<u8>,
+    file_separator: Option<Vec<u8>>,
 }
 
 impl<W: io::Write> Out<W> {
@@ -18,7 +18,7 @@ impl<W: io::Write> Out<W> {
         Out {
             wtr: io::BufWriter::new(wtr),
             printed: false,
-            file_separator: vec![],
+            file_separator: None,
         }
     }
 
@@ -27,16 +27,18 @@ impl<W: io::Write> Out<W> {
     ///
     /// If sep is empty, then no file separator is printed.
     pub fn file_separator(mut self, sep: Vec<u8>) -> Out<W> {
-        self.file_separator = sep;
+        self.file_separator = Some(sep);
         self
     }
 
     /// Write the search results of a single file to the underlying wtr and
     /// flush wtr.
     pub fn write(&mut self, buf: &[u8]) {
-        if self.printed && !self.file_separator.is_empty() {
-            let _ = self.wtr.write_all(&self.file_separator);
-            let _ = self.wtr.write_all(b"\n");
+        if let Some(ref sep) = self.file_separator {
+            if self.printed {
+                let _ = self.wtr.write_all(sep);
+                let _ = self.wtr.write_all(b"\n");
+            }
         }
         let _ = self.wtr.write_all(buf);
         let _ = self.wtr.flush();

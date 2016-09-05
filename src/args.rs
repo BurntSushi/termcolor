@@ -16,6 +16,7 @@ use ignore::Ignore;
 use out::Out;
 use printer::Printer;
 use search::{InputBuffer, Searcher};
+use sys;
 use types::{FileTypeDef, Types, TypesBuilder};
 use walk;
 
@@ -37,6 +38,9 @@ xrep is like the silver searcher and grep, but faster than both.
 Common options:
     -a, --text                 Search binary files as if they were text.
     -c, --count                Only show count of line matches for each file.
+    --color WHEN               Whether to use coloring in match.
+                               Valid values are never, always or auto.
+                               [default: auto]
     -g, --glob GLOB ...        Include or exclude files for searching that
                                match the given glob. This always overrides any
                                other ignore logic. Multiple glob flags may be
@@ -44,8 +48,13 @@ Common options:
                                Precede a glob with a '!' to exclude it.
     -h, --help                 Show this usage message.
     -i, --ignore-case          Case insensitive search.
-    -n, --line-number          Show line numbers (1-based).
+    -n, --line-number          Show line numbers (1-based). This is enabled
+                               by default at a tty.
+    -N, --no-line-number       Suppress line numbers.
     -q, --quiet                Do not print anything to stdout.
+    -r, --replace ARG          Replace every match with the string given.
+                               Capture group indices (e.g., $5) and names
+                               (e.g., $foo) are supported.
     -t, --type TYPE ...        Only search files matching TYPE. Multiple type
                                flags may be provided. Use the --type-list flag
                                to list all available types.
@@ -80,6 +89,13 @@ Less common options:
         Prefix each match with the file name that contains it. This is the
         default when more than one file is searched.
 
+    --heading
+        Show the file name above clusters of matches from each file.
+        This is the default mode at a tty.
+
+    --no-heading
+        Don't show any file name heading.
+
     --hidden
         Search hidden directories and files.
 
@@ -93,10 +109,16 @@ Less common options:
     --no-ignore
         Don't respect ignore files (.gitignore, .xrepignore, etc.)
 
+    --no-ignore-parent
+        Don't respect ignore files in parent directories.
+
+    -p, --pretty
+        Alias for --color=always --heading -n.
+
     -Q, --literal
         Treat the pattern as a literal string instead of a regular expression.
 
-    --threads ARG
+    -j, --threads ARG
         The number of threads to use. Defaults to the number of logical CPUs
         (capped at 6). [default: 0]
 
@@ -123,6 +145,7 @@ pub struct RawArgs {
     arg_path: Vec<String>,
     flag_after_context: usize,
     flag_before_context: usize,
+    flag_color: String,
     flag_context: usize,
     flag_context_separator: String,
     flag_count: bool,
@@ -130,14 +153,20 @@ pub struct RawArgs {
     flag_files: bool,
     flag_follow: bool,
     flag_glob: Vec<String>,
+    flag_heading: bool,
     flag_hidden: bool,
     flag_ignore_case: bool,
     flag_invert_match: bool,
     flag_line_number: bool,
     flag_line_terminator: String,
     flag_literal: bool,
+    flag_no_heading: bool,
     flag_no_ignore: bool,
+    flag_no_ignore_parent: bool,
+    flag_no_line_number: bool,
+    flag_pretty: bool,
     flag_quiet: bool,
+    flag_replace: Option<String>,
     flag_text: bool,
     flag_threads: usize,
     flag_type: Vec<String>,
@@ -156,18 +185,22 @@ pub struct Args {
     paths: Vec<PathBuf>,
     after_context: usize,
     before_context: usize,
+    color: bool,
     context_separator: Vec<u8>,
     count: bool,
     eol: u8,
     files: bool,
     follow: bool,
     glob_overrides: Option<Gitignore>,
+    heading: bool,
     hidden: bool,
     ignore_case: bool,
     invert_match: bool,
     line_number: bool,
     no_ignore: bool,
+    no_ignore_parent: bool,
     quiet: bool,
+    replace: Option<Vec<u8>>,
     text: bool,
     threads: usize,
     type_defs: Vec<FileTypeDef>,
@@ -194,7 +227,11 @@ impl RawArgs {
         };
         let paths =
             if self.arg_path.is_empty() {
-                vec![Path::new("./").to_path_buf()]
+                if sys::stdin_is_atty() {
+                    vec![Path::new("./").to_path_buf()]
+                } else {
+                    vec![Path::new("-").to_path_buf()]
+                }
             } else {
                 self.arg_path.iter().map(|p| {
                     Path::new(p).to_path_buf()
@@ -232,6 +269,12 @@ impl RawArgs {
             } else {
                 self.flag_threads
             };
+        let color =
+            if self.flag_color == "auto" {
+                sys::stdout_is_atty() || self.flag_pretty
+            } else {
+                self.flag_color == "always"
+            };
         let mut with_filename = self.flag_with_filename;
         if !with_filename {
             with_filename = paths.len() > 1 || paths[0].is_dir();
@@ -240,30 +283,44 @@ impl RawArgs {
         btypes.add_defaults();
         try!(self.add_types(&mut btypes));
         let types = try!(btypes.build());
-        Ok(Args {
+        let mut args = Args {
             pattern: pattern,
             paths: paths,
             after_context: after_context,
             before_context: before_context,
+            color: color,
             context_separator: unescape(&self.flag_context_separator),
             count: self.flag_count,
             eol: eol,
             files: self.flag_files,
             follow: self.flag_follow,
             glob_overrides: glob_overrides,
+            heading: !self.flag_no_heading && self.flag_heading,
             hidden: self.flag_hidden,
             ignore_case: self.flag_ignore_case,
             invert_match: self.flag_invert_match,
-            line_number: self.flag_line_number,
+            line_number: !self.flag_no_line_number && self.flag_line_number,
             no_ignore: self.flag_no_ignore,
+            no_ignore_parent: self.flag_no_ignore_parent,
             quiet: self.flag_quiet,
+            replace: self.flag_replace.clone().map(|s| s.into_bytes()),
             text: self.flag_text,
             threads: threads,
             type_defs: btypes.definitions(),
             type_list: self.flag_type_list,
             types: types,
             with_filename: with_filename,
-        })
+        };
+        // If stdout is a tty, then apply some special default options.
+        if sys::stdout_is_atty() || self.flag_pretty {
+            if !self.flag_no_line_number && !args.count {
+                args.line_number = true;
+            }
+            if !self.flag_no_heading {
+                args.heading = true;
+            }
+        }
+        Ok(args)
     }
 
     fn add_types(&self, types: &mut TypesBuilder) -> Result<()> {
@@ -338,19 +395,26 @@ impl Args {
 
     /// Create a new printer of individual search results that writes to the
     /// writer given.
-    pub fn printer<W: io::Write>(&self, wtr: W) -> Printer<W> {
-        Printer::new(wtr)
+    pub fn printer<W: Send + io::Write>(&self, wtr: W) -> Printer<W> {
+        let mut p = Printer::new(wtr, self.color)
             .context_separator(self.context_separator.clone())
             .eol(self.eol)
+            .heading(self.heading)
             .quiet(self.quiet)
-            .with_filename(self.with_filename)
+            .with_filename(self.with_filename);
+        if let Some(ref rep) = self.replace {
+            p = p.replace(rep.clone());
+        }
+        p
     }
 
     /// Create a new printer of search results for an entire file that writes
     /// to the writer given.
     pub fn out<W: io::Write>(&self, wtr: W) -> Out<W> {
         let mut out = Out::new(wtr);
-        if self.before_context > 0 || self.after_context > 0 {
+        if self.heading && !self.count {
+            out = out.file_separator(b"".to_vec());
+        } else if self.before_context > 0 || self.after_context > 0 {
             out = out.file_separator(self.context_separator.clone());
         }
         out
@@ -364,7 +428,7 @@ impl Args {
     /// Create a new line based searcher whose configuration is taken from the
     /// command line. This searcher supports a dizzying array of features:
     /// inverted matching, line counting, context control and more.
-    pub fn searcher<'a, R: io::Read, W: io::Write>(
+    pub fn searcher<'a, R: io::Read, W: Send + io::Write>(
         &self,
         inp: &'a mut InputBuffer,
         printer: &'a mut Printer<W>,
@@ -399,16 +463,19 @@ impl Args {
     }
 
     /// Create a new recursive directory iterator at the path given.
-    pub fn walker(&self, path: &Path) -> walk::Iter {
+    pub fn walker(&self, path: &Path) -> Result<walk::Iter> {
         let wd = WalkDir::new(path).follow_links(self.follow);
         let mut ig = Ignore::new();
         ig.ignore_hidden(!self.hidden);
         ig.no_ignore(self.no_ignore);
         ig.add_types(self.types.clone());
+        if !self.no_ignore_parent {
+            try!(ig.push_parents(path));
+        }
         if let Some(ref overrides) = self.glob_overrides {
             ig.add_override(overrides.clone());
         }
-        walk::Iter::new(ig, wd)
+        Ok(walk::Iter::new(ig, wd))
     }
 }
 

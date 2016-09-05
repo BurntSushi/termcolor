@@ -1,7 +1,15 @@
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
+use std::sync::Arc;
+
+use regex::bytes::Regex;
+use term::{self, Terminal};
+use term::color::*;
+use term::terminfo::TermInfo;
 
 use types::FileTypeDef;
+
+use self::Writer::*;
 
 /// Printer encapsulates all output logic for searching.
 ///
@@ -10,7 +18,7 @@ use types::FileTypeDef;
 /// writes to memory, neither of which commonly fail.
 pub struct Printer<W> {
     /// The underlying writer.
-    wtr: W,
+    wtr: Writer<W>,
     /// Whether anything has been printed to wtr yet.
     has_printed: bool,
     /// The string to use to separate non-contiguous runs of context lines.
@@ -19,21 +27,31 @@ pub struct Printer<W> {
     /// printed via the match directly, but occasionally we need to insert them
     /// ourselves (for example, to print a context separator).
     eol: u8,
+    /// Whether to show file name as a heading or not.
+    ///
+    /// N.B. If with_filename is false, then this setting has no effect.
+    heading: bool,
     /// Whether to suppress all output.
     quiet: bool,
+    /// A string to use as a replacement of each match in a matching line.
+    replace: Option<Vec<u8>>,
     /// Whether to prefix each match with the corresponding file name.
     with_filename: bool,
 }
 
-impl<W: io::Write> Printer<W> {
+impl<W: Send + io::Write> Printer<W> {
     /// Create a new printer that writes to wtr.
-    pub fn new(wtr: W) -> Printer<W> {
+    ///
+    /// `color` should be true if the printer should try to use coloring.
+    pub fn new(wtr: W, color: bool) -> Printer<W> {
         Printer {
-            wtr: wtr,
+            wtr: Writer::new(wtr, color),
             has_printed: false,
             context_separator: "--".to_string().into_bytes(),
             eol: b'\n',
+            heading: false,
             quiet: false,
+            replace: None,
             with_filename: false,
         }
     }
@@ -50,9 +68,27 @@ impl<W: io::Write> Printer<W> {
         self
     }
 
+    /// Whether to show file name as a heading or not.
+    ///
+    /// N.B. If with_filename is false, then this setting has no effect.
+    pub fn heading(mut self, yes: bool) -> Printer<W> {
+        self.heading = yes;
+        self
+    }
+
     /// When set, all output is suppressed.
     pub fn quiet(mut self, yes: bool) -> Printer<W> {
         self.quiet = yes;
+        self
+    }
+
+    /// Replace every match in each matching line with the replacement string
+    /// given.
+    ///
+    /// The replacement string syntax is documented here:
+    /// https://doc.rust-lang.org/regex/regex/bytes/struct.Captures.html#method.expand
+    pub fn replace(mut self, replacement: Vec<u8>) -> Printer<W> {
+        self.replace = Some(replacement);
         self
     }
 
@@ -70,7 +106,7 @@ impl<W: io::Write> Printer<W> {
     /// Flushes the underlying writer and returns it.
     pub fn into_inner(mut self) -> W {
         let _ = self.wtr.flush();
-        self.wtr
+        self.wtr.into_inner()
     }
 
     /// Prints a type definition.
@@ -120,24 +156,49 @@ impl<W: io::Write> Printer<W> {
 
     pub fn matched<P: AsRef<Path>>(
         &mut self,
+        re: &Regex,
         path: P,
         buf: &[u8],
         start: usize,
         end: usize,
         line_number: Option<u64>,
     ) {
-        if self.with_filename {
+        if self.heading && self.with_filename && !self.has_printed {
+            self.write_heading(path.as_ref());
+        } else if !self.heading && self.with_filename {
             self.write(path.as_ref().to_string_lossy().as_bytes());
             self.write(b":");
         }
         if let Some(line_number) = line_number {
-            self.write(line_number.to_string().as_bytes());
-            self.write(b":");
+            self.line_number(line_number, b':');
         }
-        self.write(&buf[start..end]);
+        if self.replace.is_some() {
+            let line = re.replace_all(
+                &buf[start..end], &**self.replace.as_ref().unwrap());
+            self.write(&line);
+        } else {
+            self.write_match(re, &buf[start..end]);
+        }
         if buf[start..end].last() != Some(&self.eol) {
             self.write_eol();
         }
+    }
+
+    pub fn write_match(&mut self, re: &Regex, buf: &[u8]) {
+        if !self.wtr.is_color() {
+            self.write(buf);
+            return;
+        }
+        let mut last_written = 0;
+        for (s, e) in re.find_iter(buf) {
+            self.write(&buf[last_written..s]);
+            let _ = self.wtr.fg(BRIGHT_RED);
+            let _ = self.wtr.attr(term::Attr::Bold);
+            self.write(&buf[s..e]);
+            let _ = self.wtr.reset();
+            last_written = e;
+        }
+        self.write(&buf[last_written..]);
     }
 
     pub fn context<P: AsRef<Path>>(
@@ -148,18 +209,45 @@ impl<W: io::Write> Printer<W> {
         end: usize,
         line_number: Option<u64>,
     ) {
-        if self.with_filename {
+        if self.heading && self.with_filename && !self.has_printed {
+            self.write_heading(path.as_ref());
+        } else if !self.heading && self.with_filename {
+            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write(b":");
+        }
+        if !self.heading && self.with_filename {
             self.write(path.as_ref().to_string_lossy().as_bytes());
             self.write(b"-");
         }
         if let Some(line_number) = line_number {
-            self.write(line_number.to_string().as_bytes());
-            self.write(b"-");
+            self.line_number(line_number, b'-');
         }
         self.write(&buf[start..end]);
         if buf[start..end].last() != Some(&self.eol) {
             self.write_eol();
         }
+    }
+
+    fn write_heading<P: AsRef<Path>>(&mut self, path: P) {
+        if self.wtr.is_color() {
+            let _ = self.wtr.fg(GREEN);
+        }
+        self.write(path.as_ref().to_string_lossy().as_bytes());
+        self.write_eol();
+        if self.wtr.is_color() {
+            let _ = self.wtr.reset();
+        }
+    }
+
+    fn line_number(&mut self, n: u64, sep: u8) {
+        if self.wtr.is_color() {
+            let _ = self.wtr.fg(YELLOW);
+        }
+        self.write(n.to_string().as_bytes());
+        if self.wtr.is_color() {
+            let _ = self.wtr.reset();
+        }
+        self.write(&[sep]);
     }
 
     fn write(&mut self, buf: &[u8]) {
@@ -173,5 +261,156 @@ impl<W: io::Write> Printer<W> {
     fn write_eol(&mut self) {
         let eol = self.eol;
         self.write(&[eol]);
+    }
+}
+
+enum Writer<W> {
+    Colored(term::TerminfoTerminal<W>),
+    NoColor(W),
+}
+
+lazy_static! {
+    static ref TERMINFO: Option<Arc<TermInfo>> = {
+        match term::terminfo::TermInfo::from_env() {
+            Ok(info) => Some(Arc::new(info)),
+            Err(err) => {
+                debug!("error loading terminfo for coloring: {}", err);
+                None
+            }
+        }
+    };
+}
+
+impl<W: Send + io::Write> Writer<W> {
+    fn new(wtr: W, color: bool) -> Writer<W> {
+        // If we want color, build a TerminfoTerminal and see if the current
+        // environment supports coloring. If not, bail with NoColor. To avoid
+        // losing our writer (ownership), do this the long way.
+        if !color || TERMINFO.is_none() {
+            return NoColor(wtr);
+        }
+        // Why doesn't TERMINFO.as_ref().unwrap().clone() work?
+        let info = TERMINFO.clone().unwrap();
+            // names: TERMINFO.as_ref().unwrap().names.clone(),
+            // bools: TERMINFO.as_ref().unwrap().bools.clone(),
+            // numbers: TERMINFO.as_ref().unwrap().numbers.clone(),
+            // strings: TERMINFO.as_ref().unwrap().strings.clone(),
+        // };
+        let tt = term::TerminfoTerminal::new_with_terminfo(wtr, info);
+        if !tt.supports_color() {
+            debug!("environment doesn't support coloring");
+            return NoColor(tt.into_inner());
+        }
+        Colored(tt)
+    }
+
+    fn is_color(&self) -> bool {
+        match *self {
+            Colored(_) => true,
+            NoColor(_) => false,
+        }
+    }
+
+    fn map_result<F>(
+        &mut self,
+        mut f: F,
+    ) -> term::Result<()>
+    where F: FnMut(&mut term::TerminfoTerminal<W>) -> term::Result<()> {
+        match *self {
+            Colored(ref mut w) => f(w),
+            NoColor(_) => Err(term::Error::NotSupported),
+        }
+    }
+
+    fn map_bool<F>(
+        &self,
+        mut f: F,
+    ) -> bool
+    where F: FnMut(&term::TerminfoTerminal<W>) -> bool {
+        match *self {
+            Colored(ref w) => f(w),
+            NoColor(_) => false,
+        }
+    }
+}
+
+impl<W: Send + io::Write> io::Write for Writer<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match *self {
+            Colored(ref mut w) => w.write(buf),
+            NoColor(ref mut w) => w.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match *self {
+            Colored(ref mut w) => w.flush(),
+            NoColor(ref mut w) => w.flush(),
+        }
+    }
+}
+
+impl<W: Send + io::Write> term::Terminal for Writer<W> {
+    type Output = W;
+
+    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
+        self.map_result(|w| w.fg(fg))
+    }
+
+    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
+        self.map_result(|w| w.bg(bg))
+    }
+
+    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
+        self.map_result(|w| w.attr(attr))
+    }
+
+    fn supports_attr(&self, attr: term::Attr) -> bool {
+        self.map_bool(|w| w.supports_attr(attr))
+    }
+
+    fn reset(&mut self) -> term::Result<()> {
+        self.map_result(|w| w.reset())
+    }
+
+    fn supports_reset(&self) -> bool {
+        self.map_bool(|w| w.supports_reset())
+    }
+
+    fn supports_color(&self) -> bool {
+        self.map_bool(|w| w.supports_color())
+    }
+
+    fn cursor_up(&mut self) -> term::Result<()> {
+        self.map_result(|w| w.cursor_up())
+    }
+
+    fn delete_line(&mut self) -> term::Result<()> {
+        self.map_result(|w| w.delete_line())
+    }
+
+    fn carriage_return(&mut self) -> term::Result<()> {
+        self.map_result(|w| w.carriage_return())
+    }
+
+    fn get_ref(&self) -> &W {
+        match *self {
+            Colored(ref w) => w.get_ref(),
+            NoColor(ref w) => w,
+        }
+    }
+
+    fn get_mut(&mut self) -> &mut W {
+        match *self {
+            Colored(ref mut w) => w.get_mut(),
+            NoColor(ref mut w) => w,
+        }
+    }
+
+    fn into_inner(self) -> W {
+        match self {
+            Colored(w) => w.into_inner(),
+            NoColor(w) => w,
+        }
     }
 }

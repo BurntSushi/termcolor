@@ -15,21 +15,39 @@ of `IgnoreDir`s for use during directory traversal.
 
 use std::error::Error as StdError;
 use std::fmt;
+use std::io;
 use std::path::{Path, PathBuf};
 
-use gitignore::{self, Gitignore, GitignoreBuilder, Match};
+use gitignore::{self, Gitignore, GitignoreBuilder, Match, Pattern};
 use types::Types;
+
+const IGNORE_NAMES: &'static [&'static str] = &[
+    ".gitignore",
+    ".agignore",
+    ".xrepignore",
+];
 
 /// Represents an error that can occur when parsing a gitignore file.
 #[derive(Debug)]
 pub enum Error {
     Gitignore(gitignore::Error),
+    Io {
+        path: PathBuf,
+        err: io::Error,
+    },
+}
+
+impl Error {
+    fn from_io<P: AsRef<Path>>(path: P, err: io::Error) -> Error {
+        Error::Io { path: path.as_ref().to_path_buf(), err: err }
+    }
 }
 
 impl StdError for Error {
     fn description(&self) -> &str {
         match *self {
             Error::Gitignore(ref err) => err.description(),
+            Error::Io { ref err, .. } => err.description(),
         }
     }
 }
@@ -38,6 +56,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::Gitignore(ref err) => err.fmt(f),
+            Error::Io { ref path, ref err } => {
+                write!(f, "{}: {}", path.display(), err)
+            }
         }
     }
 }
@@ -59,9 +80,9 @@ pub struct Ignore {
     stack: Vec<Option<IgnoreDir>>,
     /// A set of override globs that are always checked first. A match (whether
     /// it's whitelist or blacklist) trumps anything in stack.
-    overrides: Option<Gitignore>,
+    overrides: Overrides,
     /// A file type matcher.
-    types: Option<Types>,
+    types: Types,
     ignore_hidden: bool,
     no_ignore: bool,
 }
@@ -71,8 +92,8 @@ impl Ignore {
     pub fn new() -> Ignore {
         Ignore {
             stack: vec![],
-            overrides: None,
-            types: None,
+            overrides: Overrides::new(None),
+            types: Types::empty(),
             ignore_hidden: true,
             no_ignore: false,
         }
@@ -92,15 +113,49 @@ impl Ignore {
 
     /// Add a set of globs that overrides all other match logic.
     pub fn add_override(&mut self, gi: Gitignore) -> &mut Ignore {
-        self.overrides = Some(gi);
+        self.overrides = Overrides::new(Some(gi));
         self
     }
 
     /// Add a file type matcher. The file type matcher has the lowest
     /// precedence.
     pub fn add_types(&mut self, types: Types) -> &mut Ignore {
-        self.types = Some(types);
+        self.types = types;
         self
+    }
+
+    /// Push parent directories of `path` on to the stack.
+    pub fn push_parents<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<(), Error> {
+        let path = try!(path.as_ref().canonicalize().map_err(|err| {
+            Error::from_io(path.as_ref(), err)
+        }));
+        let mut path = &*path;
+        let mut saw_git = path.join(".git").is_dir();
+        let mut ignore_names = IGNORE_NAMES.to_vec();
+        let mut ignore_dir_results = vec![];
+        while let Some(parent) = path.parent() {
+            if self.no_ignore {
+                ignore_dir_results.push(Ok(None));
+            } else {
+                if saw_git {
+                    ignore_names.retain(|&name| name != ".gitignore");
+                } else {
+                    saw_git = parent.join(".git").is_dir();
+                }
+                let ignore_dir_result =
+                    IgnoreDir::with_ignore_names(parent, ignore_names.iter());
+                ignore_dir_results.push(ignore_dir_result);
+            }
+            path = parent;
+        }
+
+        for ignore_dir_result in ignore_dir_results.into_iter().rev() {
+            try!(self.push_ignore_dir(ignore_dir_result));
+        }
+        Ok(())
     }
 
     /// Add a directory to the stack.
@@ -112,7 +167,17 @@ impl Ignore {
             self.stack.push(None);
             return Ok(());
         }
-        match IgnoreDir::new(path) {
+        self.push_ignore_dir(IgnoreDir::new(path))
+    }
+
+    /// Pushes the result of building a directory matcher on to the stack.
+    ///
+    /// If the result given contains an error, then it is returned.
+    pub fn push_ignore_dir(
+        &mut self,
+        result: Result<Option<IgnoreDir>, Error>,
+    ) -> Result<(), Error> {
+        match result {
             Ok(id) => {
                 self.stack.push(id);
                 Ok(())
@@ -135,11 +200,9 @@ impl Ignore {
     /// Returns true if and only if the given file path should be ignored.
     pub fn ignored<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
         let path = path.as_ref();
-        if let Some(ref overrides) = self.overrides {
-            let mat = overrides.matched(path, is_dir).invert();
-            if let Some(is_ignored) = self.ignore_match(path, mat) {
-                return is_ignored;
-            }
+        let mat = self.overrides.matched(path, is_dir);
+        if let Some(is_ignored) = self.ignore_match(path, mat) {
+            return is_ignored;
         }
         if self.ignore_hidden && is_hidden(&path) {
             debug!("{} ignored because it is hidden", path.display());
@@ -156,11 +219,9 @@ impl Ignore {
                 break;
             }
         }
-        if let Some(ref types) = self.types {
-            let mat = types.matched(path, is_dir);
-            if let Some(is_ignored) = self.ignore_match(path, mat) {
-                return is_ignored;
-            }
+        let mat = self.types.matched(path, is_dir);
+        if let Some(is_ignored) = self.ignore_match(path, mat) {
+            return is_ignored;
         }
         false
     }
@@ -210,6 +271,23 @@ impl IgnoreDir {
     /// If no ignore glob patterns could be found in the directory then `None`
     /// is returned.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Option<IgnoreDir>, Error> {
+        IgnoreDir::with_ignore_names(path, IGNORE_NAMES.iter())
+    }
+
+    /// Create a new matcher for the given directory using only the ignore
+    /// patterns found in the file names given.
+    ///
+    /// If no ignore glob patterns could be found in the directory then `None`
+    /// is returned.
+    ///
+    /// Note that the order of the names given is meaningful. Names appearing
+    /// later in the list have precedence over names appearing earlier in the
+    /// list.
+    pub fn with_ignore_names<P: AsRef<Path>, S, I>(
+        path: P,
+        names: I,
+    ) -> Result<Option<IgnoreDir>, Error>
+    where P: AsRef<Path>, S: AsRef<str>, I: Iterator<Item=S> {
         let mut id = IgnoreDir {
             path: path.as_ref().to_path_buf(),
             gi: None,
@@ -217,9 +295,9 @@ impl IgnoreDir {
         let mut ok = false;
         let mut builder = GitignoreBuilder::new(&id.path);
         // The ordering here is important. Later globs have higher precedence.
-        ok = builder.add_path(id.path.join(".gitignore")).is_ok() || ok;
-        ok = builder.add_path(id.path.join(".agignore")).is_ok() || ok;
-        ok = builder.add_path(id.path.join(".xrepignore")).is_ok() || ok;
+        for name in names {
+            ok = builder.add_path(id.path.join(name.as_ref())).is_ok() || ok;
+        }
         if !ok {
             Ok(None)
         } else {
@@ -242,6 +320,56 @@ impl IgnoreDir {
     pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
         self.gi.as_ref()
             .map(|gi| gi.matched(path, is_dir))
+            .unwrap_or(Match::None)
+    }
+}
+
+/// Manages a set of overrides provided explicitly by the end user.
+struct Overrides {
+    gi: Option<Gitignore>,
+    unmatched_pat: Pattern,
+}
+
+impl Overrides {
+    /// Creates a new set of overrides from the gitignore matcher provided.
+    /// If no matcher is provided, then the resulting overrides have no effect.
+    fn new(gi: Option<Gitignore>) -> Overrides {
+        Overrides {
+            gi: gi,
+            unmatched_pat: Pattern {
+                from: Path::new("<argv>").to_path_buf(),
+                original: "<none>".to_string(),
+                pat: "<none>".to_string(),
+                whitelist: false,
+                only_dir: false,
+            },
+        }
+    }
+
+    /// Returns a match for the given path against this set of overrides.
+    ///
+    /// If there are no overrides, then this always returns Match::None.
+    ///
+    /// If there is at least one positive override, then this never returns
+    /// Match::None (and interpreting non-matches as ignored) unless is_dir
+    /// is true.
+    pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
+        // File types don't apply to directories.
+        if is_dir {
+            return Match::None;
+        }
+        let path = path.as_ref();
+        self.gi.as_ref()
+            .map(|gi| {
+                let path = &*path.to_string_lossy();
+                let mat = gi.matched_utf8(path, is_dir).invert();
+                if mat.is_none() && !is_dir {
+                    if gi.num_ignores() > 0 {
+                        return Match::Ignored(&self.unmatched_pat);
+                    }
+                }
+                mat
+            })
             .unwrap_or(Match::None)
     }
 }
