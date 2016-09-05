@@ -4,8 +4,6 @@ crate that can efficiently skip and ignore files and directories specified in
 a user's ignore patterns.
 */
 
-use std::path::PathBuf;
-
 use walkdir::{self, DirEntry, WalkDir, WalkDirIterator};
 
 use ignore::Ignore;
@@ -41,9 +39,9 @@ impl Iter {
 }
 
 impl Iterator for Iter {
-    type Item = PathBuf;
+    type Item = DirEntry;
 
-    fn next(&mut self) -> Option<PathBuf> {
+    fn next(&mut self) -> Option<DirEntry> {
         while let Some(ev) = self.it.next() {
             match ev {
                 Err(err) => {
@@ -76,11 +74,7 @@ impl Iterator for Iter {
                     if !ent.file_type().is_file() {
                         continue;
                     }
-                    let mut path = ent.path();
-                    if let Ok(p) = path.strip_prefix("./") {
-                        path = p;
-                    }
-                    return Some(path.to_path_buf());
+                    return Some(ent);
                 }
             }
         }

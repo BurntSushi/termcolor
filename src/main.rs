@@ -22,7 +22,7 @@ extern crate walkdir;
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
 use std::result;
 use std::sync::Arc;
@@ -31,6 +31,7 @@ use std::thread;
 use crossbeam::sync::chase_lev::{self, Steal, Stealer};
 use grep::Grep;
 use parking_lot::Mutex;
+use walkdir::DirEntry;
 
 use args::Args;
 use out::Out;
@@ -94,6 +95,7 @@ fn run(args: Args) -> Result<u64> {
                 inpbuf: args.input_buffer(),
                 outbuf: Some(vec![]),
                 grep: try!(args.grep()),
+                match_count: 0,
             };
             workers.push(thread::spawn(move || worker.run()));
         }
@@ -103,8 +105,8 @@ fn run(args: Args) -> Result<u64> {
         if p == Path::new("-") {
             workq.push(Work::Stdin)
         } else {
-            for path in args.walker(p) {
-                workq.push(Work::File(path));
+            for ent in args.walker(p) {
+                workq.push(Work::File(ent));
             }
         }
     }
@@ -126,8 +128,8 @@ fn run_files(args: Args) -> Result<u64> {
             printer.path(&Path::new("<stdin>"));
             file_count += 1;
         } else {
-            for path in args.walker(p) {
-                printer.path(path);
+            for ent in args.walker(p) {
+                printer.path(ent.path());
                 file_count += 1;
             }
         }
@@ -146,9 +148,14 @@ fn run_types(args: Args) -> Result<u64> {
 }
 
 enum Work {
-    File(PathBuf),
     Stdin,
+    File(DirEntry),
     Quit,
+}
+
+enum WorkReady {
+    Stdin,
+    File(DirEntry, File),
 }
 
 struct Worker {
@@ -158,51 +165,31 @@ struct Worker {
     inpbuf: InputBuffer,
     outbuf: Option<Vec<u8>>,
     grep: Grep,
+    match_count: u64,
 }
 
 impl Worker {
     fn run(mut self) -> u64 {
-        let mut match_count = 0;
+        self.match_count = 0;
         loop {
-            let (path, file) = match self.chan_work.steal() {
+            let work = match self.chan_work.steal() {
                 Steal::Empty | Steal::Abort => continue,
                 Steal::Data(Work::Quit) => break,
-                Steal::Data(Work::File(path)) => {
-                    match File::open(&path) {
-                        Ok(file) => (path, Some(file)),
+                Steal::Data(Work::Stdin) => WorkReady::Stdin,
+                Steal::Data(Work::File(ent)) => {
+                    match File::open(ent.path()) {
+                        Ok(file) => WorkReady::File(ent, file),
                         Err(err) => {
-                            eprintln!("{}: {}", path.display(), err);
+                            eprintln!("{}: {}", ent.path().display(), err);
                             continue;
                         }
                     }
-                }
-                Steal::Data(Work::Stdin) => {
-                    (Path::new("<stdin>").to_path_buf(), None)
                 }
             };
             let mut outbuf = self.outbuf.take().unwrap();
             outbuf.clear();
             let mut printer = self.args.printer(outbuf);
-            {
-                let result = match file {
-                    None => {
-                        let stdin = io::stdin();
-                        let stdin = stdin.lock();
-                        self.search(&mut printer, &path, stdin)
-                    }
-                    Some(file) => {
-                        self.search(&mut printer, &path, file)
-                    }
-                };
-                match result {
-                    Ok(count) => {
-                        match_count += count;
-                    }
-                    Err(err) => {
-                        eprintln!("{}", err);
-                    }
-                }
-            }
+            self.do_work(&mut printer, work);
             let outbuf = printer.into_inner();
             if !outbuf.is_empty() {
                 let mut out = self.out.lock();
@@ -210,7 +197,36 @@ impl Worker {
             }
             self.outbuf = Some(outbuf);
         }
-        match_count
+        self.match_count
+    }
+
+    fn do_work<W: io::Write>(
+        &mut self,
+        printer: &mut Printer<W>,
+        work: WorkReady,
+    ) {
+        let result = match work {
+            WorkReady::Stdin => {
+                let stdin = io::stdin();
+                let stdin = stdin.lock();
+                self.search(printer, &Path::new("<stdin>"), stdin)
+            }
+            WorkReady::File(ent, file) => {
+                let mut path = ent.path();
+                if let Ok(p) = path.strip_prefix("./") {
+                    path = p;
+                }
+                self.search(printer, path, file)
+            }
+        };
+        match result {
+            Ok(count) => {
+                self.match_count += count;
+            }
+            Err(err) => {
+                eprintln!("{}", err);
+            }
+        }
     }
 
     fn search<R: io::Read, W: io::Write>(

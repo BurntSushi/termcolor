@@ -13,6 +13,19 @@ that rigamorole when I wrote this. In particular, it could be fast/good enough
 to make its way into `glob` proper.
 */
 
+// TODO(burntsushi): I'm pretty dismayed by the performance of regex sets
+// here. For example, we do a first pass single-regex-of-all-globs filter
+// before actually running the regex set. This turns out to be faster,
+// especially in fresh checkouts of repos that don't have a lot of ignored
+// files. It's not clear how hard it is to make the regex set faster.
+//
+// An alternative avenue is to stop doing "regex all the things." (Which, to
+// be fair, is pretty fast---I just expected it to be faster.) We could do
+// something clever using assumptions along the lines of "oh, most ignore
+// patterns are either literals or are for ignoring file extensions." (Look
+// at the .gitignore for the chromium repo---just about every pattern satisfies
+// that assumption.)
+
 use std::error::Error as StdError;
 use std::fmt;
 use std::iter;

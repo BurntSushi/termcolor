@@ -118,14 +118,8 @@ impl Gitignore {
     /// of the directory containing this gitignore) is stripped. If there is
     /// no common suffix/prefix overlap, then path is assumed to reside in the
     /// same directory as this gitignore file.
-    ///
-    /// If the given path has a `./` prefix then it is stripped before
-    /// matching.
     pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
         let mut path = path.as_ref();
-        if let Ok(p) = path.strip_prefix("./") {
-            path = p;
-        }
         if let Ok(p) = path.strip_prefix(&self.root) {
             path = p;
         }

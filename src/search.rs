@@ -739,7 +739,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(1);
-        let mut pp = Printer::new(vec![]);
+        let mut pp = Printer::new(vec![]).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
             let searcher = Searcher::new(
@@ -755,7 +755,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(4096);
-        let mut pp = Printer::new(vec![]);
+        let mut pp = Printer::new(vec![]).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
             let searcher = Searcher::new(
