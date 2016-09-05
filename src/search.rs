@@ -329,7 +329,7 @@ impl<'a, R: io::Read, W: Send + io::Write> Searcher<'a, R, W> {
         self.count_lines(start);
         self.add_line(end);
         self.printer.matched(
-            &self.grep.regex(), &self.path,
+            self.grep.regex(), &self.path,
             &self.inp.buf, start, end, self.line_count);
         self.last_printed = end;
         self.after_context_remaining = self.opts.after_context;

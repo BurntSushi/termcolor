@@ -64,6 +64,7 @@ mod out;
 mod printer;
 mod search;
 mod sys;
+mod terminal;
 mod types;
 mod walk;
 

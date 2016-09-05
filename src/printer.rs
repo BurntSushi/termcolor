@@ -7,6 +7,7 @@ use term::{self, Terminal};
 use term::color::*;
 use term::terminfo::TermInfo;
 
+use terminal::TerminfoTerminal;
 use types::FileTypeDef;
 
 use self::Writer::*;
@@ -265,7 +266,7 @@ impl<W: Send + io::Write> Printer<W> {
 }
 
 enum Writer<W> {
-    Colored(term::TerminfoTerminal<W>),
+    Colored(TerminfoTerminal<W>),
     NoColor(W),
 }
 
@@ -289,14 +290,8 @@ impl<W: Send + io::Write> Writer<W> {
         if !color || TERMINFO.is_none() {
             return NoColor(wtr);
         }
-        // Why doesn't TERMINFO.as_ref().unwrap().clone() work?
         let info = TERMINFO.clone().unwrap();
-            // names: TERMINFO.as_ref().unwrap().names.clone(),
-            // bools: TERMINFO.as_ref().unwrap().bools.clone(),
-            // numbers: TERMINFO.as_ref().unwrap().numbers.clone(),
-            // strings: TERMINFO.as_ref().unwrap().strings.clone(),
-        // };
-        let tt = term::TerminfoTerminal::new_with_terminfo(wtr, info);
+        let tt = TerminfoTerminal::new_with_terminfo(wtr, info);
         if !tt.supports_color() {
             debug!("environment doesn't support coloring");
             return NoColor(tt.into_inner());
@@ -315,7 +310,7 @@ impl<W: Send + io::Write> Writer<W> {
         &mut self,
         mut f: F,
     ) -> term::Result<()>
-    where F: FnMut(&mut term::TerminfoTerminal<W>) -> term::Result<()> {
+    where F: FnMut(&mut TerminfoTerminal<W>) -> term::Result<()> {
         match *self {
             Colored(ref mut w) => f(w),
             NoColor(_) => Err(term::Error::NotSupported),
@@ -326,7 +321,7 @@ impl<W: Send + io::Write> Writer<W> {
         &self,
         mut f: F,
     ) -> bool
-    where F: FnMut(&term::TerminfoTerminal<W>) -> bool {
+    where F: FnMut(&TerminfoTerminal<W>) -> bool {
         match *self {
             Colored(ref w) => f(w),
             NoColor(_) => false,
