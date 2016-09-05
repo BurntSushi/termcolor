@@ -14,7 +14,6 @@ extern crate log;
 extern crate memchr;
 extern crate memmap;
 extern crate num_cpus;
-extern crate parking_lot;
 extern crate regex;
 extern crate regex_syntax as syntax;
 extern crate rustc_serialize;
@@ -30,12 +29,11 @@ use std::io;
 use std::path::Path;
 use std::process;
 use std::result;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crossbeam::sync::chase_lev::{self, Steal, Stealer};
 use grep::Grep;
-use parking_lot::Mutex;
 use walkdir::DirEntry;
 
 use args::Args;
@@ -199,7 +197,7 @@ impl Worker {
             self.do_work(&mut printer, work);
             let outbuf = printer.into_inner();
             if !outbuf.is_empty() {
-                let mut out = self.out.lock();
+                let mut out = self.out.lock().unwrap();
                 out.write(&outbuf);
             }
             self.outbuf = Some(outbuf);
