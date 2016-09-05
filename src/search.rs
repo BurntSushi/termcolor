@@ -20,6 +20,7 @@ const READ_SIZE: usize = 8 * (1<<10);
 /// Error describes errors that can occur while searching.
 #[derive(Debug)]
 pub enum Error {
+    /// A standard I/O error attached to a particular file path.
     Io {
         err: io::Error,
         path: PathBuf,
@@ -57,6 +58,7 @@ impl fmt::Display for Error {
 }
 
 pub struct Searcher<'a, R, W: 'a> {
+    opts: Options,
     inp: &'a mut InputBuffer,
     printer: &'a mut Printer<W>,
     grep: &'a Grep,
@@ -68,11 +70,32 @@ pub struct Searcher<'a, R, W: 'a> {
     last_printed: usize,
     last_line: usize,
     after_context_remaining: usize,
+}
+
+/// Options for configuring search.
+#[derive(Clone)]
+struct Options {
+    after_context: usize,
+    before_context: usize,
     count: bool,
+    eol: u8,
     invert_match: bool,
     line_number: bool,
-    before_context: usize,
-    after_context: usize,
+    text: bool,
+}
+
+impl Default for Options {
+    fn default() -> Options {
+        Options {
+            after_context: 0,
+            before_context: 0,
+            count: false,
+            eol: b'\n',
+            invert_match: false,
+            line_number: false,
+            text: false,
+        }
+    }
 }
 
 impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
@@ -96,6 +119,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         haystack: R,
     ) -> Searcher<'a, R, W> {
         Searcher {
+            opts: Options::default(),
             inp: inp,
             printer: printer,
             grep: grep,
@@ -107,47 +131,54 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
             last_printed: 0,
             last_line: 0,
             after_context_remaining: 0,
-            count: false,
-            invert_match: false,
-            line_number: false,
-            before_context: 0,
-            after_context: 0,
         }
     }
 
-    /// If enabled, searching will print a count instead of each match.
-    ///
-    /// Disabled by default.
-    pub fn count(mut self, yes: bool) -> Self {
-        self.count = yes;
-        self
-    }
-
-    /// If enabled, matching is inverted so that lines that *don't* match the
-    /// given pattern are treated as matches.
-    pub fn invert_match(mut self, yes: bool) -> Self {
-        self.invert_match = yes;
-        self
-    }
-
-    /// If enabled, compute line numbers and prefix each line of output with
-    /// them.
-    pub fn line_number(mut self, yes: bool) -> Self {
-        self.line_number = yes;
+    /// The number of contextual lines to show after each match. The default
+    /// is zero.
+    pub fn after_context(mut self, count: usize) -> Self {
+        self.opts.after_context = count;
         self
     }
 
     /// The number of contextual lines to show before each match. The default
     /// is zero.
     pub fn before_context(mut self, count: usize) -> Self {
-        self.before_context = count;
+        self.opts.before_context = count;
         self
     }
 
-    /// The number of contextual lines to show after each match. The default
-    /// is zero.
-    pub fn after_context(mut self, count: usize) -> Self {
-        self.after_context = count;
+    /// If enabled, searching will print a count instead of each match.
+    ///
+    /// Disabled by default.
+    pub fn count(mut self, yes: bool) -> Self {
+        self.opts.count = yes;
+        self
+    }
+
+    /// Set the end-of-line byte used by this searcher.
+    pub fn eol(mut self, eol: u8) -> Self {
+        self.opts.eol = eol;
+        self
+    }
+
+    /// If enabled, matching is inverted so that lines that *don't* match the
+    /// given pattern are treated as matches.
+    pub fn invert_match(mut self, yes: bool) -> Self {
+        self.opts.invert_match = yes;
+        self
+    }
+
+    /// If enabled, compute line numbers and prefix each line of output with
+    /// them.
+    pub fn line_number(mut self, yes: bool) -> Self {
+        self.opts.line_number = yes;
+        self
+    }
+
+    /// If enabled, search binary files as if they were text.
+    pub fn text(mut self, yes: bool) -> Self {
+        self.opts.text = yes;
         self
     }
 
@@ -157,16 +188,16 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
     pub fn run(mut self) -> Result<u64, Error> {
         self.inp.reset();
         self.match_count = 0;
-        self.line_count = if self.line_number { Some(0) } else { None };
+        self.line_count = if self.opts.line_number { Some(0) } else { None };
         self.last_match = Match::default();
         self.after_context_remaining = 0;
         loop {
             let upto = self.inp.lastnl;
             self.print_after_context(upto);
             if !try!(self.fill()) {
-                if self.inp.is_binary {
-                    self.printer.binary_matched(self.path);
-                }
+                break;
+            }
+            if !self.opts.text && self.inp.is_binary {
                 break;
             }
             while self.inp.pos < self.inp.lastnl {
@@ -174,7 +205,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
                     &mut self.last_match,
                     &mut self.inp.buf[..self.inp.lastnl],
                     self.inp.pos);
-                if self.invert_match {
+                if self.opts.invert_match {
                     let upto =
                         if matched {
                             self.last_match.start()
@@ -189,7 +220,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
                     }
                 } else if matched {
                     self.match_count += 1;
-                    if !self.count {
+                    if !self.opts.count {
                         let start = self.last_match.start();
                         let end = self.last_match.end();
                         self.print_after_context(start);
@@ -204,32 +235,36 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
                 }
             }
         }
-        if self.count && self.match_count > 0 {
+        if self.opts.count && self.match_count > 0 {
             self.printer.path_count(self.path, self.match_count);
         }
         Ok(self.match_count)
     }
 
+    #[inline(always)]
     fn fill(&mut self) -> Result<bool, Error> {
-        let mut keep_from = self.inp.lastnl;
-        if self.before_context > 0 || self.after_context > 0 {
-            keep_from = start_of_previous_lines(
+        let mut keep = self.inp.lastnl;
+        if self.opts.before_context > 0 || self.opts.after_context > 0 {
+            let lines = 1 + cmp::max(
+                self.opts.before_context, self.opts.after_context);
+            keep = start_of_previous_lines(
+                self.opts.eol,
                 &self.inp.buf,
                 self.inp.lastnl.saturating_sub(1),
-                cmp::max(self.before_context, self.after_context) + 1);
+                lines);
         }
-        if keep_from < self.last_printed {
-            self.last_printed = self.last_printed - keep_from;
+        if keep < self.last_printed {
+            self.last_printed = self.last_printed - keep;
         } else {
             self.last_printed = 0;
         }
-        if keep_from <= self.last_line {
-            self.last_line = self.last_line - keep_from;
+        if keep <= self.last_line {
+            self.last_line = self.last_line - keep;
         } else {
-            self.count_lines(keep_from);
+            self.count_lines(keep);
             self.last_line = 0;
         }
-        let ok = try!(self.inp.fill(&mut self.haystack, keep_from).map_err(|err| {
+        let ok = try!(self.inp.fill(&mut self.haystack, keep).map_err(|err| {
             Error::from_io(err, &self.path)
         }));
         Ok(ok)
@@ -237,10 +272,10 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_inverted_matches(&mut self, upto: usize) {
-        debug_assert!(self.invert_match);
-        let mut it = IterLines::new(self.inp.pos);
+        debug_assert!(self.opts.invert_match);
+        let mut it = IterLines::new(self.opts.eol, self.inp.pos);
         while let Some((start, end)) = it.next(&self.inp.buf[..upto]) {
-            if !self.count {
+            if !self.opts.count {
                 self.print_match(start, end);
             }
             self.inp.pos = end;
@@ -250,7 +285,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_before_context(&mut self, upto: usize) {
-        if self.count || self.before_context == 0 {
+        if self.opts.count || self.opts.before_context == 0 {
             return;
         }
         let start = self.last_printed;
@@ -260,10 +295,11 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         }
         let before_context_start =
             start + start_of_previous_lines(
+                self.opts.eol,
                 &self.inp.buf[start..],
                 end - start - 1,
-                self.before_context);
-        let mut it = IterLines::new(before_context_start);
+                self.opts.before_context);
+        let mut it = IterLines::new(self.opts.eol, before_context_start);
         while let Some((s, e)) = it.next(&self.inp.buf[..end]) {
             self.print_separator(s);
             self.print_context(s, e);
@@ -272,12 +308,12 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_after_context(&mut self, upto: usize) {
-        if self.count || self.after_context_remaining == 0 {
+        if self.opts.count || self.after_context_remaining == 0 {
             return;
         }
         let start = self.last_printed;
         let end = upto;
-        let mut it = IterLines::new(start);
+        let mut it = IterLines::new(self.opts.eol, start);
         while let Some((s, e)) = it.next(&self.inp.buf[..end]) {
             self.print_context(s, e);
             self.after_context_remaining -= 1;
@@ -295,7 +331,7 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
         self.printer.matched(
             &self.path, &self.inp.buf, start, end, self.line_count);
         self.last_printed = end;
-        self.after_context_remaining = self.after_context;
+        self.after_context_remaining = self.opts.after_context;
     }
 
     #[inline(always)]
@@ -309,21 +345,23 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_separator(&mut self, before: usize) {
-        if self.before_context == 0 && self.after_context == 0 {
+        if self.opts.before_context == 0 && self.opts.after_context == 0 {
             return;
         }
         if !self.printer.has_printed() {
             return;
         }
-        if (self.last_printed == 0 && before > 0) || self.last_printed < before {
-            self.printer.context_separator();
+        if (self.last_printed == 0 && before > 0)
+            || self.last_printed < before {
+            self.printer.context_separate();
         }
     }
 
     #[inline(always)]
     fn count_lines(&mut self, upto: usize) {
         if let Some(ref mut line_count) = self.line_count {
-            *line_count += count_lines(&self.inp.buf[self.last_line..upto]);
+            *line_count += count_lines(
+                &self.inp.buf[self.last_line..upto], self.opts.eol);
             self.last_line = upto;
         }
     }
@@ -337,15 +375,53 @@ impl<'a, R: io::Read, W: io::Write> Searcher<'a, R, W> {
     }
 }
 
+/// InputBuffer encapsulates the logic of maintaining a ~fixed sized buffer
+/// on which to search. There are three key pieces of complexity:
+///
+/// 1. We must be able to handle lines that are longer than the size of the
+///    buffer. For this reason, the buffer is allowed to expand (and is
+///    therefore not technically fixed). Note that once a buffer expands, it
+///    will never contract.
+/// 2. The contents of the buffer may end with a partial line, so we must keep
+///    track of where the last complete line ends. Namely, the partial line
+///    is only completed on subsequent reads *after* searching up through
+///    the last complete line is done.
+/// 3. When printing the context of a match, the last N lines of the buffer
+///    may need to be rolled over into the next buffer. For example, a match
+///    may occur at the beginning of a buffer, in which case, lines at the end
+///    of the previous contents of the buffer need to be printed.
+///
+/// An InputBuffer is designed to be reused and isn't tied to any particular
+/// reader.
 pub struct InputBuffer {
+    /// The number of bytes to attempt to read at a time. Once set, this is
+    /// never changed.
     read_size: usize,
+    /// The end-of-line terminator used in this buffer.
+    eol: u8,
+    /// A scratch buffer.
+    tmp: Vec<u8>,
+    /// A buffer to read bytes into. All searches are executed directly against
+    /// this buffer and pos/lastnl/end point into it.
     buf: Vec<u8>,
-    tmp1: Vec<u8>,
-    tmp2: Vec<u8>,
+    /// The current position in buf. The current position represents where the
+    /// next search should start.
     pos: usize,
+    /// The position immediately following the last line terminator in buf.
+    /// This may be equal to end.
+    ///
+    /// Searching should never cross this boundary. In particular, the contents
+    /// of the buffer following this position may correspond to *partial* line.
+    /// All contents before this position are complete lines.
     lastnl: usize,
+    /// The end position of the buffer. Data after this position is not
+    /// specified.
     end: usize,
+    /// Set to true if and only if no reads have occurred yet.
     first: bool,
+    /// Set to true if and only if the contents of buf are determined to be
+    /// "binary" (i.e., not searchable text). Note that its value may be
+    /// falsely negative *or* falsely positive. It is only a heuristic.
     is_binary: bool,
 }
 
@@ -367,9 +443,9 @@ impl InputBuffer {
         }
         InputBuffer {
             read_size: cap,
+            eol: b'\n',
             buf: vec![0; cap],
-            tmp1: vec![],
-            tmp2: vec![],
+            tmp: vec![],
             pos: 0,
             lastnl: 0,
             end: 0,
@@ -378,6 +454,12 @@ impl InputBuffer {
         }
     }
 
+    /// Set the end-of-line terminator used by this input buffer.
+    pub fn eol(&mut self, eol: u8) {
+        self.eol = eol;
+    }
+
+    /// Resets this buffer so that it may be reused with a new reader.
     fn reset(&mut self) {
         self.pos = 0;
         self.lastnl = 0;
@@ -386,36 +468,30 @@ impl InputBuffer {
         self.is_binary = false;
     }
 
+    /// Fill the contents of this buffer with the reader given. The reader
+    /// given should be the same in every call to fill unless reset has been
+    /// called.
+    ///
+    /// The bytes in buf[keep_from..end] are rolled over into the beginning
+    /// of the buffer.
     fn fill<R: io::Read>(
         &mut self,
         rdr: &mut R,
         keep_from: usize,
     ) -> Result<bool, io::Error> {
-        self.pos = 0;
-        self.tmp1.clear();
-        self.tmp2.clear();
-
-        // Save the leftovers from the previous fill before anything else.
-        if self.lastnl < self.end {
-            self.tmp1.extend_from_slice(&self.buf[self.lastnl..self.end]);
-        }
-        // If we need to save lines to account for context, do that here.
-        // These context lines have already been searched, but make up the
-        // first bytes of this buffer.
-        if keep_from < self.lastnl {
-            self.tmp2.extend_from_slice(&self.buf[keep_from..self.lastnl]);
-            self.buf[0..self.tmp2.len()].copy_from_slice(&self.tmp2);
-            self.pos = self.tmp2.len();
-        }
-        if !self.tmp1.is_empty() {
-            let (start, end) = (self.pos, self.pos + self.tmp1.len());
-            self.buf[start..end].copy_from_slice(&self.tmp1);
-            self.end = end;
-        } else {
-            self.end = self.pos;
-        }
+        // Rollover bytes from buf[keep_from..end] and update our various
+        // pointers. N.B. This could be done with the unsafe ptr::copy, but
+        // I haven't been able to produce a benchmark that notices a difference
+        // in performance. (Invariably, ptr::copy is also clearer IMO.)
+        self.tmp.clear();
+        self.tmp.extend_from_slice(&self.buf[keep_from..self.end]);
+        self.buf[0..self.tmp.len()].copy_from_slice(&self.tmp);
+        self.pos = self.lastnl - keep_from;
         self.lastnl = 0;
+        self.end = self.tmp.len();
         while self.lastnl == 0 {
+            // If our buffer isn't big enough to hold the contents of a full
+            // read, expand it.
             if self.buf.len() - self.end < self.read_size {
                 let min_len = self.read_size + self.buf.len() - self.end;
                 let new_len = cmp::max(min_len, self.buf.len() * 2);
@@ -423,22 +499,28 @@ impl InputBuffer {
             }
             let n = try!(rdr.read(
                 &mut self.buf[self.end..self.end + self.read_size]));
-            if self.first {
-                if is_binary(&self.buf[self.end..self.end + n]) {
-                    self.is_binary = true;
-                    return Ok(false);
-                }
+            if self.first && is_binary(&self.buf[self.end..self.end + n]) {
+                self.is_binary = true;
+            }
+            if self.is_binary {
+                replace_buf(
+                    &mut self.buf[self.end..self.end + n], b'\x00', self.eol);
             }
             self.first = false;
+            // We assume that reading 0 bytes means we've hit EOF.
             if n == 0 {
+                // If we've searched everything up to the end of the buffer,
+                // then there's nothing left to do.
                 if self.end - self.pos == 0 {
                     return Ok(false);
                 }
+                // Even if we hit EOF, we might still have to search the
+                // last line if it didn't contain a trailing terminator.
                 self.lastnl = self.end;
                 break;
             }
             self.lastnl =
-                memrchr(b'\n', &self.buf[self.end..self.end + n])
+                memrchr(self.eol, &self.buf[self.end..self.end + n])
                 .map(|i| self.end + i + 1)
                 .unwrap_or(0);
             self.end += n;
@@ -450,7 +532,7 @@ impl InputBuffer {
 /// Returns true if and only if the given buffer is determined to be "binary"
 /// or otherwise not contain text data that is usefully searchable.
 ///
-/// Note that this may return both false positives and false negatives!
+/// Note that this may return both false positives and false negatives.
 #[inline(always)]
 fn is_binary(buf: &[u8]) -> bool {
     if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
@@ -461,13 +543,29 @@ fn is_binary(buf: &[u8]) -> bool {
 
 /// Count the number of lines in the given buffer.
 #[inline(always)]
-fn count_lines(mut buf: &[u8]) -> u64 {
+fn count_lines(mut buf: &[u8], eol: u8) -> u64 {
     let mut count = 0;
-    while let Some(pos) = memchr(b'\n', buf) {
+    while let Some(pos) = memchr(eol, buf) {
         count += 1;
         buf = &buf[pos + 1..];
     }
     count
+}
+
+/// Replaces a with b in buf.
+fn replace_buf(buf: &mut [u8], a: u8, b: u8) {
+    if a == b {
+        return;
+    }
+    let mut pos = 0;
+    while let Some(i) = memchr(a, &buf[pos..]).map(|i| pos + i) {
+        buf[i] = b;
+        pos = i + 1;
+        while buf.get(pos) == Some(&a) {
+            buf[pos] = b;
+            pos += 1;
+        }
+    }
 }
 
 /// An "iterator" over lines in a particular buffer.
@@ -477,6 +575,7 @@ fn count_lines(mut buf: &[u8]) -> u64 {
 /// the borrow in the search code. (Because the borrow prevents composition
 /// through other mutable methods.)
 struct IterLines {
+    eol: u8,
     pos: usize,
 }
 
@@ -485,8 +584,9 @@ impl IterLines {
     ///
     /// The buffer is passed to the `next` method.
     #[inline(always)]
-    fn new(start: usize) -> IterLines {
+    fn new(eol: u8, start: usize) -> IterLines {
         IterLines {
+            eol: eol,
             pos: start,
         }
     }
@@ -497,7 +597,7 @@ impl IterLines {
     /// The range returned includes the new line.
     #[inline(always)]
     fn next(&mut self, buf: &[u8]) -> Option<(usize, usize)> {
-        match memchr(b'\n', &buf[self.pos..]) {
+        match memchr(self.eol, &buf[self.pos..]) {
             None => {
                 if self.pos < buf.len() {
                     let start = self.pos;
@@ -528,10 +628,13 @@ impl IterLines {
 /// The position returned corresponds to the first byte in the given line.
 #[inline(always)]
 fn start_of_previous_lines(
+    eol: u8,
     buf: &[u8],
     mut end: usize,
     mut count: usize,
 ) -> usize {
+    // TODO(burntsushi): This function needs to be badly simplified. The case
+    // analysis is impossible to follow.
     if buf[..end].is_empty() {
         return 0;
     }
@@ -541,14 +644,14 @@ fn start_of_previous_lines(
     if end == buf.len() {
         end -= 1;
     }
-    if buf[end] == b'\n' {
+    if buf[end] == eol {
         if end == 0 {
             return end + 1;
         }
         end -= 1;
     }
     while count > 0 {
-        if buf[end] == b'\n' {
+        if buf[end] == eol {
             count -= 1;
             if count == 0 {
                 return end + 1;
@@ -559,7 +662,7 @@ fn start_of_previous_lines(
             end -= 1;
             continue;
         }
-        match memrchr(b'\n', &buf[..end]) {
+        match memrchr(eol, &buf[..end]) {
             None => {
                 return 0;
             }
@@ -567,7 +670,7 @@ fn start_of_previous_lines(
                 count -= 1;
                 end = i;
                 if end == 0 {
-                    if buf[end] == b'\n' && count == 0 {
+                    if buf[end] == eol && count == 0 {
                         end += 1;
                     }
                     return end;
@@ -577,10 +680,6 @@ fn start_of_previous_lines(
         }
     }
     end + 2
-}
-
-fn show(bytes: &[u8]) -> &str {
-    ::std::str::from_utf8(bytes).unwrap()
 }
 
 #[cfg(test)]
@@ -668,102 +767,105 @@ fn main() {
 
     #[test]
     fn previous_lines() {
+        let eol = b'\n';
         let text = SHERLOCK.as_bytes();
         assert_eq!(366, text.len());
 
-        assert_eq!(0, start_of_previous_lines(text, 366, 100));
-        assert_eq!(366, start_of_previous_lines(text, 366, 0));
+        assert_eq!(0, start_of_previous_lines(eol, text, 366, 100));
+        assert_eq!(366, start_of_previous_lines(eol, text, 366, 0));
 
-        assert_eq!(321, start_of_previous_lines(text, 366, 1));
-        assert_eq!(321, start_of_previous_lines(text, 365, 1));
-        assert_eq!(321, start_of_previous_lines(text, 364, 1));
-        assert_eq!(321, start_of_previous_lines(text, 322, 1));
-        assert_eq!(321, start_of_previous_lines(text, 321, 1));
-        assert_eq!(258, start_of_previous_lines(text, 320, 1));
+        assert_eq!(321, start_of_previous_lines(eol, text, 366, 1));
+        assert_eq!(321, start_of_previous_lines(eol, text, 365, 1));
+        assert_eq!(321, start_of_previous_lines(eol, text, 364, 1));
+        assert_eq!(321, start_of_previous_lines(eol, text, 322, 1));
+        assert_eq!(321, start_of_previous_lines(eol, text, 321, 1));
+        assert_eq!(258, start_of_previous_lines(eol, text, 320, 1));
 
-        assert_eq!(258, start_of_previous_lines(text, 366, 2));
-        assert_eq!(258, start_of_previous_lines(text, 365, 2));
-        assert_eq!(258, start_of_previous_lines(text, 364, 2));
-        assert_eq!(258, start_of_previous_lines(text, 322, 2));
-        assert_eq!(258, start_of_previous_lines(text, 321, 2));
-        assert_eq!(193, start_of_previous_lines(text, 320, 2));
+        assert_eq!(258, start_of_previous_lines(eol, text, 366, 2));
+        assert_eq!(258, start_of_previous_lines(eol, text, 365, 2));
+        assert_eq!(258, start_of_previous_lines(eol, text, 364, 2));
+        assert_eq!(258, start_of_previous_lines(eol, text, 322, 2));
+        assert_eq!(258, start_of_previous_lines(eol, text, 321, 2));
+        assert_eq!(193, start_of_previous_lines(eol, text, 320, 2));
 
-        assert_eq!(65, start_of_previous_lines(text, 66, 1));
-        assert_eq!(0, start_of_previous_lines(text, 66, 2));
-        assert_eq!(64, start_of_previous_lines(text, 64, 0));
-        assert_eq!(0, start_of_previous_lines(text, 64, 1));
-        assert_eq!(0, start_of_previous_lines(text, 64, 2));
+        assert_eq!(65, start_of_previous_lines(eol, text, 66, 1));
+        assert_eq!(0, start_of_previous_lines(eol, text, 66, 2));
+        assert_eq!(64, start_of_previous_lines(eol, text, 64, 0));
+        assert_eq!(0, start_of_previous_lines(eol, text, 64, 1));
+        assert_eq!(0, start_of_previous_lines(eol, text, 64, 2));
 
-        assert_eq!(0, start_of_previous_lines(text, 0, 2));
-        assert_eq!(0, start_of_previous_lines(text, 0, 1));
+        assert_eq!(0, start_of_previous_lines(eol, text, 0, 2));
+        assert_eq!(0, start_of_previous_lines(eol, text, 0, 1));
     }
 
     #[test]
     fn previous_lines_short() {
+        let eol = b'\n';
         let text = &b"a\nb\nc\nd\ne\nf\n"[..];
         assert_eq!(12, text.len());
 
-        assert_eq!(10, start_of_previous_lines(text, 12, 1));
-        assert_eq!(8, start_of_previous_lines(text, 12, 2));
-        assert_eq!(6, start_of_previous_lines(text, 12, 3));
-        assert_eq!(4, start_of_previous_lines(text, 12, 4));
-        assert_eq!(2, start_of_previous_lines(text, 12, 5));
-        assert_eq!(0, start_of_previous_lines(text, 12, 6));
-        assert_eq!(0, start_of_previous_lines(text, 12, 7));
-        assert_eq!(10, start_of_previous_lines(text, 11, 1));
-        assert_eq!(8, start_of_previous_lines(text, 11, 2));
-        assert_eq!(6, start_of_previous_lines(text, 11, 3));
-        assert_eq!(4, start_of_previous_lines(text, 11, 4));
-        assert_eq!(2, start_of_previous_lines(text, 11, 5));
-        assert_eq!(0, start_of_previous_lines(text, 11, 6));
-        assert_eq!(0, start_of_previous_lines(text, 11, 7));
-        assert_eq!(10, start_of_previous_lines(text, 10, 1));
-        assert_eq!(8, start_of_previous_lines(text, 10, 2));
-        assert_eq!(6, start_of_previous_lines(text, 10, 3));
-        assert_eq!(4, start_of_previous_lines(text, 10, 4));
-        assert_eq!(2, start_of_previous_lines(text, 10, 5));
-        assert_eq!(0, start_of_previous_lines(text, 10, 6));
-        assert_eq!(0, start_of_previous_lines(text, 10, 7));
+        assert_eq!(10, start_of_previous_lines(eol, text, 12, 1));
+        assert_eq!(8, start_of_previous_lines(eol, text, 12, 2));
+        assert_eq!(6, start_of_previous_lines(eol, text, 12, 3));
+        assert_eq!(4, start_of_previous_lines(eol, text, 12, 4));
+        assert_eq!(2, start_of_previous_lines(eol, text, 12, 5));
+        assert_eq!(0, start_of_previous_lines(eol, text, 12, 6));
+        assert_eq!(0, start_of_previous_lines(eol, text, 12, 7));
+        assert_eq!(10, start_of_previous_lines(eol, text, 11, 1));
+        assert_eq!(8, start_of_previous_lines(eol, text, 11, 2));
+        assert_eq!(6, start_of_previous_lines(eol, text, 11, 3));
+        assert_eq!(4, start_of_previous_lines(eol, text, 11, 4));
+        assert_eq!(2, start_of_previous_lines(eol, text, 11, 5));
+        assert_eq!(0, start_of_previous_lines(eol, text, 11, 6));
+        assert_eq!(0, start_of_previous_lines(eol, text, 11, 7));
+        assert_eq!(10, start_of_previous_lines(eol, text, 10, 1));
+        assert_eq!(8, start_of_previous_lines(eol, text, 10, 2));
+        assert_eq!(6, start_of_previous_lines(eol, text, 10, 3));
+        assert_eq!(4, start_of_previous_lines(eol, text, 10, 4));
+        assert_eq!(2, start_of_previous_lines(eol, text, 10, 5));
+        assert_eq!(0, start_of_previous_lines(eol, text, 10, 6));
+        assert_eq!(0, start_of_previous_lines(eol, text, 10, 7));
 
-        assert_eq!(8, start_of_previous_lines(text, 9, 1));
-        assert_eq!(8, start_of_previous_lines(text, 8, 1));
+        assert_eq!(8, start_of_previous_lines(eol, text, 9, 1));
+        assert_eq!(8, start_of_previous_lines(eol, text, 8, 1));
 
-        assert_eq!(6, start_of_previous_lines(text, 7, 1));
-        assert_eq!(6, start_of_previous_lines(text, 6, 1));
+        assert_eq!(6, start_of_previous_lines(eol, text, 7, 1));
+        assert_eq!(6, start_of_previous_lines(eol, text, 6, 1));
 
-        assert_eq!(4, start_of_previous_lines(text, 5, 1));
-        assert_eq!(4, start_of_previous_lines(text, 4, 1));
+        assert_eq!(4, start_of_previous_lines(eol, text, 5, 1));
+        assert_eq!(4, start_of_previous_lines(eol, text, 4, 1));
 
-        assert_eq!(2, start_of_previous_lines(text, 3, 1));
-        assert_eq!(2, start_of_previous_lines(text, 2, 1));
+        assert_eq!(2, start_of_previous_lines(eol, text, 3, 1));
+        assert_eq!(2, start_of_previous_lines(eol, text, 2, 1));
 
-        assert_eq!(0, start_of_previous_lines(text, 1, 1));
-        assert_eq!(0, start_of_previous_lines(text, 0, 1));
+        assert_eq!(0, start_of_previous_lines(eol, text, 1, 1));
+        assert_eq!(0, start_of_previous_lines(eol, text, 0, 1));
     }
 
     #[test]
     fn previous_lines_empty() {
+        let eol = b'\n';
         let text = &b"\n\n\nd\ne\nf\n"[..];
         assert_eq!(9, text.len());
 
-        assert_eq!(7, start_of_previous_lines(text, 9, 1));
-        assert_eq!(5, start_of_previous_lines(text, 9, 2));
-        assert_eq!(3, start_of_previous_lines(text, 9, 3));
-        assert_eq!(2, start_of_previous_lines(text, 9, 4));
-        assert_eq!(1, start_of_previous_lines(text, 9, 5));
-        assert_eq!(0, start_of_previous_lines(text, 9, 6));
-        assert_eq!(0, start_of_previous_lines(text, 9, 7));
+        assert_eq!(7, start_of_previous_lines(eol, text, 9, 1));
+        assert_eq!(5, start_of_previous_lines(eol, text, 9, 2));
+        assert_eq!(3, start_of_previous_lines(eol, text, 9, 3));
+        assert_eq!(2, start_of_previous_lines(eol, text, 9, 4));
+        assert_eq!(1, start_of_previous_lines(eol, text, 9, 5));
+        assert_eq!(0, start_of_previous_lines(eol, text, 9, 6));
+        assert_eq!(0, start_of_previous_lines(eol, text, 9, 7));
 
         let text = &b"a\n\n\nd\ne\nf\n"[..];
         assert_eq!(10, text.len());
 
-        assert_eq!(8, start_of_previous_lines(text, 10, 1));
-        assert_eq!(6, start_of_previous_lines(text, 10, 2));
-        assert_eq!(4, start_of_previous_lines(text, 10, 3));
-        assert_eq!(3, start_of_previous_lines(text, 10, 4));
-        assert_eq!(2, start_of_previous_lines(text, 10, 5));
-        assert_eq!(0, start_of_previous_lines(text, 10, 6));
-        assert_eq!(0, start_of_previous_lines(text, 10, 7));
+        assert_eq!(8, start_of_previous_lines(eol, text, 10, 1));
+        assert_eq!(6, start_of_previous_lines(eol, text, 10, 2));
+        assert_eq!(4, start_of_previous_lines(eol, text, 10, 3));
+        assert_eq!(3, start_of_previous_lines(eol, text, 10, 4));
+        assert_eq!(2, start_of_previous_lines(eol, text, 10, 5));
+        assert_eq!(0, start_of_previous_lines(eol, text, 10, 6));
+        assert_eq!(0, start_of_previous_lines(eol, text, 10, 7));
     }
 
     #[test]
@@ -774,6 +876,23 @@ fn main() {
 /baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
 /baz.rs:be, to a very large extent, the result of luck. Sherlock Holmes
 ");
+    }
+
+    #[test]
+    fn binary() {
+        let text = "Sherlock\n\x00Holmes\n";
+        let (count, out) = search("Sherlock|Holmes", text, |s|s);
+        assert_eq!(0, count);
+        assert_eq!(out, "");
+    }
+
+
+    #[test]
+    fn binary_text() {
+        let text = "Sherlock\n\x00Holmes\n";
+        let (count, out) = search("Sherlock|Holmes", text, |s| s.text(true));
+        assert_eq!(2, count);
+        assert_eq!(out, "/baz.rs:Sherlock\n/baz.rs:Holmes\n");
     }
 
     #[test]

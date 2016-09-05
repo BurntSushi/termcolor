@@ -77,6 +77,8 @@ impl Set {
     /// Returns every glob pattern (by sequence number) that matches the given
     /// path.
     pub fn matches<T: AsRef<[u8]>>(&self, path: T) -> SetMatches {
+        // TODO(burntsushi): If we split this out into a separate crate, don't
+        // expose the regex::SetMatches type in the public API.
         self.set.matches(path.as_ref())
     }
 

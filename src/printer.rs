@@ -1,53 +1,121 @@
 use std::io;
 use std::path::Path;
 
-macro_rules! wln {
-    ($($tt:tt)*) => {
-        let _ = writeln!($($tt)*);
-    }
-}
+use types::FileTypeDef;
 
-macro_rules! w {
-    ($($tt:tt)*) => {
-        let _ = write!($($tt)*);
-    }
-}
-
+/// Printer encapsulates all output logic for searching.
+///
+/// Note that we currently ignore all write errors. It's probably worthwhile
+/// to fix this, but printers are only ever used for writes to stdout or
+/// writes to memory, neither of which commonly fail.
 pub struct Printer<W> {
+    /// The underlying writer.
     wtr: W,
+    /// Whether anything has been printed to wtr yet.
     has_printed: bool,
+    /// The string to use to separate non-contiguous runs of context lines.
+    context_separator: Vec<u8>,
+    /// The end-of-line terminator used by the printer. In general, eols are
+    /// printed via the match directly, but occasionally we need to insert them
+    /// ourselves (for example, to print a context separator).
+    eol: u8,
+    /// Whether to suppress all output.
+    quiet: bool,
+    /// Whether to prefix each match with the corresponding file name.
+    with_filename: bool,
 }
 
 impl<W: io::Write> Printer<W> {
+    /// Create a new printer that writes to wtr.
     pub fn new(wtr: W) -> Printer<W> {
         Printer {
             wtr: wtr,
             has_printed: false,
+            context_separator: "--".to_string().into_bytes(),
+            eol: b'\n',
+            quiet: false,
+            with_filename: false,
         }
     }
 
+    /// Set the context separator. The default is `--`.
+    pub fn context_separator(mut self, sep: Vec<u8>) -> Printer<W> {
+        self.context_separator = sep;
+        self
+    }
+
+    /// Set the end-of-line terminator. The default is `\n`.
+    pub fn eol(mut self, eol: u8) -> Printer<W> {
+        self.eol = eol;
+        self
+    }
+
+    /// When set, all output is suppressed.
+    pub fn quiet(mut self, yes: bool) -> Printer<W> {
+        self.quiet = yes;
+        self
+    }
+
+    /// When set, each match is prefixed with the file name that it came from.
+    pub fn with_filename(mut self, yes: bool) -> Printer<W> {
+        self.with_filename = yes;
+        self
+    }
+
+    /// Returns true if and only if something has been printed.
     pub fn has_printed(&self) -> bool {
         self.has_printed
     }
 
-    pub fn into_inner(self) -> W {
+    /// Flushes the underlying writer and returns it.
+    pub fn into_inner(mut self) -> W {
+        let _ = self.wtr.flush();
         self.wtr
     }
 
+    /// Prints a type definition.
+    pub fn type_def(&mut self, def: &FileTypeDef) {
+        self.write(def.name().as_bytes());
+        self.write(b": ");
+        let mut first = true;
+        for pat in def.patterns() {
+            if !first {
+                self.write(b", ");
+            }
+            self.write(pat.as_bytes());
+            first = false;
+        }
+        self.write_eol();
+    }
+
+    /// Prints the given path.
     pub fn path<P: AsRef<Path>>(&mut self, path: P) {
-        wln!(&mut self.wtr, "{}", path.as_ref().display());
+        self.write(path.as_ref().to_string_lossy().as_bytes());
+        self.write_eol();
     }
 
+    /// Prints the given path and a count of the number of matches found.
     pub fn path_count<P: AsRef<Path>>(&mut self, path: P, count: u64) {
-        wln!(&mut self.wtr, "{}:{}", path.as_ref().display(), count);
+        if self.with_filename {
+            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write(b":");
+        }
+        self.write(count.to_string().as_bytes());
+        self.write_eol();
     }
 
-    pub fn count(&mut self, count: u64) {
-        wln!(&mut self.wtr, "{}", count);
-    }
-
-    pub fn context_separator(&mut self) {
-        wln!(&mut self.wtr, "--");
+    /// Prints the context separator.
+    pub fn context_separate(&mut self) {
+        // N.B. We can't use `write` here because of borrowing restrictions.
+        if self.quiet {
+            return;
+        }
+        if self.context_separator.is_empty() {
+            return;
+        }
+        self.has_printed = true;
+        let _ = self.wtr.write_all(&self.context_separator);
+        let _ = self.wtr.write_all(&[self.eol]);
     }
 
     pub fn matched<P: AsRef<Path>>(
@@ -58,15 +126,17 @@ impl<W: io::Write> Printer<W> {
         end: usize,
         line_number: Option<u64>,
     ) {
-        self.write(path.as_ref().to_string_lossy().as_bytes());
-        self.write(b":");
+        if self.with_filename {
+            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write(b":");
+        }
         if let Some(line_number) = line_number {
             self.write(line_number.to_string().as_bytes());
             self.write(b":");
         }
         self.write(&buf[start..end]);
-        if buf[start..end].last() != Some(&b'\n') {
-            self.write(b"\n");
+        if buf[start..end].last() != Some(&self.eol) {
+            self.write_eol();
         }
     }
 
@@ -78,24 +148,30 @@ impl<W: io::Write> Printer<W> {
         end: usize,
         line_number: Option<u64>,
     ) {
-        self.write(path.as_ref().to_string_lossy().as_bytes());
-        self.write(b"-");
+        if self.with_filename {
+            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write(b"-");
+        }
         if let Some(line_number) = line_number {
             self.write(line_number.to_string().as_bytes());
             self.write(b"-");
         }
         self.write(&buf[start..end]);
-        if buf[start..end].last() != Some(&b'\n') {
-            self.write(b"\n");
+        if buf[start..end].last() != Some(&self.eol) {
+            self.write_eol();
         }
     }
 
-    pub fn binary_matched<P: AsRef<Path>>(&mut self, path: P) {
-        wln!(&mut self.wtr, "Binary file {} matches", path.as_ref().display());
-    }
-
     fn write(&mut self, buf: &[u8]) {
+        if self.quiet {
+            return;
+        }
         self.has_printed = true;
         let _ = self.wtr.write_all(buf);
+    }
+
+    fn write_eol(&mut self) {
+        let eol = self.eol;
+        self.write(&[eol]);
     }
 }

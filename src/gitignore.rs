@@ -79,6 +79,7 @@ impl From<io::Error> for Error {
 }
 
 /// Gitignore is a matcher for the glob patterns in a single gitignore file.
+#[derive(Clone, Debug)]
 pub struct Gitignore {
     set: glob::Set,
     root: PathBuf,
@@ -136,22 +137,26 @@ impl Gitignore {
     pub fn matched_utf8(&self, path: &str, is_dir: bool) -> Match {
         // A single regex with a bunch of alternations of glob patterns is
         // unfortunately typically faster than a regex, so we use it as a
-        // first pass filter. We still need to run the RegexSet to most
+        // first pass filter. We still need to run the RegexSet to get the most
         // recently defined glob that matched.
         if !self.set.is_match(path) {
             return Match::None;
         }
-        let pat = match self.set.matches(path).iter().last() {
-            None => return Match::None,
-            Some(i) => &self.patterns[i],
-        };
-        if pat.whitelist {
-            Match::Whitelist(&pat)
-        } else if !pat.only_dir || is_dir {
-            Match::Ignored(&pat)
-        } else {
-            Match::None
+        // The regex set can't actually pick the right glob that matched all
+        // on its own. In particular, some globs require that only directories
+        // can match. Thus, only accept a match from the regex set if the given
+        // path satisfies the corresponding glob's directory criteria.
+        for i in self.set.matches(path).iter().rev() {
+            let pat = &self.patterns[i];
+            if !pat.only_dir || is_dir {
+                return if pat.whitelist {
+                    Match::Whitelist(pat)
+                } else {
+                    Match::Ignored(pat)
+                };
+            }
         }
+        Match::None
     }
 }
 
@@ -175,6 +180,24 @@ impl<'a> Match<'a> {
         match *self {
             Match::Ignored(_) => true,
             Match::None | Match::Whitelist(_) => false,
+        }
+    }
+
+    /// Returns true if the match result didn't match any globs.
+    pub fn is_none(&self) -> bool {
+        match *self {
+            Match::None => true,
+            Match::Ignored(_) | Match::Whitelist(_) => false,
+        }
+    }
+
+    /// Inverts the match so that Ignored becomes Whitelisted and Whitelisted
+    /// becomes Ignored. A non-match remains the same.
+    pub fn invert(self) -> Match<'a> {
+        match self {
+            Match::None => Match::None,
+            Match::Ignored(pat) => Match::Whitelist(pat),
+            Match::Whitelist(pat) => Match::Ignored(pat),
         }
     }
 }
@@ -231,7 +254,6 @@ impl GitignoreBuilder {
     /// Add each pattern line from the file path given.
     pub fn add_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         let rdr = io::BufReader::new(try!(File::open(&path)));
-        // println!("adding ignores from: {}", path.as_ref().display());
         for line in rdr.lines() {
             try!(self.add(&path, &try!(line)));
         }

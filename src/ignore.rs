@@ -18,6 +18,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use gitignore::{self, Gitignore, GitignoreBuilder, Match};
+use types::Types;
 
 /// Represents an error that can occur when parsing a gitignore file.
 #[derive(Debug)]
@@ -56,7 +57,13 @@ pub struct Ignore {
     /// A stack of ignore patterns at each directory level of traversal.
     /// A directory that contributes no ignore patterns is `None`.
     stack: Vec<Option<IgnoreDir>>,
+    /// A set of override globs that are always checked first. A match (whether
+    /// it's whitelist or blacklist) trumps anything in stack.
+    overrides: Option<Gitignore>,
+    /// A file type matcher.
+    types: Option<Types>,
     ignore_hidden: bool,
+    no_ignore: bool,
 }
 
 impl Ignore {
@@ -64,7 +71,10 @@ impl Ignore {
     pub fn new() -> Ignore {
         Ignore {
             stack: vec![],
+            overrides: None,
+            types: None,
             ignore_hidden: true,
+            no_ignore: false,
         }
     }
 
@@ -74,11 +84,34 @@ impl Ignore {
         self
     }
 
+    /// When set, ignore files are ignored.
+    pub fn no_ignore(&mut self, yes: bool) -> &mut Ignore {
+        self.no_ignore = yes;
+        self
+    }
+
+    /// Add a set of globs that overrides all other match logic.
+    pub fn add_override(&mut self, gi: Gitignore) -> &mut Ignore {
+        self.overrides = Some(gi);
+        self
+    }
+
+    /// Add a file type matcher. The file type matcher has the lowest
+    /// precedence.
+    pub fn add_types(&mut self, types: Types) -> &mut Ignore {
+        self.types = Some(types);
+        self
+    }
+
     /// Add a directory to the stack.
     ///
     /// Note that even if this returns an error, the directory is added to the
     /// stack (and therefore should be popped).
     pub fn push<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
+        if self.no_ignore {
+            self.stack.push(None);
+            return Ok(());
+        }
         match IgnoreDir::new(path) {
             Ok(id) => {
                 self.stack.push(id);
@@ -102,23 +135,56 @@ impl Ignore {
     /// Returns true if and only if the given file path should be ignored.
     pub fn ignored<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
         let path = path.as_ref();
+        if let Some(ref overrides) = self.overrides {
+            let mat = overrides.matched(path, is_dir).invert();
+            if let Some(is_ignored) = self.ignore_match(path, mat) {
+                return is_ignored;
+            }
+        }
         if self.ignore_hidden && is_hidden(&path) {
+            debug!("{} ignored because it is hidden", path.display());
             return true;
         }
         for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
-            match id.matched(path, is_dir) {
-                Match::Whitelist(ref pat) => {
-                    debug!("{} whitelisted by {:?}", path.display(), pat);
-                    return false;
-                }
-                Match::Ignored(ref pat) => {
-                    debug!("{} ignored by {:?}", path.display(), pat);
+            let mat = id.matched(path, is_dir);
+            if let Some(is_ignored) = self.ignore_match(path, mat) {
+                if is_ignored {
                     return true;
                 }
-                Match::None => {}
+                // If this path is whitelisted by an ignore, then fallthrough
+                // and let the file type matcher have a say.
+                break;
+            }
+        }
+        if let Some(ref types) = self.types {
+            let mat = types.matched(path, is_dir);
+            if let Some(is_ignored) = self.ignore_match(path, mat) {
+                return is_ignored;
             }
         }
         false
+    }
+
+    /// Returns true if the given match says the given pattern should be
+    /// ignored or false if the given pattern should be explicitly whitelisted.
+    /// Returns None otherwise.
+    pub fn ignore_match<P: AsRef<Path>>(
+        &self,
+        path: P,
+        mat: Match,
+    ) -> Option<bool> {
+        let path = path.as_ref();
+        match mat {
+            Match::Whitelist(ref pat) => {
+                debug!("{} whitelisted by {:?}", path.display(), pat);
+                Some(false)
+            }
+            Match::Ignored(ref pat) => {
+                debug!("{} ignored by {:?}", path.display(), pat);
+                Some(true)
+            }
+            Match::None => None,
+        }
     }
 }
 
