@@ -75,6 +75,11 @@ Less common options:
     -C, --context NUM
         Show NUM lines before and after each match.
 
+    --column
+        Show column numbers (1 based) in output. This only shows the column
+        numbers for the first match on each line. Note that this doesn't try
+        to account for Unicode. One byte is equal to one column.
+
     --context-separator ARG
         The string to use when separating non-continuous context lines. Escape
         sequences may be used. [default: --]
@@ -146,6 +151,7 @@ pub struct RawArgs {
     flag_after_context: usize,
     flag_before_context: usize,
     flag_color: String,
+    flag_column: bool,
     flag_context: usize,
     flag_context_separator: String,
     flag_count: bool,
@@ -186,6 +192,7 @@ pub struct Args {
     after_context: usize,
     before_context: usize,
     color: bool,
+    column: bool,
     context_separator: Vec<u8>,
     count: bool,
     eol: u8,
@@ -296,6 +303,7 @@ impl RawArgs {
             after_context: after_context,
             before_context: before_context,
             color: color,
+            column: self.flag_column,
             context_separator: unescape(&self.flag_context_separator),
             count: self.flag_count,
             eol: eol,
@@ -401,6 +409,7 @@ impl Args {
     /// writer given.
     pub fn printer<W: Send + io::Write>(&self, wtr: W) -> Printer<W> {
         let mut p = Printer::new(wtr, self.color)
+            .column(self.column)
             .context_separator(self.context_separator.clone())
             .eol(self.eol)
             .heading(self.heading)

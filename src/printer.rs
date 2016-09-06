@@ -22,6 +22,8 @@ pub struct Printer<W> {
     wtr: Writer<W>,
     /// Whether anything has been printed to wtr yet.
     has_printed: bool,
+    /// Whether to show column numbers for the first match or not.
+    column: bool,
     /// The string to use to separate non-contiguous runs of context lines.
     context_separator: Vec<u8>,
     /// The end-of-line terminator used by the printer. In general, eols are
@@ -48,6 +50,7 @@ impl<W: Send + io::Write> Printer<W> {
         Printer {
             wtr: Writer::new(wtr, color),
             has_printed: false,
+            column: false,
             context_separator: "--".to_string().into_bytes(),
             eol: b'\n',
             heading: false,
@@ -55,6 +58,13 @@ impl<W: Send + io::Write> Printer<W> {
             replace: None,
             with_filename: false,
         }
+    }
+
+    /// When set, column numbers will be printed for the first match on each
+    /// line.
+    pub fn column(mut self, yes: bool) -> Printer<W> {
+        self.column = yes;
+        self
     }
 
     /// Set the context separator. The default is `--`.
@@ -172,6 +182,11 @@ impl<W: Send + io::Write> Printer<W> {
         }
         if let Some(line_number) = line_number {
             self.line_number(line_number, b':');
+        }
+        if self.column {
+            let c = re.find(&buf[start..end]).map(|(s, _)| s + 1).unwrap_or(0);
+            self.write(c.to_string().as_bytes());
+            self.write(b":");
         }
         if self.replace.is_some() {
             let line = re.replace_all(
