@@ -99,7 +99,7 @@ fn run(args: Args) -> Result<u64> {
                 chan_work: stealer.clone(),
                 inpbuf: args.input_buffer(),
                 outbuf: Some(vec![]),
-                grep: try!(args.grep()),
+                grep: args.grep(),
                 match_count: 0,
             };
             workers.push(thread::spawn(move || worker.run()));

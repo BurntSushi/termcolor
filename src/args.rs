@@ -192,6 +192,7 @@ pub struct Args {
     files: bool,
     follow: bool,
     glob_overrides: Option<Gitignore>,
+    grep: Grep,
     heading: bool,
     hidden: bool,
     ignore_case: bool,
@@ -283,6 +284,12 @@ impl RawArgs {
         btypes.add_defaults();
         try!(self.add_types(&mut btypes));
         let types = try!(btypes.build());
+        let grep = try!(
+            GrepBuilder::new(&pattern)
+                .case_insensitive(self.flag_ignore_case)
+                .line_terminator(eol)
+                .build()
+        );
         let mut args = Args {
             pattern: pattern,
             paths: paths,
@@ -295,6 +302,7 @@ impl RawArgs {
             files: self.flag_files,
             follow: self.flag_follow,
             glob_overrides: glob_overrides,
+            grep: grep,
             heading: !self.flag_no_heading && self.flag_heading,
             hidden: self.flag_hidden,
             ignore_case: self.flag_ignore_case,
@@ -378,12 +386,8 @@ impl Args {
     /// basic searching of regular expressions in a single buffer.
     ///
     /// The pattern and other flags are taken from the command line.
-    pub fn grep(&self) -> Result<Grep> {
-        GrepBuilder::new(&self.pattern)
-            .case_insensitive(self.ignore_case)
-            .line_terminator(self.eol)
-            .build()
-            .map_err(From::from)
+    pub fn grep(&self) -> Grep {
+        self.grep.clone()
     }
 
     /// Creates a new input buffer that is used in searching.
