@@ -29,7 +29,6 @@ to make its way into `glob` proper.
 use std::error::Error as StdError;
 use std::fmt;
 use std::iter;
-use std::path;
 use std::str;
 
 use regex;
@@ -214,7 +213,7 @@ impl Pattern {
     /// regular expression and will represent the matching semantics of this
     /// glob pattern and the options given.
     pub fn to_regex_with(&self, options: &MatchOptions) -> String {
-        let sep = regex::quote(&path::MAIN_SEPARATOR.to_string());
+        let seps = regex::quote(r"/\");
         let mut re = String::new();
         re.push_str("(?-u)");
         if options.case_insensitive {
@@ -235,26 +234,27 @@ impl Pattern {
                 }
                 Token::Any => {
                     if options.require_literal_separator {
-                        re.push_str(&format!("[^{}]", sep));
+                        re.push_str(&format!("[^{}]", seps));
                     } else {
                         re.push_str(".");
                     }
                 }
                 Token::ZeroOrMore => {
                     if options.require_literal_separator {
-                        re.push_str(&format!("[^{}]*", sep));
+                        re.push_str(&format!("[^{}]*", seps));
                     } else {
                         re.push_str(".*");
                     }
                 }
                 Token::RecursivePrefix => {
-                    re.push_str(&format!("(?:{sep}?|.*{sep})", sep=sep));
+                    re.push_str(&format!("(?:[{sep}]?|.*[{sep}])", sep=seps));
                 }
                 Token::RecursiveSuffix => {
-                    re.push_str(&format!("(?:{sep}?|{sep}.*)", sep=sep));
+                    re.push_str(&format!("(?:[{sep}]?|[{sep}].*)", sep=seps));
                 }
                 Token::RecursiveZeroOrMore => {
-                    re.push_str(&format!("(?:{sep}|{sep}.*{sep})", sep=sep));
+                    re.push_str(&format!("(?:[{sep}]|[{sep}].*[{sep}])",
+                                         sep=seps));
                 }
                 Token::Class { negated, ref ranges } => {
                     re.push('[');
@@ -480,9 +480,9 @@ mod tests {
                 let pat = Pattern::new($pat).unwrap();
                 let path = &Path::new($path).to_str().unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                println!("PATTERN: {}", $pat);
-                println!("REGEX: {:?}", re);
-                println!("PATH: {}", path);
+                // println!("PATTERN: {}", $pat);
+                // println!("REGEX: {:?}", re);
+                // println!("PATH: {}", path);
                 assert!(!re.is_match(path.as_bytes()));
             }
         };
@@ -564,12 +564,11 @@ mod tests {
         case_insensitive: true,
         require_literal_separator: false,
     };
-    const SEP: char = ::std::path::MAIN_SEPARATOR;
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 
-    toregex!(re_slash1, "?", format!("^[^{}]$", SEP), SLASHLIT);
-    toregex!(re_slash2, "*", format!("^[^{}]*$", SEP), SLASHLIT);
+    toregex!(re_slash1, "?", r"^[^/\\]$", SLASHLIT);
+    toregex!(re_slash2, "*", r"^[^/\\]*$", SLASHLIT);
 
     toregex!(re1, "a", "^a$");
     toregex!(re2, "?", "^.$");
