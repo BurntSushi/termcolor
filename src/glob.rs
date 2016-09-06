@@ -214,7 +214,7 @@ impl Pattern {
     /// regular expression and will represent the matching semantics of this
     /// glob pattern and the options given.
     pub fn to_regex_with(&self, options: &MatchOptions) -> String {
-        let sep = path::MAIN_SEPARATOR.to_string();
+        let sep = regex::quote(&path::MAIN_SEPARATOR.to_string());
         let mut re = String::new();
         re.push_str("(?-u)");
         if options.case_insensitive {
@@ -235,14 +235,14 @@ impl Pattern {
                 }
                 Token::Any => {
                     if options.require_literal_separator {
-                        re.push_str(&format!("[^{}]", regex::quote(&sep)));
+                        re.push_str(&format!("[^{}]", sep));
                     } else {
                         re.push_str(".");
                     }
                 }
                 Token::ZeroOrMore => {
                     if options.require_literal_separator {
-                        re.push_str(&format!("[^{}]*", regex::quote(&sep)));
+                        re.push_str(&format!("[^{}]*", sep));
                     } else {
                         re.push_str(".*");
                     }
