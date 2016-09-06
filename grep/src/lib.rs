@@ -4,6 +4,8 @@
 A fast line oriented regex searcher.
 */
 
+#[macro_use]
+extern crate log;
 extern crate memchr;
 extern crate regex;
 extern crate regex_syntax as syntax;

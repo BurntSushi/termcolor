@@ -1,13 +1,22 @@
+/*!
+The literals module is responsible for extracting *inner* literals out of the
+AST of a regular expression. Normally this is the job of the regex engine
+itself, but the regex engine doesn't look for inner literals. Since we're doing
+line based searching, we can use them, so we need to do it ourselves.
+
+Note that this implementation is incredibly suspicious. We need something more
+principled.
+*/
 use std::cmp;
 use std::iter;
 
 use regex::bytes::Regex;
 use syntax::{
     Expr, Literals, Lit,
-    Repeater,
+    ByteClass, ByteRange, CharClass, ClassRange, Repeater,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LiteralSets {
     prefixes: Literals,
     suffixes: Literals,
@@ -27,6 +36,7 @@ impl LiteralSets {
 
     pub fn to_regex(&self) -> Option<Regex> {
         if self.prefixes.all_complete() && !self.prefixes.is_empty() {
+            debug!("literal prefixes detected: {:?}", self.prefixes);
             // When this is true, the regex engine will do a literal scan.
             return None;
         }
@@ -56,13 +66,27 @@ impl LiteralSets {
         if suf_lcs.len() > lit.len() {
             lit = suf_lcs;
         }
-        if req.len() > lit.len() {
+        if req_lits.len() == 1 && req.len() > lit.len() {
             lit = req;
         }
-        if lit.is_empty() {
+
+        // Special case: if we detected an alternation of inner required
+        // literals and its longest literal is bigger than the longest
+        // prefix/suffix, then choose the alternation. In practice, this
+        // helps with case insensitive matching, which can generate lots of
+        // inner required literals.
+        let any_empty = req_lits.iter().any(|lit| lit.is_empty());
+        if req.len() > lit.len() && req_lits.len() > 1 && !any_empty {
+            debug!("required literals found: {:?}", req_lits);
+            let alts: Vec<String> =
+                req_lits.into_iter().map(|x| bytes_to_regex(x)).collect();
+            // Literals always compile.
+            Some(Regex::new(&alts.join("|")).unwrap())
+        } else if lit.is_empty() {
             None
         } else {
             // Literals always compile.
+            debug!("required literal found: {:?}", show(lit));
             Some(Regex::new(&bytes_to_regex(lit)).unwrap())
         }
     }
@@ -75,14 +99,30 @@ fn union_required(expr: &Expr, lits: &mut Literals) {
             let s: String = chars.iter().cloned().collect();
             lits.cross_add(s.as_bytes());
         }
-        Literal { casei: true, .. } => {
-            lits.cut();
+        Literal { ref chars, casei: true } => {
+            for &c in chars {
+                let cls = CharClass::new(vec![
+                    ClassRange { start: c, end: c },
+                ]).case_fold();
+                if !lits.add_char_class(&cls) {
+                    lits.cut();
+                    return;
+                }
+            }
         }
         LiteralBytes { ref bytes, casei: false } => {
             lits.cross_add(bytes);
         }
-        LiteralBytes { casei: true, .. } => {
-            lits.cut();
+        LiteralBytes { ref bytes, casei: true } => {
+            for &b in bytes {
+                let cls = ByteClass::new(vec![
+                    ByteRange { start: b, end: b },
+                ]).case_fold();
+                if !lits.add_byte_class(&cls) {
+                    lits.cut();
+                    return;
+                }
+            }
         }
         Class(_) => {
             lits.cut();
@@ -204,4 +244,19 @@ fn bytes_to_regex(bs: &[u8]) -> String {
         s.push_str(&format!("\\x{:02x}", b));
     }
     s
+}
+
+/// Converts arbitrary bytes to a nice string.
+fn show(bs: &[u8]) -> String {
+    // Why aren't we using this to feed to the regex? Doesn't really matter
+    // I guess. ---AG
+    use std::ascii::escape_default;
+    use std::str;
+
+    let mut nice = String::new();
+    for &b in bs {
+        let part: Vec<u8> = escape_default(b).collect();
+        nice.push_str(str::from_utf8(&part).unwrap());
+    }
+    nice
 }
