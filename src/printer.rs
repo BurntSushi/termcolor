@@ -193,7 +193,7 @@ impl<W: Send + io::Write> Printer<W> {
         let mut last_written = 0;
         for (s, e) in re.find_iter(buf) {
             self.write(&buf[last_written..s]);
-            let _ = self.wtr.fg(BRIGHT_RED);
+            let _ = self.wtr.fg(RED);
             let _ = self.wtr.attr(term::Attr::Bold);
             self.write(&buf[s..e]);
             let _ = self.wtr.reset();
@@ -228,6 +228,7 @@ impl<W: Send + io::Write> Printer<W> {
     fn write_heading<P: AsRef<Path>>(&mut self, path: P) {
         if self.wtr.is_color() {
             let _ = self.wtr.fg(GREEN);
+            let _ = self.wtr.attr(term::Attr::Bold);
         }
         self.write(path.as_ref().to_string_lossy().as_bytes());
         self.write_eol();
@@ -238,7 +239,7 @@ impl<W: Send + io::Write> Printer<W> {
 
     fn line_number(&mut self, n: u64, sep: u8) {
         if self.wtr.is_color() {
-            let _ = self.wtr.fg(YELLOW);
+            let _ = self.wtr.fg(BLUE);
             let _ = self.wtr.attr(term::Attr::Bold);
         }
         self.write(n.to_string().as_bytes());
