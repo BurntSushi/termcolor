@@ -414,6 +414,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use regex::bytes::Regex;
 
     use super::{Error, Pattern, MatchOptions, SetBuilder, Token};
@@ -461,8 +463,9 @@ mod tests {
             #[test]
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
+                let path = &Path::new($path).to_str().unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                assert!(re.is_match($path.as_bytes()));
+                assert!(re.is_match(path.as_bytes()));
             }
         };
     }
@@ -475,8 +478,9 @@ mod tests {
             #[test]
             fn $name() {
                 let pat = Pattern::new($pat).unwrap();
+                let path = &Path::new($path).to_str().unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                assert!(!re.is_match($path.as_bytes()));
+                assert!(!re.is_match(path.as_bytes()));
             }
         };
     }
