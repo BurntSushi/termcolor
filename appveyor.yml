@@ -37,7 +37,8 @@ test_script:
 
 before_deploy:
   # Generate artifacts for release
-  - RUSTFLAGS="-C target-feature=+ssse3" cargo build --release --features simd-accel
+  - SET RUSTFLAGS="-C target-feature=+ssse3"
+  - cargo build --release --features simd-accel
   - mkdir staging
   # TODO update this part to copy the artifacts that make sense for your project
   - copy target\release\xrep.exe staging

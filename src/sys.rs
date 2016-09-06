@@ -37,6 +37,6 @@ pub fn stdout_is_atty() -> bool {
     unsafe {
         let fd = winapi::winbase::STD_OUTPUT_HANDLE;
         let mut out = 0;
-        kernel32::GetConsoleMode(handle, &mut out) != 0
+        kernel32::GetConsoleMode(kernel32::GetStdHandle(fd), &mut out) != 0
     }
 }
