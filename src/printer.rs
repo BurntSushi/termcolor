@@ -214,10 +214,6 @@ impl<W: Send + io::Write> Printer<W> {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
             self.write(path.as_ref().to_string_lossy().as_bytes());
-            self.write(b":");
-        }
-        if !self.heading && self.with_filename {
-            self.write(path.as_ref().to_string_lossy().as_bytes());
             self.write(b"-");
         }
         if let Some(line_number) = line_number {
