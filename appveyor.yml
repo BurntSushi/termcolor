@@ -32,15 +32,13 @@ build: false
 # Equivalent to Travis' `script` phase
 # TODO modify this phase as you see fit
 test_script:
-  # - cargo build --verbose
-  - cargo test matchslash2 -- --nocapture
+  - cargo test --verbose
 
 before_deploy:
   # Generate artifacts for release
-  - SET RUSTFLAGS="-C target-feature=+ssse3"
-  - cargo build --release --features simd-accel
+  # TODO(burntsushi): How can we enable SSSE3 on Windows?
+  - cargo build --release
   - mkdir staging
-  # TODO update this part to copy the artifacts that make sense for your project
   - copy target\release\xrep.exe staging
   - cd staging
     # release zipfile will look like 'rust-everywhere-v1.2.3-x86_64-pc-windows-msvc'
