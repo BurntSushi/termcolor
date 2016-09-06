@@ -239,6 +239,7 @@ impl<W: Send + io::Write> Printer<W> {
     fn line_number(&mut self, n: u64, sep: u8) {
         if self.wtr.is_color() {
             let _ = self.wtr.fg(YELLOW);
+            let _ = self.wtr.attr(term::Attr::Bold);
         }
         self.write(n.to_string().as_bytes());
         if self.wtr.is_color() {
