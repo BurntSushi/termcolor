@@ -16,6 +16,7 @@ use ignore::Ignore;
 use out::Out;
 use printer::Printer;
 use search::{InputBuffer, Searcher};
+use search_buffer::BufferSearcher;
 use sys;
 use types::{FileTypeDef, Types, TypesBuilder};
 use walk;
@@ -111,6 +112,14 @@ Less common options:
         The byte to use for a line terminator. Escape sequences may be used.
         [default: \\n]
 
+    --mmap
+        Search using memory maps when possible. This is enabled by default
+        when xrep thinks it will be faster. (Note that mmap searching doesn't
+        current support the various context related options.)
+
+    --no-mmap
+        Never use memory maps, even when they might be faster.
+
     --no-ignore
         Don't respect ignore files (.gitignore, .xrepignore, etc.)
 
@@ -166,10 +175,12 @@ pub struct RawArgs {
     flag_line_number: bool,
     flag_line_terminator: String,
     flag_literal: bool,
+    flag_mmap: bool,
     flag_no_heading: bool,
     flag_no_ignore: bool,
     flag_no_ignore_parent: bool,
     flag_no_line_number: bool,
+    flag_no_mmap: bool,
     flag_pretty: bool,
     flag_quiet: bool,
     flag_replace: Option<String>,
@@ -205,6 +216,7 @@ pub struct Args {
     ignore_case: bool,
     invert_match: bool,
     line_number: bool,
+    mmap: bool,
     no_ignore: bool,
     no_ignore_parent: bool,
     quiet: bool,
@@ -251,6 +263,19 @@ impl RawArgs {
             } else {
                 (self.flag_after_context, self.flag_before_context)
             };
+        let mmap =
+            if before_context > 0 || after_context > 0 || self.flag_no_mmap {
+                false
+            } else if self.flag_mmap {
+                true
+            } else {
+                // If we're only searching a few paths and all of them are
+                // files, then memory maps are probably faster.
+                paths.len() <= 10 && paths.iter().all(|p| p.is_file())
+            };
+        if mmap {
+            debug!("will try to use memory maps");
+        }
         let eol = {
             let eol = unescape(&self.flag_line_terminator);
             if eol.is_empty() {
@@ -316,6 +341,7 @@ impl RawArgs {
             ignore_case: self.flag_ignore_case,
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
+            mmap: mmap,
             no_ignore: self.flag_no_ignore,
             no_ignore_parent: self.flag_no_ignore_parent,
             quiet: self.flag_quiet,
@@ -405,6 +431,11 @@ impl Args {
         inp
     }
 
+    /// Whether we should prefer memory maps for searching or not.
+    pub fn mmap(&self) -> bool {
+        self.mmap
+    }
+
     /// Create a new printer of individual search results that writes to the
     /// writer given.
     pub fn printer<W: Send + io::Write>(&self, wtr: W) -> Printer<W> {
@@ -452,6 +483,24 @@ impl Args {
         Searcher::new(inp, printer, grep, path, rdr)
             .after_context(self.after_context)
             .before_context(self.before_context)
+            .count(self.count)
+            .eol(self.eol)
+            .line_number(self.line_number)
+            .invert_match(self.invert_match)
+            .text(self.text)
+    }
+
+    /// Create a new line based searcher whose configuration is taken from the
+    /// command line. This search operates on an entire file all once (which
+    /// may have been memory mapped).
+    pub fn searcher_buffer<'a, W: Send + io::Write>(
+        &self,
+        printer: &'a mut Printer<W>,
+        grep: &'a Grep,
+        path: &'a Path,
+        buf: &'a [u8],
+    ) -> BufferSearcher<'a, W> {
+        BufferSearcher::new(printer, grep, path, buf)
             .count(self.count)
             .eol(self.eol)
             .line_number(self.line_number)

@@ -34,6 +34,7 @@ use std::thread;
 
 use crossbeam::sync::chase_lev::{self, Steal, Stealer};
 use grep::Grep;
+use memmap::{Mmap, Protection};
 use walkdir::DirEntry;
 
 use args::Args;
@@ -61,6 +62,7 @@ mod ignore;
 mod out;
 mod printer;
 mod search;
+mod search_buffer;
 mod sys;
 mod terminal;
 mod types;
@@ -221,7 +223,11 @@ impl Worker {
                 if let Ok(p) = path.strip_prefix("./") {
                     path = p;
                 }
-                self.search(printer, path, file)
+                if self.args.mmap() {
+                    self.search_mmap(printer, path, &file)
+                } else {
+                    self.search(printer, path, file)
+                }
             }
         };
         match result {
@@ -247,5 +253,24 @@ impl Worker {
             path,
             rdr,
         ).run().map_err(From::from)
+    }
+
+    fn search_mmap<W: Send + io::Write>(
+        &mut self,
+        printer: &mut Printer<W>,
+        path: &Path,
+        file: &File,
+    ) -> Result<u64> {
+        if try!(file.metadata()).len() == 0 {
+            // Opening a memory map with an empty file results in an error.
+            return Ok(0);
+        }
+        let mmap = try!(Mmap::open(file, Protection::Read));
+        Ok(self.args.searcher_buffer(
+            printer,
+            &self.grep,
+            path,
+            unsafe { mmap.as_slice() },
+        ).run())
     }
 }

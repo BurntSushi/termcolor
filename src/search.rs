@@ -74,14 +74,14 @@ pub struct Searcher<'a, R, W: 'a> {
 
 /// Options for configuring search.
 #[derive(Clone)]
-struct Options {
-    after_context: usize,
-    before_context: usize,
-    count: bool,
-    eol: u8,
-    invert_match: bool,
-    line_number: bool,
-    text: bool,
+pub struct Options {
+    pub after_context: usize,
+    pub before_context: usize,
+    pub count: bool,
+    pub eol: u8,
+    pub invert_match: bool,
+    pub line_number: bool,
+    pub text: bool,
 }
 
 impl Default for Options {
@@ -219,14 +219,11 @@ impl<'a, R: io::Read, W: Send + io::Write> Searcher<'a, R, W> {
                         self.print_inverted_matches(upto);
                     }
                 } else if matched {
-                    self.match_count += 1;
-                    if !self.opts.count {
-                        let start = self.last_match.start();
-                        let end = self.last_match.end();
-                        self.print_after_context(start);
-                        self.print_before_context(start);
-                        self.print_match(start, end);
-                    }
+                    let start = self.last_match.start();
+                    let end = self.last_match.end();
+                    self.print_after_context(start);
+                    self.print_before_context(start);
+                    self.print_match(start, end);
                 }
                 if matched {
                     self.inp.pos = self.last_match.end();
@@ -275,11 +272,8 @@ impl<'a, R: io::Read, W: Send + io::Write> Searcher<'a, R, W> {
         debug_assert!(self.opts.invert_match);
         let mut it = IterLines::new(self.opts.eol, self.inp.pos);
         while let Some((start, end)) = it.next(&self.inp.buf[..upto]) {
-            if !self.opts.count {
-                self.print_match(start, end);
-            }
+            self.print_match(start, end);
             self.inp.pos = end;
-            self.match_count += 1;
         }
     }
 
@@ -325,11 +319,15 @@ impl<'a, R: io::Read, W: Send + io::Write> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
+        self.match_count += 1;
+        if self.opts.count {
+            return;
+        }
         self.print_separator(start);
         self.count_lines(start);
         self.add_line(end);
         self.printer.matched(
-            self.grep.regex(), &self.path,
+            self.grep.regex(), self.path,
             &self.inp.buf, start, end, self.line_count);
         self.last_printed = end;
         self.after_context_remaining = self.opts.after_context;
@@ -535,7 +533,7 @@ impl InputBuffer {
 ///
 /// Note that this may return both false positives and false negatives.
 #[inline(always)]
-fn is_binary(buf: &[u8]) -> bool {
+pub fn is_binary(buf: &[u8]) -> bool {
     if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
         return true;
     }
@@ -544,7 +542,7 @@ fn is_binary(buf: &[u8]) -> bool {
 
 /// Count the number of lines in the given buffer.
 #[inline(always)]
-fn count_lines(mut buf: &[u8], eol: u8) -> u64 {
+pub fn count_lines(mut buf: &[u8], eol: u8) -> u64 {
     let mut count = 0;
     while let Some(pos) = memchr(eol, buf) {
         count += 1;
@@ -575,7 +573,7 @@ fn replace_buf(buf: &mut [u8], a: u8, b: u8) {
 /// advance over the positions of each line. We neglect that approach to avoid
 /// the borrow in the search code. (Because the borrow prevents composition
 /// through other mutable methods.)
-struct IterLines {
+pub struct IterLines {
     eol: u8,
     pos: usize,
 }
@@ -585,7 +583,7 @@ impl IterLines {
     ///
     /// The buffer is passed to the `next` method.
     #[inline(always)]
-    fn new(eol: u8, start: usize) -> IterLines {
+    pub fn new(eol: u8, start: usize) -> IterLines {
         IterLines {
             eol: eol,
             pos: start,
@@ -597,7 +595,7 @@ impl IterLines {
     ///
     /// The range returned includes the new line.
     #[inline(always)]
-    fn next(&mut self, buf: &[u8]) -> Option<(usize, usize)> {
+    pub fn next(&mut self, buf: &[u8]) -> Option<(usize, usize)> {
         match memchr(self.eol, &buf[self.pos..]) {
             None => {
                 if self.pos < buf.len() {
@@ -870,7 +868,7 @@ fn main() {
     }
 
     #[test]
-    fn basic_search() {
+    fn basic_search1() {
         let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s|s);
         assert_eq!(2, count);
         assert_eq!(out, "\
@@ -886,7 +884,6 @@ fn main() {
         assert_eq!(0, count);
         assert_eq!(out, "");
     }
-
 
     #[test]
     fn binary_text() {
