@@ -254,7 +254,7 @@ impl<'b, 's> Iterator for Iter<'b, 's> {
             self.start = self.buf.len();
             return None;
         }
-        self.start = mat.end + 1;
+        self.start = mat.end;
         Some(mat)
     }
 }
