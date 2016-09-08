@@ -1,14 +1,14 @@
 [package]
 publish = false
-name = "xrep"
+name = "ripgrep"
 version = "0.1.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Line oriented search tool using Rust's regex library.
 """
-documentation = "https://github.com/BurntSushi/xrep"
-homepage = "https://github.com/BurntSushi/xrep"
-repository = "https://github.com/BurntSushi/xrep"
+documentation = "https://github.com/BurntSushi/ripgrep"
+homepage = "https://github.com/BurntSushi/ripgrep"
+repository = "https://github.com/BurntSushi/ripgrep"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"
@@ -16,7 +16,7 @@ license = "Unlicense/MIT"
 [[bin]]
 bench = false
 path = "src/main.rs"
-name = "xrep"
+name = "rg"
 
 [dependencies]
 crossbeam = "0.2"

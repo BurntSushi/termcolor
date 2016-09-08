@@ -1,6 +1,6 @@
 environment:
   global:
-    PROJECT_NAME: xrep
+    PROJECT_NAME: rg
   matrix:
     # Nightly channel
     - TARGET: i686-pc-windows-gnu
@@ -39,7 +39,7 @@ before_deploy:
   # TODO(burntsushi): How can we enable SSSE3 on Windows?
   - cargo build --release
   - mkdir staging
-  - copy target\release\xrep.exe staging
+  - copy target\release\rg.exe staging
   - cd staging
     # release zipfile will look like 'rust-everywhere-v1.2.3-x86_64-pc-windows-msvc'
   - 7z a ../%PROJECT_NAME%-%APPVEYOR_REPO_TAG_NAME%-%TARGET%.zip *

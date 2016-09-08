@@ -5,7 +5,7 @@ whether a *single* file path should be searched or not.
 In general, there are two ways to ignore a particular file:
 
 1. Specify an ignore rule in some "global" configuration, such as a
-   $HOME/.xrepignore or on the command line.
+   $HOME/.rgignore or on the command line.
 2. A specific ignore file (like .gitignore) found during directory traversal.
 
 The `IgnoreDir` type handles ignore patterns for any one particular directory
@@ -24,7 +24,7 @@ use types::Types;
 const IGNORE_NAMES: &'static [&'static str] = &[
     ".gitignore",
     ".agignore",
-    ".xrepignore",
+    ".rgignore",
 ];
 
 /// Represents an error that can occur when parsing a gitignore file.
@@ -257,8 +257,8 @@ pub struct IgnoreDir {
     /// A single accumulation of glob patterns for this directory, matched
     /// using gitignore semantics.
     ///
-    /// This will include patterns from xrepignore as well. The patterns are
-    /// ordered so that precedence applies automatically (e.g., xrepignore
+    /// This will include patterns from rgignore as well. The patterns are
+    /// ordered so that precedence applies automatically (e.g., rgignore
     /// patterns procede gitignore patterns).
     gi: Option<Gitignore>,
     // TODO(burntsushi): Matching other types of glob patterns that don't
@@ -422,7 +422,7 @@ mod tests {
         };
     }
 
-    const ROOT: &'static str = "/home/foobar/rust/xrep";
+    const ROOT: &'static str = "/home/foobar/rust/rg";
 
     ignored_dir!(id1, ROOT, "src/main.rs", "", "src/main.rs");
     ignored_dir!(id2, ROOT, "", "src/main.rs", "src/main.rs");

@@ -28,13 +28,13 @@ use Result;
 /// If you've never heard of Docopt before, see: http://docopt.org
 /// (TL;DR: The CLI parser is generated from the usage string below.)
 const USAGE: &'static str = "
-Usage: xrep [options] <pattern> [<path> ...]
-       xrep [options] --files [<path> ...]
-       xrep [options] --type-list
-       xrep --help
-       xrep --version
+Usage: rg [options] <pattern> [<path> ...]
+       rg [options] --files [<path> ...]
+       rg [options] --type-list
+       rg --help
+       rg --version
 
-xrep is like the silver searcher and grep, but faster than both.
+rg combines the usability of the silver search with the raw speed of grep.
 
 Common options:
     -a, --text                 Search binary files as if they were text.
@@ -114,14 +114,14 @@ Less common options:
 
     --mmap
         Search using memory maps when possible. This is enabled by default
-        when xrep thinks it will be faster. (Note that mmap searching doesn't
-        current support the various context related options.)
+        when ripgrep thinks it will be faster. (Note that mmap searching
+        doesn't current support the various context related options.)
 
     --no-mmap
         Never use memory maps, even when they might be faster.
 
     --no-ignore
-        Don't respect ignore files (.gitignore, .xrepignore, etc.)
+        Don't respect ignore files (.gitignore, .rgignore, etc.)
 
     --no-ignore-parent
         Don't respect ignore files in parent directories.
@@ -137,7 +137,7 @@ Less common options:
         (capped at 6). [default: 0]
 
     --version
-        Show the version number of xrep and exit.
+        Show the version number of ripgrep and exit.
 
 File type management options:
     --type-list
@@ -152,7 +152,7 @@ File type management options:
 ";
 
 /// RawArgs are the args as they are parsed from Docopt. They aren't used
-/// directly by the rest of xrep.
+/// directly by the rest of ripgrep.
 #[derive(Debug, RustcDecodable)]
 pub struct RawArgs {
     arg_pattern: String,
@@ -230,7 +230,7 @@ pub struct Args {
 }
 
 impl RawArgs {
-    /// Convert arguments parsed into a configuration used by xrep.
+    /// Convert arguments parsed into a configuration used by ripgrep.
     fn to_args(&self) -> Result<Args> {
         let pattern = {
             let pattern =
@@ -387,7 +387,7 @@ impl Args {
     ///
     /// If a CLI usage error occurred, then exit the process and print a usage
     /// or error message. Similarly, if the user requested the version of
-    /// xrep, then print the version and exit.
+    /// ripgrep, then print the version and exit.
     ///
     /// Also, initialize a global logger.
     pub fn parse() -> Result<Args> {
@@ -409,7 +409,7 @@ impl Args {
         raw.to_args().map_err(From::from)
     }
 
-    /// Returns true if xrep should print the files it will search and exit
+    /// Returns true if ripgrep should print the files it will search and exit
     /// (but not do any actual searching).
     pub fn files(&self) -> bool {
         self.files
@@ -518,8 +518,8 @@ impl Args {
         &self.type_defs
     }
 
-    /// Returns true if xrep should print the type definitions currently loaded
-    /// and then exit.
+    /// Returns true if ripgrep should print the type definitions currently
+    /// loaded and then exit.
     pub fn type_list(&self) -> bool {
         self.type_list
     }

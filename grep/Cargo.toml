@@ -6,9 +6,9 @@ authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Fast line oriented regex searching as a library.
 """
-documentation = "https://github.com/BurntSushi/xrep"
-homepage = "https://github.com/BurntSushi/xrep"
-repository = "https://github.com/BurntSushi/xrep"
+documentation = "https://github.com/BurntSushi/ripgrep"
+homepage = "https://github.com/BurntSushi/ripgrep"
+repository = "https://github.com/BurntSushi/ripgrep"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"

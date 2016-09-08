@@ -1,6 +1,6 @@
 /*!
 This io module contains various platform specific functions for detecting
-how xrep is being used. e.g., Is stdin being piped into it? Is stdout being
+how ripgrep is being used. e.g., Is stdin being piped into it? Is stdout being
 redirected to a file? etc... We use this information to tweak various default
 configuration parameters such as colors and match formatting.
 */
