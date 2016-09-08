@@ -6,23 +6,22 @@ set -ex
 
 # Generate artifacts for release
 mk_artifacts() {
-    RUSTFLAGS="-C target-feature=+ssse3" cargo build --target $TARGET --release --features simd-accel
+    RUSTFLAGS="-C target-feature=+ssse3" \
+      cargo build --target $TARGET --release --features simd-accel
 }
 
 mk_tarball() {
     # create a "staging" directory
     local td=$(mktempd)
     local out_dir=$(pwd)
+    local name="${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
+    mkdir "$td/$name"
 
-    # TODO update this part to copy the artifacts that make sense for your project
-    # NOTE All Cargo build artifacts will be under the 'target/$TARGET/{debug,release}'
-    cp target/$TARGET/release/rg $td
+    cp target/$TARGET/release/rg "$td/$name/"
+    cp {README,UNLICENSE,COPYING,LICENSE_MIT} "$td/$name/"
 
     pushd $td
-
-    # release tarball will look like 'rust-everywhere-v1.2.3-x86_64-unknown-linux-gnu.tar.gz'
-    tar czf $out_dir/${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.tar.gz *
-
+    tar czf "$out_dir/$name.tar.gz" *
     popd
     rm -r $td
 }
