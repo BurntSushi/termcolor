@@ -35,6 +35,7 @@ use std::thread;
 use crossbeam::sync::chase_lev::{self, Steal, Stealer};
 use grep::Grep;
 use memmap::{Mmap, Protection};
+use term::Terminal;
 use walkdir::DirEntry;
 
 use args::Args;
@@ -198,11 +199,11 @@ impl Worker {
             let mut printer = self.args.printer(outbuf);
             self.do_work(&mut printer, work);
             let outbuf = printer.into_inner();
-            if !outbuf.is_empty() {
+            if !outbuf.get_ref().is_empty() {
                 let mut out = self.out.lock().unwrap();
                 out.write(&outbuf);
             }
-            self.outbuf = Some(outbuf);
+            self.outbuf = Some(outbuf.into_inner());
         }
         self.match_count
     }

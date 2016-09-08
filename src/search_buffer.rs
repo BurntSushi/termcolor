@@ -144,6 +144,7 @@ mod tests {
     use std::path::Path;
 
     use grep::{Grep, GrepBuilder};
+    use term::Terminal;
 
     use printer::Printer;
 
@@ -197,7 +198,7 @@ fn main() {
                 &mut pp, &grep, test_path(), haystack.as_bytes());
             map(searcher).run()
         };
-        (count, String::from_utf8(pp.into_inner()).unwrap())
+        (count, String::from_utf8(pp.into_inner().into_inner()).unwrap())
     }
 
     #[test]

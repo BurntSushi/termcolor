@@ -1,5 +1,11 @@
 use std::io::{self, Write};
 
+use term::{StdoutTerminal, Terminal};
+#[cfg(windows)]
+use term::WinConsole;
+
+use printer::Writer;
+
 /// Out controls the actual output of all search results for a particular file
 /// to the end user.
 ///
@@ -8,8 +14,24 @@ use std::io::{self, Write};
 /// file as a whole. For example, it knows when to print a file separator.)
 pub struct Out<W: io::Write> {
     wtr: io::BufWriter<W>,
+    term: Option<Box<StdoutTerminal>>,
     printed: bool,
     file_separator: Option<Vec<u8>>,
+}
+
+/// This is like term::stdout, but on Windows always uses WinConsole instead
+/// of trying for a TerminfoTerminal. This may be a mistake.
+#[cfg(windows)]
+fn term_stdout() -> Option<Box<StdoutTerminal>> {
+    WinConsole::new(io::stdout())
+        .ok()
+        .map(|t| Box::new(t) as Box<StdoutTerminal>)
+}
+
+#[cfg(not(windows))]
+fn term_stdout() -> Option<Box<StdoutTerminal>> {
+    // We never use this crap on *nix.
+    None
 }
 
 impl<W: io::Write> Out<W> {
@@ -17,6 +39,7 @@ impl<W: io::Write> Out<W> {
     pub fn new(wtr: W) -> Out<W> {
         Out {
             wtr: io::BufWriter::new(wtr),
+            term: term_stdout(),
             printed: false,
             file_separator: None,
         }
@@ -33,14 +56,31 @@ impl<W: io::Write> Out<W> {
 
     /// Write the search results of a single file to the underlying wtr and
     /// flush wtr.
-    pub fn write(&mut self, buf: &[u8]) {
+    pub fn write(&mut self, buf: &Writer<Vec<u8>>) {
         if let Some(ref sep) = self.file_separator {
             if self.printed {
                 let _ = self.wtr.write_all(sep);
                 let _ = self.wtr.write_all(b"\n");
             }
         }
-        let _ = self.wtr.write_all(buf);
+        match *buf {
+            Writer::Colored(ref tt) => {
+                let _ = self.wtr.write_all(tt.get_ref());
+            }
+            Writer::Windows(ref w) => {
+                match self.term {
+                    None => {
+                        let _ = self.wtr.write_all(w.get_ref());
+                    }
+                    Some(ref mut stdout) => {
+                        w.print_stdout(stdout);
+                    }
+                }
+            }
+            Writer::NoColor(ref buf) => {
+                let _ = self.wtr.write_all(buf);
+            }
+        }
         let _ = self.wtr.flush();
         self.printed = true;
     }

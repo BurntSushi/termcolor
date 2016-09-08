@@ -5,15 +5,15 @@ redirected to a file? etc... We use this information to tweak various default
 configuration parameters such as colors and match formatting.
 */
 
-use libc;
-
 #[cfg(unix)]
 pub fn stdin_is_atty() -> bool {
+    use libc;
     0 < unsafe { libc::isatty(libc::STDIN_FILENO) }
 }
 
 #[cfg(unix)]
 pub fn stdout_is_atty() -> bool {
+    use libc;
     0 < unsafe { libc::isatty(libc::STDOUT_FILENO) }
 }
 

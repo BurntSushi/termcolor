@@ -687,6 +687,7 @@ mod tests {
     use std::path::Path;
 
     use grep::{Grep, GrepBuilder};
+    use term::Terminal;
 
     use printer::Printer;
 
@@ -745,7 +746,7 @@ fn main() {
                 &mut inp, &mut pp, &grep, test_path(), hay(haystack));
             map(searcher).run().unwrap()
         };
-        (count, String::from_utf8(pp.into_inner()).unwrap())
+        (count, String::from_utf8(pp.into_inner().into_inner()).unwrap())
     }
 
     fn search<F: FnMut(TestSearcher) -> TestSearcher>(
@@ -761,7 +762,7 @@ fn main() {
                 &mut inp, &mut pp, &grep, test_path(), hay(haystack));
             map(searcher).run().unwrap()
         };
-        (count, String::from_utf8(pp.into_inner()).unwrap())
+        (count, String::from_utf8(pp.into_inner().into_inner()).unwrap())
     }
 
     #[test]
