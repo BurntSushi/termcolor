@@ -1,6 +1,6 @@
 environment:
   global:
-    PROJECT_NAME: rg
+    PROJECT_NAME: ripgrep
   matrix:
     # Nightly channel
     - TARGET: i686-pc-windows-gnu

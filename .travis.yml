@@ -16,7 +16,7 @@ cache: cargo
 
 env:
   global:
-    - PROJECT_NAME=xrep
+    - PROJECT_NAME=ripgrep
 matrix:
   include:
     # Nightly channel
