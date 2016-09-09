@@ -39,7 +39,7 @@ use term::Terminal;
 use walkdir::DirEntry;
 
 use args::Args;
-use out::Out;
+use out::{NoColorTerminal, Out, OutBuffer};
 use printer::Printer;
 use search::InputBuffer;
 
@@ -90,7 +90,8 @@ fn run(args: Args) -> Result<u64> {
         return run_types(args);
     }
     let args = Arc::new(args);
-    let out = Arc::new(Mutex::new(args.out(io::stdout())));
+    let out = Arc::new(Mutex::new(args.out()));
+    let outbuf = args.outbuf();
     let mut workers = vec![];
 
     let mut workq = {
@@ -101,7 +102,7 @@ fn run(args: Args) -> Result<u64> {
                 out: out.clone(),
                 chan_work: stealer.clone(),
                 inpbuf: args.input_buffer(),
-                outbuf: Some(vec![]),
+                outbuf: Some(outbuf.clone()),
                 grep: args.grep(),
                 match_count: 0,
             };
@@ -129,7 +130,8 @@ fn run(args: Args) -> Result<u64> {
 }
 
 fn run_files(args: Args) -> Result<u64> {
-    let mut printer = args.printer(io::BufWriter::new(io::stdout()));
+    let term = NoColorTerminal::new(io::BufWriter::new(io::stdout()));
+    let mut printer = args.printer(term);
     let mut file_count = 0;
     for p in args.paths() {
         if p == Path::new("-") {
@@ -146,7 +148,8 @@ fn run_files(args: Args) -> Result<u64> {
 }
 
 fn run_types(args: Args) -> Result<u64> {
-    let mut printer = args.printer(io::BufWriter::new(io::stdout()));
+    let term = NoColorTerminal::new(io::BufWriter::new(io::stdout()));
+    let mut printer = args.printer(term);
     let mut ty_count = 0;
     for def in args.type_defs() {
         printer.type_def(def);
@@ -168,10 +171,10 @@ enum WorkReady {
 
 struct Worker {
     args: Arc<Args>,
-    out: Arc<Mutex<Out<io::Stdout>>>,
+    out: Arc<Mutex<Out>>,
     chan_work: Stealer<Work>,
     inpbuf: InputBuffer,
-    outbuf: Option<Vec<u8>>,
+    outbuf: Option<OutBuffer>,
     grep: Grep,
     match_count: u64,
 }
@@ -203,12 +206,12 @@ impl Worker {
                 let mut out = self.out.lock().unwrap();
                 out.write(&outbuf);
             }
-            self.outbuf = Some(outbuf.into_inner());
+            self.outbuf = Some(outbuf);
         }
         self.match_count
     }
 
-    fn do_work<W: Send + io::Write>(
+    fn do_work<W: Send + Terminal>(
         &mut self,
         printer: &mut Printer<W>,
         work: WorkReady,
@@ -241,7 +244,7 @@ impl Worker {
         }
     }
 
-    fn search<R: io::Read, W: Send + io::Write>(
+    fn search<R: io::Read, W: Send + Terminal>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,
@@ -256,7 +259,7 @@ impl Worker {
         ).run().map_err(From::from)
     }
 
-    fn search_mmap<W: Send + io::Write>(
+    fn search_mmap<W: Send + Terminal>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,

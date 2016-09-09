@@ -1,8 +1,8 @@
 use std::cmp;
-use std::io;
 use std::path::Path;
 
 use grep::Grep;
+use term::Terminal;
 
 use printer::Printer;
 use search::{IterLines, Options, count_lines, is_binary};
@@ -18,7 +18,7 @@ pub struct BufferSearcher<'a, W: 'a> {
     last_line: usize,
 }
 
-impl<'a, W: Send + io::Write> BufferSearcher<'a, W> {
+impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
     pub fn new(
         printer: &'a mut Printer<W>,
         grep: &'a Grep,
@@ -146,6 +146,7 @@ mod tests {
     use grep::{Grep, GrepBuilder};
     use term::Terminal;
 
+    use out::OutBuffer;
     use printer::Printer;
 
     use super::BufferSearcher;
@@ -184,14 +185,15 @@ fn main() {
         &Path::new("/baz.rs")
     }
 
-    type TestSearcher<'a> = BufferSearcher<'a, Vec<u8>>;
+    type TestSearcher<'a> = BufferSearcher<'a, OutBuffer>;
 
     fn search<F: FnMut(TestSearcher) -> TestSearcher>(
         pat: &str,
         haystack: &str,
         mut map: F,
     ) -> (u64, String) {
-        let mut pp = Printer::new(vec![], false).with_filename(true);
+        let outbuf = OutBuffer::NoColor(vec![]);
+        let mut pp = Printer::new(outbuf).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
             let searcher = BufferSearcher::new(

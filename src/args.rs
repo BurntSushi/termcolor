@@ -9,11 +9,12 @@ use grep::{Grep, GrepBuilder};
 use log;
 use num_cpus;
 use regex;
+use term::Terminal;
 use walkdir::WalkDir;
 
 use gitignore::{Gitignore, GitignoreBuilder};
 use ignore::Ignore;
-use out::Out;
+use out::{Out, OutBuffer};
 use printer::Printer;
 use search::{InputBuffer, Searcher};
 use search_buffer::BufferSearcher;
@@ -438,8 +439,8 @@ impl Args {
 
     /// Create a new printer of individual search results that writes to the
     /// writer given.
-    pub fn printer<W: Send + io::Write>(&self, wtr: W) -> Printer<W> {
-        let mut p = Printer::new(wtr, self.color)
+    pub fn printer<W: Send + Terminal>(&self, wtr: W) -> Printer<W> {
+        let mut p = Printer::new(wtr)
             .column(self.column)
             .context_separator(self.context_separator.clone())
             .eol(self.eol)
@@ -454,14 +455,19 @@ impl Args {
 
     /// Create a new printer of search results for an entire file that writes
     /// to the writer given.
-    pub fn out<W: io::Write>(&self, wtr: W) -> Out<W> {
-        let mut out = Out::new(wtr);
+    pub fn out(&self) -> Out {
+        let mut out = Out::new(self.color);
         if self.heading && !self.count {
             out = out.file_separator(b"".to_vec());
         } else if self.before_context > 0 || self.after_context > 0 {
             out = out.file_separator(self.context_separator.clone());
         }
         out
+    }
+
+    /// Create a new buffer for use with searching.
+    pub fn outbuf(&self) -> OutBuffer {
+        OutBuffer::new(self.color)
     }
 
     /// Return the paths that should be searched.
@@ -472,7 +478,7 @@ impl Args {
     /// Create a new line based searcher whose configuration is taken from the
     /// command line. This searcher supports a dizzying array of features:
     /// inverted matching, line counting, context control and more.
-    pub fn searcher<'a, R: io::Read, W: Send + io::Write>(
+    pub fn searcher<'a, R: io::Read, W: Send + Terminal>(
         &self,
         inp: &'a mut InputBuffer,
         printer: &'a mut Printer<W>,
@@ -493,7 +499,7 @@ impl Args {
     /// Create a new line based searcher whose configuration is taken from the
     /// command line. This search operates on an entire file all once (which
     /// may have been memory mapped).
-    pub fn searcher_buffer<'a, W: Send + io::Write>(
+    pub fn searcher_buffer<'a, W: Send + Terminal>(
         &self,
         printer: &'a mut Printer<W>,
         grep: &'a Grep,

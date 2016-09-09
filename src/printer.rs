@@ -1,16 +1,10 @@
-use std::io::{self, Write};
 use std::path::Path;
-use std::sync::Arc;
 
 use regex::bytes::Regex;
-use term::{self, StdoutTerminal, Terminal};
-use term::color::*;
-use term::terminfo::TermInfo;
+use term::{Attr, Terminal};
+use term::color;
 
-use terminal::TerminfoTerminal;
 use types::FileTypeDef;
-
-use self::Writer::*;
 
 /// Printer encapsulates all output logic for searching.
 ///
@@ -19,7 +13,7 @@ use self::Writer::*;
 /// writes to memory, neither of which commonly fail.
 pub struct Printer<W> {
     /// The underlying writer.
-    wtr: Writer<W>,
+    wtr: W,
     /// Whether anything has been printed to wtr yet.
     has_printed: bool,
     /// Whether to show column numbers for the first match or not.
@@ -42,13 +36,11 @@ pub struct Printer<W> {
     with_filename: bool,
 }
 
-impl<W: Send + io::Write> Printer<W> {
+impl<W: Send + Terminal> Printer<W> {
     /// Create a new printer that writes to wtr.
-    ///
-    /// `color` should be true if the printer should try to use coloring.
-    pub fn new(wtr: W, color: bool) -> Printer<W> {
+    pub fn new(wtr: W) -> Printer<W> {
         Printer {
-            wtr: Writer::new(wtr, color),
+            wtr: wtr,
             has_printed: false,
             column: false,
             context_separator: "--".to_string().into_bytes(),
@@ -115,7 +107,7 @@ impl<W: Send + io::Write> Printer<W> {
     }
 
     /// Flushes the underlying writer and returns it.
-    pub fn into_inner(mut self) -> Writer<W> {
+    pub fn into_inner(mut self) -> W {
         let _ = self.wtr.flush();
         self.wtr
     }
@@ -201,15 +193,15 @@ impl<W: Send + io::Write> Printer<W> {
     }
 
     pub fn write_match(&mut self, re: &Regex, buf: &[u8]) {
-        if !self.wtr.is_color() {
+        if !self.wtr.supports_color() {
             self.write(buf);
             return;
         }
         let mut last_written = 0;
         for (s, e) in re.find_iter(buf) {
             self.write(&buf[last_written..s]);
-            let _ = self.wtr.fg(BRIGHT_RED);
-            let _ = self.wtr.attr(term::Attr::Bold);
+            let _ = self.wtr.fg(color::BRIGHT_RED);
+            let _ = self.wtr.attr(Attr::Bold);
             self.write(&buf[s..e]);
             let _ = self.wtr.reset();
             last_written = e;
@@ -241,24 +233,24 @@ impl<W: Send + io::Write> Printer<W> {
     }
 
     fn write_heading<P: AsRef<Path>>(&mut self, path: P) {
-        if self.wtr.is_color() {
-            let _ = self.wtr.fg(BRIGHT_GREEN);
-            let _ = self.wtr.attr(term::Attr::Bold);
+        if self.wtr.supports_color() {
+            let _ = self.wtr.fg(color::BRIGHT_GREEN);
+            let _ = self.wtr.attr(Attr::Bold);
         }
         self.write(path.as_ref().to_string_lossy().as_bytes());
         self.write_eol();
-        if self.wtr.is_color() {
+        if self.wtr.supports_color() {
             let _ = self.wtr.reset();
         }
     }
 
     fn line_number(&mut self, n: u64, sep: u8) {
-        if self.wtr.is_color() {
-            let _ = self.wtr.fg(BRIGHT_BLUE);
-            let _ = self.wtr.attr(term::Attr::Bold);
+        if self.wtr.supports_color() {
+            let _ = self.wtr.fg(color::BRIGHT_BLUE);
+            let _ = self.wtr.attr(Attr::Bold);
         }
         self.write(n.to_string().as_bytes());
-        if self.wtr.is_color() {
+        if self.wtr.supports_color() {
             let _ = self.wtr.reset();
         }
         self.write(&[sep]);
@@ -275,291 +267,5 @@ impl<W: Send + io::Write> Printer<W> {
     fn write_eol(&mut self) {
         let eol = self.eol;
         self.write(&[eol]);
-    }
-}
-
-/// Writer corresponds to the final output buffer for search results. All
-/// search results are written to a Writer and then a Writer is flushed to
-/// stdout only after the full search has completed.
-pub enum Writer<W> {
-    Colored(TerminfoTerminal<W>),
-    Windows(WindowsWriter<W>),
-    NoColor(W),
-}
-
-pub struct WindowsWriter<W> {
-    wtr: W,
-    pos: usize,
-    colors: Vec<WindowsColor>,
-}
-
-pub struct WindowsColor {
-    pos: usize,
-    opt: WindowsOption,
-}
-
-pub enum WindowsOption {
-    Foreground(Color),
-    Background(Color),
-    Reset,
-}
-
-lazy_static! {
-    static ref TERMINFO: Option<Arc<TermInfo>> = {
-        match term::terminfo::TermInfo::from_env() {
-            Ok(info) => Some(Arc::new(info)),
-            Err(err) => {
-                debug!("error loading terminfo for coloring: {}", err);
-                None
-            }
-        }
-    };
-}
-
-impl<W: Send + io::Write> Writer<W> {
-    fn new(wtr: W, color: bool) -> Writer<W> {
-        // If we want color, build a TerminfoTerminal and see if the current
-        // environment supports coloring. If not, bail with NoColor. To avoid
-        // losing our writer (ownership), do this the long way.
-        if !color {
-            return NoColor(wtr);
-        }
-        if cfg!(windows) {
-            return Windows(WindowsWriter { wtr: wtr, pos: 0, colors: vec![] });
-        }
-        if TERMINFO.is_none() {
-            return NoColor(wtr);
-        }
-        let info = TERMINFO.clone().unwrap();
-        let tt = TerminfoTerminal::new_with_terminfo(wtr, info);
-        if !tt.supports_color() {
-            debug!("environment doesn't support coloring");
-            return NoColor(tt.into_inner());
-        }
-        Colored(tt)
-    }
-
-    fn is_color(&self) -> bool {
-        match *self {
-            Colored(_) => true,
-            Windows(_) => true,
-            NoColor(_) => false,
-        }
-    }
-
-    fn map_result<F, G>(
-        &mut self,
-        mut f: F,
-        mut g: G,
-    ) -> term::Result<()>
-    where F: FnMut(&mut TerminfoTerminal<W>) -> term::Result<()>,
-          G: FnMut(&mut WindowsWriter<W>) -> term::Result<()> {
-        match *self {
-            Colored(ref mut w) => f(w),
-            Windows(ref mut w) => g(w),
-            NoColor(_) => Err(term::Error::NotSupported),
-        }
-    }
-
-    fn map_bool<F, G>(
-        &self,
-        mut f: F,
-        mut g: G,
-    ) -> bool
-    where F: FnMut(&TerminfoTerminal<W>) -> bool,
-          G: FnMut(&WindowsWriter<W>) -> bool {
-        match *self {
-            Colored(ref w) => f(w),
-            Windows(ref w) => g(w),
-            NoColor(_) => false,
-        }
-    }
-}
-
-impl<W: Send + io::Write> io::Write for Writer<W> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match *self {
-            Colored(ref mut w) => w.write(buf),
-            Windows(ref mut w) => w.write(buf),
-            NoColor(ref mut w) => w.write(buf),
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        match *self {
-            Colored(ref mut w) => w.flush(),
-            Windows(ref mut w) => w.flush(),
-            NoColor(ref mut w) => w.flush(),
-        }
-    }
-}
-
-impl<W: Send + io::Write> term::Terminal for Writer<W> {
-    type Output = W;
-
-    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
-        self.map_result(|w| w.fg(fg), |w| w.fg(fg))
-    }
-
-    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
-        self.map_result(|w| w.bg(bg), |w| w.bg(bg))
-    }
-
-    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
-        self.map_result(|w| w.attr(attr), |w| w.attr(attr))
-    }
-
-    fn supports_attr(&self, attr: term::Attr) -> bool {
-        self.map_bool(|w| w.supports_attr(attr), |w| w.supports_attr(attr))
-    }
-
-    fn reset(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.reset(), |w| w.reset())
-    }
-
-    fn supports_reset(&self) -> bool {
-        self.map_bool(|w| w.supports_reset(), |w| w.supports_reset())
-    }
-
-    fn supports_color(&self) -> bool {
-        self.map_bool(|w| w.supports_color(), |w| w.supports_color())
-    }
-
-    fn cursor_up(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.cursor_up(), |w| w.cursor_up())
-    }
-
-    fn delete_line(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.delete_line(), |w| w.delete_line())
-    }
-
-    fn carriage_return(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.carriage_return(), |w| w.carriage_return())
-    }
-
-    fn get_ref(&self) -> &W {
-        match *self {
-            Colored(ref w) => w.get_ref(),
-            Windows(ref w) => w.get_ref(),
-            NoColor(ref w) => w,
-        }
-    }
-
-    fn get_mut(&mut self) -> &mut W {
-        match *self {
-            Colored(ref mut w) => w.get_mut(),
-            Windows(ref mut w) => w.get_mut(),
-            NoColor(ref mut w) => w,
-        }
-    }
-
-    fn into_inner(self) -> W {
-        match self {
-            Colored(w) => w.into_inner(),
-            Windows(w) => w.into_inner(),
-            NoColor(w) => w,
-        }
-    }
-}
-
-impl<W: Send + io::Write> WindowsWriter<W> {
-    fn push(&mut self, opt: WindowsOption) {
-        let pos = self.pos;
-        self.colors.push(WindowsColor { pos: pos, opt: opt });
-    }
-}
-
-impl WindowsWriter<Vec<u8>> {
-    /// Print the contents to the given terminal.
-    pub fn print_stdout(&self, tt: &mut Box<StdoutTerminal>) {
-        let mut last = 0;
-        for col in &self.colors {
-            let _ = tt.write_all(&self.wtr[last..col.pos]);
-            match col.opt {
-                WindowsOption::Foreground(c) => {
-                    let _ = tt.fg(c);
-                }
-                WindowsOption::Background(c) => {
-                    let _ = tt.bg(c);
-                }
-                WindowsOption::Reset => {
-                    let _ = tt.reset();
-                }
-            }
-            last = col.pos;
-        }
-        let _ = tt.write_all(&self.wtr[last..]);
-        let _ = tt.flush();
-    }
-}
-
-impl<W: Send + io::Write> io::Write for WindowsWriter<W> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let n = try!(self.wtr.write(buf));
-        self.pos += n;
-        Ok(n)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.wtr.flush()
-    }
-}
-
-impl<W: Send + io::Write> term::Terminal for WindowsWriter<W> {
-    type Output = W;
-
-    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
-        self.push(WindowsOption::Foreground(fg));
-        Ok(())
-    }
-
-    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
-        self.push(WindowsOption::Background(bg));
-        Ok(())
-    }
-
-    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn supports_attr(&self, attr: term::Attr) -> bool {
-        false
-    }
-
-    fn reset(&mut self) -> term::Result<()> {
-        self.push(WindowsOption::Reset);
-        Ok(())
-    }
-
-    fn supports_reset(&self) -> bool {
-        true
-    }
-
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn cursor_up(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn delete_line(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn carriage_return(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn get_ref(&self) -> &W {
-        &self.wtr
-    }
-
-    fn get_mut(&mut self) -> &mut W {
-        &mut self.wtr
-    }
-
-    fn into_inner(self) -> W {
-        self.wtr
     }
 }
