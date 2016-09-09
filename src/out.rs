@@ -9,25 +9,25 @@ use term::WinConsole;
 
 use terminal::TerminfoTerminal;
 
-pub type StdoutTerminal = Box<Terminal<Output=io::BufWriter<io::Stdout>> + Send>;
+pub type StdoutTerminal = Box<Terminal<Output=io::Stdout> + Send>;
 
 /// Gets a terminal that supports color if available.
 #[cfg(windows)]
 fn term_stdout(color: bool) -> StdoutTerminal {
-    let stdout = io::BufWriter::new(io::stdout());
+    let stdout = io::stdout();
     WinConsole::new(stdout)
         .ok()
-        .map(|t| Box::new(t))
+        .map(|t| Box::new(t) as StdoutTerminal)
         .unwrap_or_else(|| {
-            let stdout = io::BufWriter::new(io::stdout());
-            Box::new(NoColorTerminal::new(stdout))
+            let stdout = io::stdout();
+            Box::new(NoColorTerminal::new(stdout)) as StdoutTerminal
         })
 }
 
 /// Gets a terminal that supports color if available.
 #[cfg(not(windows))]
 fn term_stdout(color: bool) -> StdoutTerminal {
-    let stdout = io::BufWriter::new(io::stdout());
+    let stdout = io::stdout();
     if !color || TERMINFO.is_none() {
         Box::new(NoColorTerminal::new(stdout))
     } else {
