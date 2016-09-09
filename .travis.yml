@@ -30,10 +30,10 @@ matrix:
       env: TARGET=x86_64-apple-darwin
     # Minimum Rust supported channel.
     - os: linux
-      rust: 1.9
+      rust: 1.9.0
       env: TARGET=x86_64-unknown-linux-musl
     - os: osx
-      rust: 1.9
+      rust: 1.9.0
       env: TARGET=x86_64-apple-darwin
 
 before_install:
