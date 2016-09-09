@@ -1,16 +1,3 @@
-#language: rust
-#rust:
-#  - stable
-#  - beta
-#  - nightly
-#script:
-#  - cargo build --verbose
-#  - cargo doc
-#  - cargo test --verbose
-#  - if [ "$TRAVIS_RUST_VERSION" = "nightly" ]; then
-#      cargo bench --verbose;
-#    fi
-
 language: rust
 cache: cargo
 
@@ -19,19 +6,35 @@ env:
     - PROJECT_NAME=ripgrep
 matrix:
   include:
-    # Nightly channel
-    - os: osx
-      rust: nightly
-      env: TARGET=i686-apple-darwin
-    - os: osx
-      rust: nightly
-      env: TARGET=x86_64-apple-darwin
+    # Nightly channel.
+    # (All *nix releases are done on the nightly channel to take advantage
+    # of the regex library's multiple pattern SIMD search.)
     - os: linux
       rust: nightly
       env: TARGET=i686-unknown-linux-musl
     - os: linux
       rust: nightly
       env: TARGET=x86_64-unknown-linux-musl
+    - os: osx
+      rust: nightly
+      env: TARGET=i686-apple-darwin
+    - os: osx
+      rust: nightly
+      env: TARGET=x86_64-apple-darwin
+    # Beta channel.
+    - os: linux
+      rust: beta
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: osx
+      rust: beta
+      env: TARGET=x86_64-apple-darwin
+    # Minimum Rust supported channel.
+    - os: linux
+      rust: 1.9
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: osx
+      rust: 1.9
+      env: TARGET=x86_64-apple-darwin
 
 before_install:
   - export PATH="$PATH:$HOME/.cargo/bin"
