@@ -195,7 +195,7 @@ impl Grep {
                 let (prevnl, nextnl) = self.find_line(buf, e, e);
                 match self.re.shortest_match(&buf[prevnl..nextnl]) {
                     None => {
-                        start = nextnl + 1;
+                        start = nextnl;
                         continue;
                     }
                     Some(_) => {
