@@ -1,6 +1,7 @@
 /*!
-The search module is responsible for searching a single file and printing
-matches.
+The search_stream module is responsible for searching a single file and
+printing matches. In particular, it searches the file in a streaming fashion
+using `read` calls and a (roughly) fixed size buffer.
 */
 
 use std::cmp;

@@ -17,8 +17,8 @@ use gitignore::{Gitignore, GitignoreBuilder};
 use ignore::Ignore;
 use out::{Out, OutBuffer};
 use printer::Printer;
-use search::{InputBuffer, Searcher};
 use search_buffer::BufferSearcher;
+use search_stream::{InputBuffer, Searcher};
 use types::{FileTypeDef, Types, TypesBuilder};
 use walk;
 

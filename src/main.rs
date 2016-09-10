@@ -41,7 +41,7 @@ use walkdir::DirEntry;
 use args::Args;
 use out::{NoColorTerminal, Out, OutBuffer};
 use printer::Printer;
-use search::InputBuffer;
+use search_stream::InputBuffer;
 
 macro_rules! errored {
     ($($tt:tt)*) => {
@@ -63,8 +63,8 @@ mod glob;
 mod ignore;
 mod out;
 mod printer;
-mod search;
 mod search_buffer;
+mod search_stream;
 mod terminal;
 mod types;
 mod walk;
