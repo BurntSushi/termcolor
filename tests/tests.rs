@@ -102,7 +102,7 @@ sherlock!(with_heading_default, "Sherlock", ".",
     wd.create("foo", "Sherlock Holmes lives on Baker Street.");
     cmd.arg("-j1").arg("--heading");
     let lines: String = wd.stdout(&mut cmd);
-    let expected = "\
+    let expected1 = "\
 foo
 Sherlock Holmes lives on Baker Street.
 
@@ -110,7 +110,15 @@ sherlock
 For the Doctor Watsons of this world, as opposed to the Sherlock
 be, to a very large extent, the result of luck. Sherlock Holmes
 ";
-    assert_eq!(lines, expected);
+    let expected2 = "\
+sherlock
+For the Doctor Watsons of this world, as opposed to the Sherlock
+be, to a very large extent, the result of luck. Sherlock Holmes
+
+foo
+Sherlock Holmes lives on Baker Street.
+";
+    assert!(lines == expected1 || lines == expected2);
 });
 
 sherlock!(inverted, |wd: WorkDir, mut cmd: Command| {
