@@ -1,24 +1,23 @@
 /*!
-This io module contains various platform specific functions for detecting
-how ripgrep is being used. e.g., Is stdin being piped into it? Is stdout being
-redirected to a file? etc... We use this information to tweak various default
-configuration parameters such as colors and match formatting.
+This atty module contains functions for detecting whether ripgrep is being fed
+from (or to) a terminal. Windows and Unix do this differently, so implement
+both here.
 */
 
 #[cfg(unix)]
-pub fn stdin_is_atty() -> bool {
+pub fn on_stdin() -> bool {
     use libc;
     0 < unsafe { libc::isatty(libc::STDIN_FILENO) }
 }
 
 #[cfg(unix)]
-pub fn stdout_is_atty() -> bool {
+pub fn on_stdout() -> bool {
     use libc;
     0 < unsafe { libc::isatty(libc::STDOUT_FILENO) }
 }
 
 #[cfg(windows)]
-pub fn stdin_is_atty() -> bool {
+pub fn on_stdin() -> bool {
     use kernel32;
     use winapi;
 
@@ -30,7 +29,7 @@ pub fn stdin_is_atty() -> bool {
 }
 
 #[cfg(windows)]
-pub fn stdout_is_atty() -> bool {
+pub fn on_stdout() -> bool {
     use kernel32;
     use winapi;
 

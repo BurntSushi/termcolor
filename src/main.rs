@@ -57,6 +57,7 @@ macro_rules! eprintln {
 }
 
 mod args;
+mod atty;
 mod gitignore;
 mod glob;
 mod ignore;
@@ -64,7 +65,6 @@ mod out;
 mod printer;
 mod search;
 mod search_buffer;
-mod sys;
 mod terminal;
 mod types;
 mod walk;

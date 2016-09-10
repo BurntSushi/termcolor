@@ -12,13 +12,13 @@ use regex;
 use term::Terminal;
 use walkdir::WalkDir;
 
+use atty;
 use gitignore::{Gitignore, GitignoreBuilder};
 use ignore::Ignore;
 use out::{Out, OutBuffer};
 use printer::Printer;
 use search::{InputBuffer, Searcher};
 use search_buffer::BufferSearcher;
-use sys;
 use types::{FileTypeDef, Types, TypesBuilder};
 use walk;
 
@@ -104,7 +104,8 @@ Less common options:
         Don't show any file name heading.
 
     --hidden
-        Search hidden directories and files.
+        Search hidden directories and files. (Hidden directories and files are
+        skipped by default.)
 
     -L, --follow
         Follow symlinks.
@@ -243,7 +244,7 @@ impl RawArgs {
         };
         let paths =
             if self.arg_path.is_empty() {
-                if sys::stdin_is_atty()
+                if atty::on_stdin()
                     || self.flag_files
                     || self.flag_type_list {
                     vec![Path::new("./").to_path_buf()]
@@ -293,7 +294,7 @@ impl RawArgs {
             };
         let color =
             if self.flag_color == "auto" {
-                sys::stdout_is_atty() || self.flag_pretty
+                atty::on_stdout() || self.flag_pretty
             } else {
                 self.flag_color == "always"
             };
@@ -344,7 +345,7 @@ impl RawArgs {
             with_filename: with_filename,
         };
         // If stdout is a tty, then apply some special default options.
-        if sys::stdout_is_atty() || self.flag_pretty {
+        if atty::on_stdout() || self.flag_pretty {
             if !self.flag_no_line_number && !args.count {
                 args.line_number = true;
             }
