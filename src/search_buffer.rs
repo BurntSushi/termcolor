@@ -151,8 +151,7 @@ mod tests {
 
     use super::BufferSearcher;
 
-    lazy_static! {
-        static ref SHERLOCK: &'static str = "\
+    const SHERLOCK: &'static str = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
 Holmeses, success in the province of detective work must always
 be, to a very large extent, the result of luck. Sherlock Holmes
@@ -160,7 +159,8 @@ can extract a clew from a wisp of straw or a flake of cigar ash;
 but Doctor Watson has to have it taken out for him and dusted,
 and exhibited clearly, with a label attached.\
 ";
-        static ref CODE: &'static str = "\
+
+    const CODE: &'static str = "\
 extern crate snap;
 
 use std::io;
@@ -175,7 +175,6 @@ fn main() {
     io::copy(&mut rdr, &mut wtr).expect(\"I/O operation failed\");
 }
 ";
-    }
 
     fn matcher(pat: &str) -> Grep {
         GrepBuilder::new(pat).build().unwrap()
@@ -205,7 +204,7 @@ fn main() {
 
     #[test]
     fn basic_search() {
-        let (count, out) = search("Sherlock", &*SHERLOCK, |s|s);
+        let (count, out) = search("Sherlock", SHERLOCK, |s|s);
         assert_eq!(2, count);
         assert_eq!(out, "\
 /baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -233,7 +232,7 @@ fn main() {
     #[test]
     fn line_numbers() {
         let (count, out) = search(
-            "Sherlock", &*SHERLOCK, |s| s.line_number(true));
+            "Sherlock", SHERLOCK, |s| s.line_number(true));
         assert_eq!(2, count);
         assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -244,7 +243,7 @@ fn main() {
     #[test]
     fn count() {
         let (count, out) = search(
-            "Sherlock", &*SHERLOCK, |s| s.count(true));
+            "Sherlock", SHERLOCK, |s| s.count(true));
         assert_eq!(2, count);
         assert_eq!(out, "/baz.rs:2\n");
     }
@@ -252,7 +251,7 @@ fn main() {
     #[test]
     fn invert_match() {
         let (count, out) = search(
-            "Sherlock", &*SHERLOCK, |s| s.invert_match(true));
+            "Sherlock", SHERLOCK, |s| s.invert_match(true));
         assert_eq!(4, count);
         assert_eq!(out, "\
 /baz.rs:Holmeses, success in the province of detective work must always
@@ -264,7 +263,7 @@ fn main() {
 
     #[test]
     fn invert_match_line_numbers() {
-        let (count, out) = search("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search("Sherlock", SHERLOCK, |s| {
             s.invert_match(true).line_number(true)
         });
         assert_eq!(4, count);
@@ -278,7 +277,7 @@ fn main() {
 
     #[test]
     fn invert_match_count() {
-        let (count, out) = search("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search("Sherlock", SHERLOCK, |s| {
             s.invert_match(true).count(true)
         });
         assert_eq!(4, count);

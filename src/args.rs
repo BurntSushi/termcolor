@@ -109,10 +109,6 @@ Less common options:
     -L, --follow
         Follow symlinks.
 
-    --line-terminator ARG
-        The byte to use for a line terminator. Escape sequences may be used.
-        [default: \\n]
-
     --mmap
         Search using memory maps when possible. This is enabled by default
         when ripgrep thinks it will be faster. (Note that mmap searching
@@ -174,7 +170,6 @@ pub struct RawArgs {
     flag_ignore_case: bool,
     flag_invert_match: bool,
     flag_line_number: bool,
-    flag_line_terminator: String,
     flag_literal: bool,
     flag_mmap: bool,
     flag_no_heading: bool,
@@ -248,7 +243,9 @@ impl RawArgs {
         };
         let paths =
             if self.arg_path.is_empty() {
-                if sys::stdin_is_atty() {
+                if sys::stdin_is_atty()
+                    || self.flag_files
+                    || self.flag_type_list {
                     vec![Path::new("./").to_path_buf()]
                 } else {
                     vec![Path::new("-").to_path_buf()]
@@ -277,15 +274,6 @@ impl RawArgs {
         if mmap {
             debug!("will try to use memory maps");
         }
-        let eol = {
-            let eol = unescape(&self.flag_line_terminator);
-            if eol.is_empty() {
-                errored!("Empty line terminator is not allowed.");
-            } else if eol.len() > 1 {
-                errored!("Line terminators are limited to exactly 1 byte.");
-            }
-            eol[0]
-        };
         let glob_overrides =
             if self.flag_glob.is_empty() {
                 None
@@ -309,6 +297,7 @@ impl RawArgs {
             } else {
                 self.flag_color == "always"
             };
+        let eol = b'\n';
         let mut with_filename = self.flag_with_filename;
         if !with_filename {
             with_filename = paths.len() > 1 || paths[0].is_dir();

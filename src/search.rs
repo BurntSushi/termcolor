@@ -695,8 +695,7 @@ mod tests {
 
     use super::{InputBuffer, Searcher, start_of_previous_lines};
 
-    lazy_static! {
-        static ref SHERLOCK: &'static str = "\
+    const SHERLOCK: &'static str = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
 Holmeses, success in the province of detective work must always
 be, to a very large extent, the result of luck. Sherlock Holmes
@@ -704,7 +703,8 @@ can extract a clew from a wisp of straw or a flake of cigar ash;
 but Doctor Watson has to have it taken out for him and dusted,
 and exhibited clearly, with a label attached.\
 ";
-        static ref CODE: &'static str = "\
+
+    const CODE: &'static str = "\
 extern crate snap;
 
 use std::io;
@@ -719,7 +719,6 @@ fn main() {
     io::copy(&mut rdr, &mut wtr).expect(\"I/O operation failed\");
 }
 ";
-    }
 
     fn hay(s: &str) -> io::Cursor<Vec<u8>> {
         io::Cursor::new(s.to_string().into_bytes())
@@ -874,7 +873,7 @@ fn main() {
 
     #[test]
     fn basic_search1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s|s);
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s|s);
         assert_eq!(2, count);
         assert_eq!(out, "\
 /baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -901,7 +900,7 @@ fn main() {
     #[test]
     fn line_numbers() {
         let (count, out) = search_smallcap(
-            "Sherlock", &*SHERLOCK, |s| s.line_number(true));
+            "Sherlock", SHERLOCK, |s| s.line_number(true));
         assert_eq!(2, count);
         assert_eq!(out, "\
 /baz.rs:1:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -912,7 +911,7 @@ fn main() {
     #[test]
     fn count() {
         let (count, out) = search_smallcap(
-            "Sherlock", &*SHERLOCK, |s| s.count(true));
+            "Sherlock", SHERLOCK, |s| s.count(true));
         assert_eq!(2, count);
         assert_eq!(out, "/baz.rs:2\n");
     }
@@ -920,7 +919,7 @@ fn main() {
     #[test]
     fn invert_match() {
         let (count, out) = search_smallcap(
-            "Sherlock", &*SHERLOCK, |s| s.invert_match(true));
+            "Sherlock", SHERLOCK, |s| s.invert_match(true));
         assert_eq!(4, count);
         assert_eq!(out, "\
 /baz.rs:Holmeses, success in the province of detective work must always
@@ -932,7 +931,7 @@ fn main() {
 
     #[test]
     fn invert_match_line_numbers() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.invert_match(true).line_number(true)
         });
         assert_eq!(4, count);
@@ -946,7 +945,7 @@ fn main() {
 
     #[test]
     fn invert_match_count() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.invert_match(true).count(true)
         });
         assert_eq!(4, count);
@@ -955,7 +954,7 @@ fn main() {
 
     #[test]
     fn before_context_one1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).before_context(1)
         });
         assert_eq!(2, count);
@@ -968,7 +967,7 @@ fn main() {
 
     #[test]
     fn before_context_invert_one1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).before_context(1).invert_match(true)
         });
         assert_eq!(4, count);
@@ -984,7 +983,7 @@ fn main() {
 
     #[test]
     fn before_context_invert_one2() {
-        let (count, out) = search_smallcap(" a ", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap(" a ", SHERLOCK, |s| {
             s.line_number(true).before_context(1).invert_match(true)
         });
         assert_eq!(3, count);
@@ -999,7 +998,7 @@ fn main() {
 
     #[test]
     fn before_context_two1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).before_context(2)
         });
         assert_eq!(2, count);
@@ -1012,7 +1011,7 @@ fn main() {
 
     #[test]
     fn before_context_two2() {
-        let (count, out) = search_smallcap("dusted", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("dusted", SHERLOCK, |s| {
             s.line_number(true).before_context(2)
         });
         assert_eq!(1, count);
@@ -1026,7 +1025,7 @@ fn main() {
     #[test]
     fn before_context_two3() {
         let (count, out) = search_smallcap(
-            "success|attached", &*SHERLOCK, |s| {
+            "success|attached", SHERLOCK, |s| {
                 s.line_number(true).before_context(2)
             });
         assert_eq!(2, count);
@@ -1042,7 +1041,7 @@ fn main() {
 
     #[test]
     fn before_context_two4() {
-        let (count, out) = search("stdin", &*CODE, |s| {
+        let (count, out) = search("stdin", CODE, |s| {
             s.line_number(true).before_context(2)
         });
         assert_eq!(3, count);
@@ -1059,7 +1058,7 @@ fn main() {
 
     #[test]
     fn before_context_two5() {
-        let (count, out) = search("stdout", &*CODE, |s| {
+        let (count, out) = search("stdout", CODE, |s| {
             s.line_number(true).before_context(2)
         });
         assert_eq!(2, count);
@@ -1076,7 +1075,7 @@ fn main() {
 
     #[test]
     fn before_context_three1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
                 s.line_number(true).before_context(3)
             });
         assert_eq!(2, count);
@@ -1089,7 +1088,7 @@ fn main() {
 
     #[test]
     fn after_context_one1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).after_context(1)
         });
         assert_eq!(2, count);
@@ -1103,7 +1102,7 @@ fn main() {
 
     #[test]
     fn after_context_invert_one1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).after_context(1).invert_match(true)
         });
         assert_eq!(4, count);
@@ -1118,7 +1117,7 @@ fn main() {
 
     #[test]
     fn after_context_invert_one2() {
-        let (count, out) = search_smallcap(" a ", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap(" a ", SHERLOCK, |s| {
             s.line_number(true).after_context(1).invert_match(true)
         });
         assert_eq!(3, count);
@@ -1134,7 +1133,7 @@ fn main() {
 
     #[test]
     fn after_context_two1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).after_context(2)
         });
         assert_eq!(2, count);
@@ -1149,7 +1148,7 @@ fn main() {
 
     #[test]
     fn after_context_two2() {
-        let (count, out) = search_smallcap("dusted", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("dusted", SHERLOCK, |s| {
             s.line_number(true).after_context(2)
         });
         assert_eq!(1, count);
@@ -1162,7 +1161,7 @@ fn main() {
     #[test]
     fn after_context_two3() {
         let (count, out) = search_smallcap(
-            "success|attached", &*SHERLOCK, |s| {
+            "success|attached", SHERLOCK, |s| {
                 s.line_number(true).after_context(2)
             });
         assert_eq!(2, count);
@@ -1177,7 +1176,7 @@ fn main() {
 
     #[test]
     fn after_context_three1() {
-        let (count, out) = search_smallcap("Sherlock", &*SHERLOCK, |s| {
+        let (count, out) = search_smallcap("Sherlock", SHERLOCK, |s| {
             s.line_number(true).after_context(3)
         });
         assert_eq!(2, count);
@@ -1194,7 +1193,7 @@ fn main() {
     #[test]
     fn before_after_context_two1() {
         let (count, out) = search(
-            r"fn main|let mut rdr", &*CODE, |s| {
+            r"fn main|let mut rdr", CODE, |s| {
                 s.line_number(true).after_context(2).before_context(2)
             });
         assert_eq!(2, count);

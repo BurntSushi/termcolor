@@ -18,6 +18,10 @@ bench = false
 path = "src/main.rs"
 name = "rg"
 
+[[test]]
+name = "integration"
+path = "tests/tests.rs"
+
 [dependencies]
 crossbeam = "0.2"
 docopt = "0.6"
