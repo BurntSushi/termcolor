@@ -548,7 +548,13 @@ fn files() {
     let mut cmd = wd.command();
     cmd.arg("--files");
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "./file\n./dir/file\n");
+    if cfg!(windows) {
+        assert!(lines == "./dir\\file\n./file\n"
+                || lines == "./file\n./dir\\file\n");
+    } else {
+        assert!(lines == "./file\n./dir/file\n"
+                || lines == "./dir/file\n./file\n");
+    }
 }
 
 #[test]
