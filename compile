@@ -1,4 +1,5 @@
 #!/bin/sh
 
 export RUSTFLAGS="-C target-feature=+ssse3"
+# export RUSTFLAGS="-C target-cpu=native"
 cargo build --release --features simd-accel
