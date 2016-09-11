@@ -1,3 +1,3 @@
 ripgrep (rg)
 ------------
-rg combines the usability of the silver search with the raw speed of grep.
+ripgrep combines the usability of the silver searcher with the raw speed of grep.
