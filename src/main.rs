@@ -15,7 +15,6 @@ extern crate memchr;
 extern crate memmap;
 extern crate num_cpus;
 extern crate regex;
-extern crate regex_syntax as syntax;
 extern crate rustc_serialize;
 extern crate term;
 extern crate thread_local;
