@@ -382,9 +382,22 @@ impl Args {
     ///
     /// Also, initialize a global logger.
     pub fn parse() -> Result<Args> {
+        // Get all of the arguments, being careful to require valid UTF-8.
+        let mut argv = vec![];
+        for arg in env::args_os().skip(1) {
+            match arg.into_string() {
+                Ok(s) => argv.push(s),
+                Err(s) => {
+                    errored!("Argument '{}' is not valid UTF-8. \
+                              Use hex escape sequences to match arbitrary \
+                              bytes in a pattern (e.g., \\xFF).",
+                              s.to_string_lossy());
+                }
+            }
+        }
         let raw: RawArgs =
             Docopt::new(USAGE)
-                .and_then(|d| d.version(Some(version())).decode())
+                .and_then(|d| d.argv(argv).version(Some(version())).decode())
                 .unwrap_or_else(|e| e.exit());
 
         let mut logb = env_logger::LogBuilder::new();
