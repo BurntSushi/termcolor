@@ -23,6 +23,7 @@ import time
 
 SUBTITLES_DIR = 'subtitles'
 SUBTITLES_EN_NAME = 'OpenSubtitles2016.raw.en'
+SUBTITLES_EN_NAME_SAMPLE = 'OpenSubtitles2016.raw.sample.en'
 SUBTITLES_EN_NAME_GZ = '%s.gz' % SUBTITLES_EN_NAME
 SUBTITLES_EN_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz'
 SUBTITLES_RU_NAME = 'OpenSubtitles2016.raw.ru'
@@ -31,6 +32,12 @@ SUBTITLES_RU_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitl
 
 LINUX_DIR = 'linux'
 LINUX_CLONE = 'git://github.com/BurntSushi/linux'
+
+# Grep takes locale settings from the environment. There is a *substantial*
+# performance impact for enabling Unicode, so we need to handle this explicitly
+# in our benchmarks.
+GREP_ASCII = {'LC_ALL': 'C'}
+GREP_UNICODE = {'LC_ALL': 'en_US.UTF-8'}
 
 
 def bench_linux_literal_default(suite_dir):
@@ -320,10 +327,10 @@ def bench_linux_no_literal(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', pat]),
+        mkcmd('rg-whitelist', ['rg', '-tall', '--no-ignore', '-n', pat]),
         mkcmd('rg (no Unicode)', ['rg', '-n', '(?-u)' + pat]),
-        mkcmd('rg-novcs (no Unicode)', [
-            'rg', '--no-ignore', '-n', '(?-u)' + pat,
+        mkcmd('rg-whitelist (no Unicode)', [
+            'rg', '-tall', '--no-ignore', '-n', '(?-u)' + pat,
         ]),
         mkcmd('ag (no Unicode)', ['ag', '-s', pat]),
         mkcmd('ag-novcs (no Unicode)', [
@@ -411,18 +418,141 @@ def bench_linux_alternates_casei(suite_dir):
     ])
 
 
-# BREADCRUMBS(burntsushi): We should benchmark an alternation for `linux` as
-# well.
-
-def bench_sherlock(suite_dir):
-    'TODO: Fix this and add more single file benchmarks.'
+def bench_subtitles_en_literal(suite_dir):
+    '''
+    Benchmark the speed of an ASCII string literal.
+    '''
     require(suite_dir, 'subtitles-en')
-    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME)
-    pat = 'Sherlock'
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', pat, en]),
-        Command('grep', ['grep', '-a', pat, en])
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('rg (no line numbers)', ['rg', pat, ru]),
+        Command('ag', ['ag', '-s', pat, ru]),
+        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep', ['grep', '-an', pat, ru], env=GREP_ASCII),
+        Command('grep (no line numbers)', [
+            'grep', '-a', pat, ru,
+        ], env=GREP_ASCII),
+        Command('pt', ['pt', pat, ru]),
+        Command('pt (no line numbers)', ['pt', '-N', pat, ru]),
+        Command('sift', ['sift', '-n', pat, ru]),
+        Command('sift (no line numbers)', ['sift', pat, ru]),
+    ])
+
+
+def bench_subtitles_ru_literal(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string literal.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('rg (no line numbers)', ['rg', pat, ru]),
+        Command('ag', ['ag', '-s', pat, ru]),
+        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep', ['grep', '-an', pat, ru], env=GREP_ASCII),
+        Command('grep (no line numbers)', [
+            'grep', '-a', pat, ru,
+        ], env=GREP_ASCII),
+        Command('pt', ['pt', pat, ru]),
+        Command('pt (no line numbers)', ['pt', '-N', pat, ru]),
+        Command('sift', ['sift', '-n', pat, ru]),
+        Command('sift (no line numbers)', ['sift', pat, ru]),
+    ])
+
+
+def bench_subtitles_ru_literal_casei(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string case insensitively.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', '-i', pat, ru]),
+        Command('ucg (not Unicode)', ['ucg', '-i', pat, ru]),
+        Command('grep', ['grep', '-ani', pat, ru], env=GREP_UNICODE),
+        Command('grep (not Unicode)', [
+            'grep', '-E', '-ani', pat, ru,
+        ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_ru_alternate(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = '|'.join([
+        'Шерлок Холмс',  # Sherlock Holmes
+        'Джон Уотсон',  # John Watson
+        'Ирен Адлер',  # Irene Adler
+        'инспектор Лестрейд',  # Inspector Lestrade
+        'профессор Мориарти',  # Professor Moriarty
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('rg (no line numbers)', ['rg', pat, ru]),
+        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep', ['grep', '-E', '-an', pat, ru], env=GREP_ASCII),
+        Command('grep (no line numbers)', [
+            'grep', '-E', '-a', pat, ru,
+        ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_ru_alternate_casei(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = '|'.join([
+        'Шерлок Холмс',  # Sherlock Holmes
+        'Джон Уотсон',  # John Watson
+        'Ирен Адлер',  # Irene Adler
+        'инспектор Лестрейд',  # Inspector Lestrade
+        'профессор Мориарти',  # Professor Moriarty
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', '-i', pat, ru]),
+        Command('ucg (not Unicode)', ['ucg', '-i', pat, ru]),
+        Command('grep', ['grep', '-E', '-ani', pat, ru], env=GREP_UNICODE),
+        Command('grep (not Unicode)', [
+            'grep', '-E', '-ani', pat, ru,
+        ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_ru_no_literal(suite_dir):
+    '''
+    Benchmark the speed of a regex with no literals.
+
+    Note that we don't even try to run grep with Unicode support
+    on this one. While it should eventually get the right answer,
+    I killed it after it had already been running for two minutes
+    and showed no signs of finishing soon.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = r'\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('rg (no line numbers)', ['rg', pat, ru]),
+        Command('ucg (no Unicode)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (no Unicode)', [
+            'grep', '-E', '-an', pat, ru,
+        ], env=GREP_ASCII),
     ])
 
 
@@ -723,6 +853,7 @@ def download_subtitles_en(suite_dir):
     subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
     en_path_gz = path.join(subtitle_dir, SUBTITLES_EN_NAME_GZ)
     en_path = path.join(subtitle_dir, SUBTITLES_EN_NAME)
+    en_path_sample = path.join(subtitle_dir, SUBTITLES_EN_NAME_SAMPLE)
 
     if not os.path.isdir(subtitle_dir):
         os.makedirs(subtitle_dir)
@@ -730,12 +861,19 @@ def download_subtitles_en(suite_dir):
         if not os.path.exists(en_path_gz):
             run_cmd(['curl', '-LO', SUBTITLES_EN_URL], cwd=subtitle_dir)
         run_cmd(['gunzip', en_path_gz], cwd=subtitle_dir)
+    if not os.path.exists(en_path_sample):
+        # Get a sample roughly the same size as the Russian corpus so that
+        # benchmarks finish in a reasonable time.
+        with open(path.join(subtitle_dir, en_path_sample), 'wb+') as f:
+            run_cmd(
+                ['head', '-n', '32722372', en_path],
+                cwd=subtitle_dir, stdout=f)
 
 
 def has_subtitles_en(suite_dir):
     'Returns true if English subtitles have been downloaded.'
     subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
-    return path.exists(path.join(subtitle_dir, SUBTITLES_EN_NAME))
+    return path.exists(path.join(subtitle_dir, SUBTITLES_EN_NAME_SAMPLE))
 
 
 def download_subtitles_ru(suite_dir):
@@ -770,7 +908,7 @@ def download(suite_dir, choices):
         A list of corpora to download. Available choices are:
         all, linux, subtitles-en, subtitles-ru.
     '''
-    for choice in args.download:
+    for choice in choices:
         if choice == 'linux':
             download_linux(suite_dir)
         elif choice == 'subtitles-en':
@@ -849,7 +987,7 @@ def main():
     args = p.parse_args()
 
     if args.download is not None and len(args.download) > 0:
-        download(args.dir, args.choices)
+        download(args.dir, args.download)
         sys.exit(0)
 
     if not path.isdir(args.dir):
