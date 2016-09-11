@@ -384,7 +384,7 @@ impl Args {
     pub fn parse() -> Result<Args> {
         // Get all of the arguments, being careful to require valid UTF-8.
         let mut argv = vec![];
-        for arg in env::args_os().skip(1) {
+        for arg in env::args_os() {
             match arg.into_string() {
                 Ok(s) => argv.push(s),
                 Err(s) => {
