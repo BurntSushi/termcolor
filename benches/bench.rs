@@ -1,3 +1,7 @@
+/*!
+This module benchmarks the glob implementation. For benchmarks on the ripgrep
+tool itself, see the benchsuite directory.
+*/
 #![feature(test)]
 
 extern crate glob;
