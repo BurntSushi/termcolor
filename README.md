@@ -1,5 +1,3 @@
-rep
----
-A faster `grep`, written in Rust using the
-[`regex`](https://github.com/rust-lang-nursery/regex)
-crate.
+ripgrep (rg)
+------------
+rg combines the usability of the silver search with the raw speed of grep.
