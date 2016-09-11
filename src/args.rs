@@ -367,7 +367,7 @@ impl RawArgs {
             types.select(ty);
         }
         for ty in &self.flag_type_not {
-            types.select_not(ty);
+            types.negate(ty);
         }
         Ok(())
     }

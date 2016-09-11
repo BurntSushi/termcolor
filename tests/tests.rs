@@ -219,6 +219,13 @@ sherlock!(file_types, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "file.rs:Sherlock\n");
 });
 
+sherlock!(file_types_all, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("file.py", "Sherlock");
+    cmd.arg("-t").arg("all");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "file.py:Sherlock\n");
+});
+
 sherlock!(file_types_negate, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.remove("sherlock");
     wd.create("file.py", "Sherlock");
@@ -226,6 +233,18 @@ sherlock!(file_types_negate, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("-T").arg("rust");
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "file.py:Sherlock\n");
+});
+
+sherlock!(file_types_negate_all, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("file.py", "Sherlock");
+    cmd.arg("-T").arg("all");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+");
 });
 
 sherlock!(file_type_clear, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {

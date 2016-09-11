@@ -8,7 +8,10 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::path::Path;
 
-use gitignore::{self, Gitignore, GitignoreBuilder, Match, Pattern};
+use regex;
+
+use gitignore::{Match, Pattern};
+use glob::{self, MatchOptions};
 
 const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("asm", &["*.asm", "*.s", "*.S"]),
@@ -55,6 +58,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm"]),
     ("php", &["*.php", "*.php3", "*.php4", "*.php5", "*.phtml"]),
     ("py", &["*.py"]),
+    ("readme", &["README*", "*README"]),
     ("rr", &["*.R"]),
     ("rst", &["*.rst"]),
     ("ruby", &["*.rb"]),
@@ -81,7 +85,9 @@ pub enum Error {
     /// A user specified file type definition could not be parsed.
     InvalidDefinition,
     /// There was an error building the matcher (probably a bad glob).
-    Gitignore(gitignore::Error),
+    Glob(glob::Error),
+    /// There was an error compiling a glob as a regex.
+    Regex(regex::Error),
 }
 
 impl StdError for Error {
@@ -89,7 +95,8 @@ impl StdError for Error {
         match *self {
             Error::UnrecognizedFileType(_) => "unrecognized file type",
             Error::InvalidDefinition => "invalid definition",
-            Error::Gitignore(ref err) => err.description(),
+            Error::Glob(ref err) => err.description(),
+            Error::Regex(ref err) => err.description(),
         }
     }
 }
@@ -104,14 +111,21 @@ impl fmt::Display for Error {
                 write!(f, "invalid definition (format is type:glob, e.g., \
                            html:*.html)")
             }
-            Error::Gitignore(ref err) => err.fmt(f),
+            Error::Glob(ref err) => err.fmt(f),
+            Error::Regex(ref err) => err.fmt(f),
         }
     }
 }
 
-impl From<gitignore::Error> for Error {
-    fn from(err: gitignore::Error) -> Error {
-        Error::Gitignore(err)
+impl From<glob::Error> for Error {
+    fn from(err: glob::Error) -> Error {
+        Error::Glob(err)
+    }
+}
+
+impl From<regex::Error> for Error {
+    fn from(err: regex::Error) -> Error {
+        Error::Regex(err)
     }
 }
 
@@ -137,7 +151,8 @@ impl FileTypeDef {
 /// Types is a file type matcher.
 #[derive(Clone, Debug)]
 pub struct Types {
-    gi: Option<Gitignore>,
+    selected: Option<glob::Set>,
+    negated: Option<glob::Set>,
     has_selected: bool,
     unmatched_pat: Pattern,
 }
@@ -149,14 +164,19 @@ impl Types {
     ///
     /// If has_selected is true, then at least one file type was selected.
     /// Therefore, any non-matches should be ignored.
-    fn new(gi: Option<Gitignore>, has_selected: bool) -> Types {
+    fn new(
+        selected: Option<glob::Set>,
+        negated: Option<glob::Set>,
+        has_selected: bool,
+    ) -> Types {
         Types {
-            gi: gi,
+            selected: selected,
+            negated: negated,
             has_selected: has_selected,
             unmatched_pat: Pattern {
                 from: Path::new("<filetype>").to_path_buf(),
-                original: "<none>".to_string(),
-                pat: "<none>".to_string(),
+                original: "<N/A>".to_string(),
+                pat: "<N/A>".to_string(),
                 whitelist: false,
                 only_dir: false,
             },
@@ -165,7 +185,7 @@ impl Types {
 
     /// Creates a new file type matcher that never matches.
     pub fn empty() -> Types {
-        Types::new(None, false)
+        Types::new(None, None, false)
     }
 
     /// Returns a match for the given path against this file type matcher.
@@ -175,22 +195,35 @@ impl Types {
     /// If at least one file type is selected and path doesn't match, then
     /// the path is also considered ignored.
     pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
+        // If we don't have any matcher, then we can't do anything.
+        if self.negated.is_none() && self.selected.is_none() {
+            return Match::None;
+        }
         // File types don't apply to directories.
         if is_dir {
             return Match::None;
         }
         let path = path.as_ref();
-        self.gi.as_ref()
-            .map(|gi| {
-                let path = &*path.to_string_lossy();
-                let mat = gi.matched_utf8(path, is_dir).invert();
-                if self.has_selected && mat.is_none() {
-                    Match::Ignored(&self.unmatched_pat)
-                } else {
-                    mat
-                }
-            })
-            .unwrap_or(Match::None)
+        let name = match path.file_name() {
+            Some(name) => name.to_string_lossy(),
+            None if self.has_selected => {
+                return Match::Ignored(&self.unmatched_pat);
+            }
+            None => {
+                return Match::None;
+            }
+        };
+        if self.negated.as_ref().map(|s| s.is_match(&*name)).unwrap_or(false) {
+            return Match::Ignored(&self.unmatched_pat);
+        }
+        if self.selected.as_ref().map(|s| s.is_match(&*name)).unwrap_or(false) {
+            return Match::Whitelist(&self.unmatched_pat);
+        }
+        if self.has_selected {
+            Match::Ignored(&self.unmatched_pat)
+        } else {
+            Match::None
+        }
     }
 }
 
@@ -198,8 +231,8 @@ impl Types {
 /// a set of file type selections.
 pub struct TypesBuilder {
     types: HashMap<String, Vec<String>>,
-    select: Vec<String>,
-    select_not: Vec<String>,
+    selected: Vec<String>,
+    negated: Vec<String>,
 }
 
 impl TypesBuilder {
@@ -207,41 +240,57 @@ impl TypesBuilder {
     pub fn new() -> TypesBuilder {
         TypesBuilder {
             types: HashMap::new(),
-            select: vec![],
-            select_not: vec![],
+            selected: vec![],
+            negated: vec![],
         }
     }
 
     /// Build the current set of file type definitions *and* selections into
     /// a file type matcher.
     pub fn build(&self) -> Result<Types, Error> {
-        if self.select.is_empty() && self.select_not.is_empty() {
-            return Ok(Types::new(None, false));
-        }
-        let mut bgi = GitignoreBuilder::new("/");
-        for name in &self.select {
-            let globs = match self.types.get(name) {
-                Some(globs) => globs,
-                None => {
-                    return Err(Error::UnrecognizedFileType(name.to_string()));
+        let opts = MatchOptions {
+            require_literal_separator: true, ..MatchOptions::default()
+        };
+        let selected_globs =
+            if self.selected.is_empty() {
+                None
+            } else {
+                let mut bset = glob::SetBuilder::new();
+                for name in &self.selected {
+                    let globs = match self.types.get(name) {
+                        Some(globs) => globs,
+                        None => {
+                            let msg = name.to_string();
+                            return Err(Error::UnrecognizedFileType(msg));
+                        }
+                    };
+                    for glob in globs {
+                        try!(bset.add_with(glob, &opts));
+                    }
                 }
+                Some(try!(bset.build()))
             };
-            for glob in globs {
-                try!(bgi.add("<filetype>", glob));
-            }
-        }
-        for name in &self.select_not {
-            let globs = match self.types.get(name) {
-                Some(globs) => globs,
-                None => {
-                    return Err(Error::UnrecognizedFileType(name.to_string()));
+        let negated_globs =
+            if self.negated.is_empty() {
+                None
+            } else {
+                let mut bset = glob::SetBuilder::new();
+                for name in &self.negated {
+                    let globs = match self.types.get(name) {
+                        Some(globs) => globs,
+                        None => {
+                            let msg = name.to_string();
+                            return Err(Error::UnrecognizedFileType(msg));
+                        }
+                    };
+                    for glob in globs {
+                        try!(bset.add_with(glob, &opts));
+                    }
                 }
+                Some(try!(bset.build()))
             };
-            for glob in globs {
-                try!(bgi.add("<filetype>", &format!("!{}", glob)));
-            }
-        }
-        Ok(Types::new(Some(try!(bgi.build())), !self.select.is_empty()))
+        Ok(Types::new(
+            selected_globs, negated_globs, !self.selected.is_empty()))
     }
 
     /// Return the set of current file type definitions.
@@ -260,14 +309,30 @@ impl TypesBuilder {
     }
 
     /// Select the file type given by `name`.
+    ///
+    /// If `name` is `all`, then all file types are selected.
     pub fn select(&mut self, name: &str) -> &mut TypesBuilder {
-        self.select.push(name.to_string());
+        if name == "all" {
+            for name in self.types.keys() {
+                self.selected.push(name.to_string());
+            }
+        } else {
+            self.selected.push(name.to_string());
+        }
         self
     }
 
     /// Ignore the file type given by `name`.
-    pub fn select_not(&mut self, name: &str) -> &mut TypesBuilder {
-        self.select_not.push(name.to_string());
+    ///
+    /// If `name` is `all`, then all file types are negated.
+    pub fn negate(&mut self, name: &str) -> &mut TypesBuilder {
+        if name == "all" {
+            for name in self.types.keys() {
+                self.negated.push(name.to_string());
+            }
+        } else {
+            self.negated.push(name.to_string());
+        }
         self
     }
 
@@ -333,7 +398,7 @@ mod tests {
                     btypes.select(sel);
                 }
                 for selnot in $selnot {
-                    btypes.select_not(selnot);
+                    btypes.negate(selnot);
                 }
                 let types = btypes.build().unwrap();
                 let mat = types.matched($path, false);
