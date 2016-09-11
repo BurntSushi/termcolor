@@ -288,7 +288,7 @@ impl RawArgs {
             };
         let threads =
             if self.flag_threads == 0 {
-                cmp::min(6, num_cpus::get())
+                cmp::min(8, num_cpus::get())
             } else {
                 self.flag_threads
             };
