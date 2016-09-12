@@ -476,11 +476,34 @@ def bench_subtitles_ru_literal_casei(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         Command('rg', ['rg', '-n', '-i', pat, ru]),
+        Command('ag (not Unicode)', ['ag', '-i', pat, ru]),
         Command('ucg (not Unicode)', ['ucg', '-i', pat, ru]),
         Command('grep', ['grep', '-ani', pat, ru], env=GREP_UNICODE),
         Command('grep (not Unicode)', [
             'grep', '-E', '-ani', pat, ru,
         ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_ru_literal_word(suite_dir):
+    '''
+    Benchmark the speed of finding a literal inside word boundaries.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-nw', pat, ru]),
+        Command('rg (not Unicode)', [
+            'rg', '-n', r'(?-u:\b)' + pat + r'(?-u:\b)', ru,
+        ]),
+        Command('ag (not Unicode)', ['ag', '-sw', pat, ru]),
+        Command('ucg (not Unicode)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (not Unicode)', [
+            'grep', '-anw', pat, ru,
+        ], env=GREP_ASCII),
+        Command('grep', ['grep', '-anw', pat, ru], env=GREP_UNICODE),
     ])
 
 
