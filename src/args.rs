@@ -124,6 +124,7 @@ Less common options:
 
     --no-ignore
         Don't respect ignore files (.gitignore, .rgignore, etc.)
+        This implies --no-ignore-parent.
 
     --no-ignore-parent
         Don't respect ignore files in parent directories.
@@ -338,7 +339,9 @@ impl RawArgs {
             line_number: !self.flag_no_line_number && self.flag_line_number,
             mmap: mmap,
             no_ignore: self.flag_no_ignore,
-            no_ignore_parent: self.flag_no_ignore_parent,
+            no_ignore_parent:
+                // --no-ignore implies --no-ignore-parent
+                self.flag_no_ignore_parent || self.flag_no_ignore,
             quiet: self.flag_quiet,
             replace: self.flag_replace.clone().map(|s| s.into_bytes()),
             text: self.flag_text,
