@@ -1,12 +1,11 @@
 [package]
-publish = false
 name = "grep"
 version = "0.1.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Fast line oriented regex searching as a library.
 """
-documentation = "https://github.com/BurntSushi/ripgrep"
+documentation = "http://burntsushi.net/rustdoc/grep/"
 homepage = "https://github.com/BurntSushi/ripgrep"
 repository = "https://github.com/BurntSushi/ripgrep"
 readme = "README.md"
