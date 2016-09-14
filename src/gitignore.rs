@@ -21,7 +21,6 @@ additional rules such as whitelists (prefix of `!`) or directory-only globs
 // TODO(burntsushi): Implement something similar, but for Mercurial. We can't
 // use this exact implementation because hgignore files are different.
 
-use std::env;
 use std::error::Error as StdError;
 use std::fmt;
 use std::fs::File;
@@ -89,21 +88,10 @@ pub struct Gitignore {
 }
 
 impl Gitignore {
-    /// Create a new gitignore glob matcher from the gitignore file at the
-    /// given path. The root of the gitignore file is the basename of path.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Gitignore, Error> {
-        let root = match path.as_ref().parent() {
-            Some(parent) => parent.to_path_buf(),
-            None => env::current_dir().unwrap_or(Path::new("/").to_path_buf()),
-        };
-        let mut builder = GitignoreBuilder::new(root);
-        try!(builder.add_path(path));
-        builder.build()
-    }
-
     /// Create a new gitignore glob matcher from the given root directory and
     /// string containing the contents of a gitignore file.
-    pub fn from_str<P: AsRef<Path>>(
+    #[allow(dead_code)]
+    fn from_str<P: AsRef<Path>>(
         root: P,
         gitignore: &str,
     ) -> Result<Gitignore, Error> {
@@ -159,11 +147,6 @@ impl Gitignore {
     pub fn num_ignores(&self) -> u64 {
         self.num_ignores
     }
-
-    /// Returns the total number of whitelisted patterns.
-    pub fn num_whitelist(&self) -> u64 {
-        self.num_whitelist
-    }
 }
 
 /// The result of a glob match.
@@ -182,6 +165,7 @@ pub enum Match<'a> {
 
 impl<'a> Match<'a> {
     /// Returns true if the match result implies the path should be ignored.
+    #[allow(dead_code)]
     pub fn is_ignored(&self) -> bool {
         match *self {
             Match::Ignored(_) => true,

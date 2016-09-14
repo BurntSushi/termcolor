@@ -151,10 +151,10 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
 mod tests {
     use std::path::Path;
 
-    use grep::{Grep, GrepBuilder};
-    use term::Terminal;
+    use grep::GrepBuilder;
+    use term::{Terminal, TerminfoTerminal};
 
-    use out::OutBuffer;
+    use out::ColoredTerminal;
     use printer::Printer;
 
     use super::BufferSearcher;
@@ -168,38 +168,19 @@ but Doctor Watson has to have it taken out for him and dusted,
 and exhibited clearly, with a label attached.\
 ";
 
-    const CODE: &'static str = "\
-extern crate snap;
-
-use std::io;
-
-fn main() {
-    let stdin = io::stdin();
-    let stdout = io::stdout();
-
-    // Wrap the stdin reader in a Snappy reader.
-    let mut rdr = snap::Reader::new(stdin.lock());
-    let mut wtr = stdout.lock();
-    io::copy(&mut rdr, &mut wtr).expect(\"I/O operation failed\");
-}
-";
-
-    fn matcher(pat: &str) -> Grep {
-        GrepBuilder::new(pat).build().unwrap()
-    }
-
     fn test_path() -> &'static Path {
         &Path::new("/baz.rs")
     }
 
-    type TestSearcher<'a> = BufferSearcher<'a, OutBuffer>;
+    type TestSearcher<'a> =
+        BufferSearcher<'a, ColoredTerminal<TerminfoTerminal<Vec<u8>>>>;
 
     fn search<F: FnMut(TestSearcher) -> TestSearcher>(
         pat: &str,
         haystack: &str,
         mut map: F,
     ) -> (u64, String) {
-        let outbuf = OutBuffer::NoColor(vec![]);
+        let outbuf = ColoredTerminal::NoColor(vec![]);
         let mut pp = Printer::new(outbuf).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {

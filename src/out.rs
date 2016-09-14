@@ -1,40 +1,12 @@
 use std::io::{self, Write};
-use std::sync::Arc;
 
 use term::{self, Terminal};
-use term::color::Color;
 use term::terminfo::TermInfo;
 #[cfg(windows)]
 use term::WinConsole;
 
-use terminal::TerminfoTerminal;
-
-pub type StdoutTerminal = Box<Terminal<Output=io::Stdout> + Send>;
-
-/// Gets a terminal that supports color if available.
 #[cfg(windows)]
-fn term_stdout(color: bool) -> StdoutTerminal {
-    let stdout = io::stdout();
-    WinConsole::new(stdout)
-        .ok()
-        .map(|t| Box::new(t) as StdoutTerminal)
-        .unwrap_or_else(|| {
-            let stdout = io::stdout();
-            Box::new(NoColorTerminal::new(stdout)) as StdoutTerminal
-        })
-}
-
-/// Gets a terminal that supports color if available.
-#[cfg(not(windows))]
-fn term_stdout(color: bool) -> StdoutTerminal {
-    let stdout = io::stdout();
-    if !color || TERMINFO.is_none() {
-        Box::new(NoColorTerminal::new(stdout))
-    } else {
-        let info = TERMINFO.clone().unwrap();
-        Box::new(TerminfoTerminal::new_with_terminfo(stdout, info))
-    }
-}
+use terminal_win::WindowsBuffer;
 
 /// Out controls the actual output of all search results for a particular file
 /// to the end user.
@@ -43,16 +15,31 @@ fn term_stdout(color: bool) -> StdoutTerminal {
 /// individual search results where as Out works with search results for each
 /// file as a whole. For example, it knows when to print a file separator.)
 pub struct Out {
-    term: StdoutTerminal,
+    #[cfg(not(windows))]
+    term: ColoredTerminal<term::TerminfoTerminal<io::BufWriter<io::Stdout>>>,
+    #[cfg(windows)]
+    term: ColoredTerminal<WinConsole<io::Stdout>>,
     printed: bool,
     file_separator: Option<Vec<u8>>,
 }
 
 impl Out {
     /// Create a new Out that writes to the wtr given.
+    #[cfg(not(windows))]
+    pub fn new(color: bool) -> Out {
+        let wtr = io::BufWriter::new(io::stdout());
+        Out {
+            term: ColoredTerminal::new(wtr, color),
+            printed: false,
+            file_separator: None,
+        }
+    }
+
+    /// Create a new Out that writes to the wtr given.
+    #[cfg(windows)]
     pub fn new(color: bool) -> Out {
         Out {
-            term: term_stdout(color),
+            term: ColoredTerminal::new_stdout(color),
             printed: false,
             file_separator: None,
         }
@@ -69,154 +56,194 @@ impl Out {
 
     /// Write the search results of a single file to the underlying wtr and
     /// flush wtr.
-    pub fn write(&mut self, buf: &OutBuffer) {
+    #[cfg(not(windows))]
+    pub fn write(
+        &mut self,
+        buf: &ColoredTerminal<term::TerminfoTerminal<Vec<u8>>>,
+    ) {
+        self.write_sep();
+        match *buf {
+            ColoredTerminal::Colored(ref tt) => {
+                let _ = self.term.write_all(tt.get_ref());
+            }
+            ColoredTerminal::NoColor(ref buf) => {
+                let _ = self.term.write_all(buf);
+            }
+        }
+        self.write_done();
+    }
+    /// Write the search results of a single file to the underlying wtr and
+    /// flush wtr.
+    #[cfg(windows)]
+    pub fn write(
+        &mut self,
+        buf: &ColoredTerminal<WindowsBuffer>,
+    ) {
+        self.write_sep();
+        match *buf {
+            ColoredTerminal::Colored(ref tt) => {
+                tt.print_stdout(&mut self.term);
+            }
+            ColoredTerminal::NoColor(ref buf) => {
+                let _ = self.term.write_all(buf);
+            }
+        }
+        self.write_done();
+    }
+
+    fn write_sep(&mut self) {
         if let Some(ref sep) = self.file_separator {
             if self.printed {
                 let _ = self.term.write_all(sep);
                 let _ = self.term.write_all(b"\n");
             }
         }
-        match *buf {
-            OutBuffer::Colored(ref tt) => {
-                let _ = self.term.write_all(tt.get_ref());
-            }
-            OutBuffer::Windows(ref w) => {
-                w.print_stdout(&mut self.term);
-            }
-            OutBuffer::NoColor(ref buf) => {
-                let _ = self.term.write_all(buf);
-            }
-        }
+    }
+
+    fn write_done(&mut self) {
         let _ = self.term.flush();
         self.printed = true;
     }
 }
 
-/// OutBuffer corresponds to the final output buffer for search results. All
-/// search results are written to a buffer and then a buffer is flushed to
-/// stdout only after the full search has completed.
+/// ColoredTerminal provides optional colored output through the term::Terminal
+/// trait. In particular, it will dynamically configure itself to use coloring
+/// if it's available in the environment.
 #[derive(Clone, Debug)]
-pub enum OutBuffer {
-    Colored(TerminfoTerminal<Vec<u8>>),
-    Windows(WindowsBuffer),
-    NoColor(Vec<u8>),
+pub enum ColoredTerminal<T: Terminal + Send> {
+    Colored(T),
+    NoColor(T::Output),
 }
 
-#[derive(Clone, Debug)]
-pub struct WindowsBuffer {
-    buf: Vec<u8>,
-    pos: usize,
-    colors: Vec<WindowsColor>,
-}
-
-#[derive(Clone, Debug)]
-pub struct WindowsColor {
-    pos: usize,
-    opt: WindowsOption,
-}
-
-#[derive(Clone, Debug)]
-pub enum WindowsOption {
-    Foreground(Color),
-    Background(Color),
-    Reset,
-}
-
-lazy_static! {
-    static ref TERMINFO: Option<Arc<TermInfo>> = {
-        match TermInfo::from_env() {
-            Ok(info) => Some(Arc::new(info)),
-            Err(err) => {
-                debug!("error loading terminfo for coloring: {}", err);
-                None
-            }
-        }
-    };
-}
-
-impl OutBuffer {
+#[cfg(not(windows))]
+impl<W: io::Write + Send> ColoredTerminal<term::TerminfoTerminal<W>> {
     /// Create a new output buffer.
     ///
     /// When color is true, the buffer will attempt to support coloring.
-    pub fn new(color: bool) -> OutBuffer {
-        // If we want color, build a TerminfoTerminal and see if the current
-        // environment supports coloring. If not, bail with NoColor. To avoid
-        // losing our writer (ownership), do this the long way.
+    pub fn new(wtr: W, color: bool) -> Self {
+        lazy_static! {
+            // Only pay for parsing the terminfo once.
+            static ref TERMINFO: Option<TermInfo> = {
+                match TermInfo::from_env() {
+                    Ok(info) => Some(info),
+                    Err(err) => {
+                        debug!("error loading terminfo for coloring: {}", err);
+                        None
+                    }
+                }
+            };
+        }
+        // If we want color, build a term::TerminfoTerminal and see if the
+        // current environment supports coloring. If not, bail with NoColor. To
+        // avoid losing our writer (ownership), do this the long way.
         if !color {
-            return OutBuffer::NoColor(vec![]);
+            return ColoredTerminal::NoColor(wtr);
         }
-        if cfg!(windows) {
-            return OutBuffer::Windows(WindowsBuffer {
-                buf: vec![],
-                pos: 0,
-                colors: vec![]
-            });
-        }
-        if TERMINFO.is_none() {
-            return OutBuffer::NoColor(vec![]);
-        }
-        let info = TERMINFO.clone().unwrap();
-        let tt = TerminfoTerminal::new_with_terminfo(vec![], info);
+        let terminfo = match *TERMINFO {
+            None => return ColoredTerminal::NoColor(wtr),
+            Some(ref ti) => {
+                // Ug, this should go away with the next release of `term`.
+                TermInfo {
+                    names: ti.names.clone(),
+                    bools: ti.bools.clone(),
+                    numbers: ti.numbers.clone(),
+                    strings: ti.strings.clone(),
+                }
+            }
+        };
+        let tt = term::TerminfoTerminal::new_with_terminfo(wtr, terminfo);
         if !tt.supports_color() {
             debug!("environment doesn't support coloring");
-            return OutBuffer::NoColor(tt.into_inner());
+            return ColoredTerminal::NoColor(tt.into_inner());
         }
-        OutBuffer::Colored(tt)
+        ColoredTerminal::Colored(tt)
+    }
+}
+
+#[cfg(not(windows))]
+impl ColoredTerminal<term::TerminfoTerminal<Vec<u8>>> {
+    /// Clear the give buffer of all search results such that it is reusable
+    /// in another search.
+    pub fn clear(&mut self) {
+        match *self {
+            ColoredTerminal::Colored(ref mut tt) => {
+                tt.get_mut().clear();
+            }
+            ColoredTerminal::NoColor(ref mut buf) => {
+                buf.clear();
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+impl ColoredTerminal<WindowsBuffer> {
+    /// Create a new output buffer.
+    ///
+    /// When color is true, the buffer will attempt to support coloring.
+    pub fn new_buffer(color: bool) -> Self {
+        if !color {
+            ColoredTerminal::NoColor(vec![])
+        } else {
+            ColoredTerminal::Colored(WindowsBuffer::new())
+        }
     }
 
     /// Clear the give buffer of all search results such that it is reusable
     /// in another search.
     pub fn clear(&mut self) {
         match *self {
-            OutBuffer::Colored(ref mut tt) => {
-                tt.get_mut().clear();
-            }
-            OutBuffer::Windows(ref mut win) => {
-                win.buf.clear();
-                win.colors.clear();
-                win.pos = 0;
-            }
-            OutBuffer::NoColor(ref mut buf) => {
-                buf.clear();
-            }
+            ColoredTerminal::Colored(ref mut win) => win.clear(),
+            ColoredTerminal::NoColor(ref mut buf) => buf.clear(),
         }
     }
+}
 
-    fn map_result<F, G>(
+#[cfg(windows)]
+impl ColoredTerminal<WinConsole<io::Stdout>> {
+    /// Create a new output buffer.
+    ///
+    /// When color is true, the buffer will attempt to support coloring.
+    pub fn new_stdout(color: bool) -> Self {
+        if !color {
+            return ColoredTerminal::NoColor(io::stdout());
+        }
+        match WinConsole::new(io::stdout()) {
+            Ok(win) => ColoredTerminal::Colored(win),
+            Err(_) => ColoredTerminal::NoColor(io::stdout()),
+        }
+    }
+}
+
+impl<T: Terminal + Send> ColoredTerminal<T> {
+    fn map_result<F>(
         &mut self,
         mut f: F,
-        mut g: G,
     ) -> term::Result<()>
-    where F: FnMut(&mut TerminfoTerminal<Vec<u8>>) -> term::Result<()>,
-          G: FnMut(&mut WindowsBuffer) -> term::Result<()> {
+    where F: FnMut(&mut T) -> term::Result<()> {
         match *self {
-            OutBuffer::Colored(ref mut w) => f(w),
-            OutBuffer::Windows(ref mut w) => g(w),
-            OutBuffer::NoColor(_) => Err(term::Error::NotSupported),
+            ColoredTerminal::Colored(ref mut w) => f(w),
+            ColoredTerminal::NoColor(_) => Err(term::Error::NotSupported),
         }
     }
 
-    fn map_bool<F, G>(
+    fn map_bool<F>(
         &self,
         mut f: F,
-        mut g: G,
     ) -> bool
-    where F: FnMut(&TerminfoTerminal<Vec<u8>>) -> bool,
-          G: FnMut(&WindowsBuffer) -> bool {
+    where F: FnMut(&T) -> bool {
         match *self {
-            OutBuffer::Colored(ref w) => f(w),
-            OutBuffer::Windows(ref w) => g(w),
-            OutBuffer::NoColor(_) => false,
+            ColoredTerminal::Colored(ref w) => f(w),
+            ColoredTerminal::NoColor(_) => false,
         }
     }
 }
 
-impl io::Write for OutBuffer {
+impl<T: Terminal + Send> io::Write for ColoredTerminal<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match *self {
-            OutBuffer::Colored(ref mut w) => w.write(buf),
-            OutBuffer::Windows(ref mut w) => w.write(buf),
-            OutBuffer::NoColor(ref mut w) => w.write(buf),
+            ColoredTerminal::Colored(ref mut w) => w.write(buf),
+            ColoredTerminal::NoColor(ref mut w) => w.write(buf),
         }
     }
 
@@ -225,259 +252,67 @@ impl io::Write for OutBuffer {
     }
 }
 
-impl term::Terminal for OutBuffer {
-    type Output = Vec<u8>;
+impl<T: Terminal + Send> term::Terminal for ColoredTerminal<T> {
+    type Output = T::Output;
 
     fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
-        self.map_result(|w| w.fg(fg), |w| w.fg(fg))
+        self.map_result(|w| w.fg(fg))
     }
 
     fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
-        self.map_result(|w| w.bg(bg), |w| w.bg(bg))
+        self.map_result(|w| w.bg(bg))
     }
 
     fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
-        self.map_result(|w| w.attr(attr), |w| w.attr(attr))
+        self.map_result(|w| w.attr(attr))
     }
 
     fn supports_attr(&self, attr: term::Attr) -> bool {
-        self.map_bool(|w| w.supports_attr(attr), |w| w.supports_attr(attr))
+        self.map_bool(|w| w.supports_attr(attr))
     }
 
     fn reset(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.reset(), |w| w.reset())
+        self.map_result(|w| w.reset())
     }
 
     fn supports_reset(&self) -> bool {
-        self.map_bool(|w| w.supports_reset(), |w| w.supports_reset())
+        self.map_bool(|w| w.supports_reset())
     }
 
     fn supports_color(&self) -> bool {
-        self.map_bool(|w| w.supports_color(), |w| w.supports_color())
+        self.map_bool(|w| w.supports_color())
     }
 
     fn cursor_up(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.cursor_up(), |w| w.cursor_up())
+        self.map_result(|w| w.cursor_up())
     }
 
     fn delete_line(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.delete_line(), |w| w.delete_line())
+        self.map_result(|w| w.delete_line())
     }
 
     fn carriage_return(&mut self) -> term::Result<()> {
-        self.map_result(|w| w.carriage_return(), |w| w.carriage_return())
+        self.map_result(|w| w.carriage_return())
     }
 
-    fn get_ref(&self) -> &Vec<u8> {
+    fn get_ref(&self) -> &Self::Output {
         match *self {
-            OutBuffer::Colored(ref w) => w.get_ref(),
-            OutBuffer::Windows(ref w) => w.get_ref(),
-            OutBuffer::NoColor(ref w) => w,
+            ColoredTerminal::Colored(ref w) => w.get_ref(),
+            ColoredTerminal::NoColor(ref w) => w,
         }
     }
 
-    fn get_mut(&mut self) -> &mut Vec<u8> {
+    fn get_mut(&mut self) -> &mut Self::Output {
         match *self {
-            OutBuffer::Colored(ref mut w) => w.get_mut(),
-            OutBuffer::Windows(ref mut w) => w.get_mut(),
-            OutBuffer::NoColor(ref mut w) => w,
+            ColoredTerminal::Colored(ref mut w) => w.get_mut(),
+            ColoredTerminal::NoColor(ref mut w) => w,
         }
     }
 
-    fn into_inner(self) -> Vec<u8> {
+    fn into_inner(self) -> Self::Output {
         match self {
-            OutBuffer::Colored(w) => w.into_inner(),
-            OutBuffer::Windows(w) => w.into_inner(),
-            OutBuffer::NoColor(w) => w,
+            ColoredTerminal::Colored(w) => w.into_inner(),
+            ColoredTerminal::NoColor(w) => w,
         }
-    }
-}
-
-impl WindowsBuffer {
-    fn push(&mut self, opt: WindowsOption) {
-        let pos = self.pos;
-        self.colors.push(WindowsColor { pos: pos, opt: opt });
-    }
-}
-
-impl WindowsBuffer {
-    /// Print the contents to the given terminal.
-    pub fn print_stdout(&self, tt: &mut StdoutTerminal) {
-        if !tt.supports_color() {
-            let _ = tt.write_all(&self.buf);
-            let _ = tt.flush();
-            return;
-        }
-        let mut last = 0;
-        for col in &self.colors {
-            let _ = tt.write_all(&self.buf[last..col.pos]);
-            match col.opt {
-                WindowsOption::Foreground(c) => {
-                    let _ = tt.fg(c);
-                }
-                WindowsOption::Background(c) => {
-                    let _ = tt.bg(c);
-                }
-                WindowsOption::Reset => {
-                    let _ = tt.reset();
-                }
-            }
-            last = col.pos;
-        }
-        let _ = tt.write_all(&self.buf[last..]);
-        let _ = tt.flush();
-    }
-}
-
-impl io::Write for WindowsBuffer {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let n = try!(self.buf.write(buf));
-        self.pos += n;
-        Ok(n)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl term::Terminal for WindowsBuffer {
-    type Output = Vec<u8>;
-
-    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
-        self.push(WindowsOption::Foreground(fg));
-        Ok(())
-    }
-
-    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
-        self.push(WindowsOption::Background(bg));
-        Ok(())
-    }
-
-    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn supports_attr(&self, attr: term::Attr) -> bool {
-        false
-    }
-
-    fn reset(&mut self) -> term::Result<()> {
-        self.push(WindowsOption::Reset);
-        Ok(())
-    }
-
-    fn supports_reset(&self) -> bool {
-        true
-    }
-
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn cursor_up(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn delete_line(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn carriage_return(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn get_ref(&self) -> &Vec<u8> {
-        &self.buf
-    }
-
-    fn get_mut(&mut self) -> &mut Vec<u8> {
-        &mut self.buf
-    }
-
-    fn into_inner(self) -> Vec<u8> {
-        self.buf
-    }
-}
-
-/// NoColorTerminal implements Terminal, but supports no coloring.
-///
-/// Its useful when an API requires a Terminal, but coloring isn't needed.
-pub struct NoColorTerminal<W> {
-    wtr: W,
-}
-
-impl<W: Send + io::Write> NoColorTerminal<W> {
-    /// Wrap the given writer in a Terminal interface.
-    pub fn new(wtr: W) -> NoColorTerminal<W> {
-        NoColorTerminal {
-            wtr: wtr,
-        }
-    }
-}
-
-impl<W: Send + io::Write> io::Write for NoColorTerminal<W> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.wtr.write(buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.wtr.flush()
-    }
-}
-
-impl<W: Send + io::Write> term::Terminal for NoColorTerminal<W> {
-    type Output = W;
-
-    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn supports_attr(&self, attr: term::Attr) -> bool {
-        false
-    }
-
-    fn reset(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn supports_reset(&self) -> bool {
-        false
-    }
-
-    fn supports_color(&self) -> bool {
-        false
-    }
-
-    fn cursor_up(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn delete_line(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn carriage_return(&mut self) -> term::Result<()> {
-        Err(term::Error::NotSupported)
-    }
-
-    fn get_ref(&self) -> &W {
-        &self.wtr
-    }
-
-    fn get_mut(&mut self) -> &mut W {
-        &mut self.wtr
-    }
-
-    fn into_inner(self) -> W {
-        self.wtr
     }
 }

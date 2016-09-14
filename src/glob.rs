@@ -95,6 +95,7 @@ impl Set {
     }
 
     /// Returns the number of glob patterns in this set.
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.set.len()
     }
@@ -137,6 +138,7 @@ impl SetBuilder {
     ///
     /// If the pattern could not be parsed as a glob, then an error is
     /// returned.
+    #[allow(dead_code)]
     pub fn add(&mut self, pat: &str) -> Result<(), Error> {
         self.add_with(pat, &MatchOptions::default())
     }
@@ -205,6 +207,7 @@ impl Pattern {
     /// Convert this pattern to a string that is guaranteed to be a valid
     /// regular expression and will represent the matching semantics of this
     /// glob pattern. This uses a default set of options.
+    #[allow(dead_code)]
     pub fn to_regex(&self) -> String {
         self.to_regex_with(&MatchOptions::default())
     }
@@ -315,7 +318,7 @@ impl<'a> Parser<'a> {
             }
             return Ok(());
         }
-        let last = self.p.tokens.pop().unwrap();
+        self.p.tokens.pop().unwrap();
         if prev != Some('/') {
             return Err(Error::InvalidRecursive);
         }

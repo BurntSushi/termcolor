@@ -36,7 +36,7 @@ pub struct Printer<W> {
     with_filename: bool,
 }
 
-impl<W: Send + Terminal> Printer<W> {
+impl<W: Terminal + Send> Printer<W> {
     /// Create a new printer that writes to wtr.
     pub fn new(wtr: W) -> Printer<W> {
         Printer {

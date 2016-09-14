@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)]
-
 extern crate crossbeam;
 extern crate docopt;
 extern crate env_logger;
@@ -25,7 +23,7 @@ extern crate winapi;
 use std::error::Error;
 use std::fs::File;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::result;
 use std::sync::{Arc, Mutex};
@@ -38,9 +36,11 @@ use term::Terminal;
 use walkdir::DirEntry;
 
 use args::Args;
-use out::{NoColorTerminal, Out, OutBuffer};
+use out::{ColoredTerminal, Out};
 use printer::Printer;
 use search_stream::InputBuffer;
+#[cfg(windows)]
+use terminal_win::WindowsBuffer;
 
 macro_rules! errored {
     ($($tt:tt)*) => {
@@ -64,7 +64,8 @@ mod out;
 mod printer;
 mod search_buffer;
 mod search_stream;
-mod terminal;
+#[cfg(windows)]
+mod terminal_win;
 mod types;
 mod walk;
 
@@ -73,7 +74,7 @@ pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 fn main() {
     match Args::parse().and_then(run) {
         Ok(count) if count == 0 => process::exit(1),
-        Ok(count) => process::exit(0),
+        Ok(_) => process::exit(0),
         Err(err) => {
             eprintln!("{}", err);
             process::exit(1);
@@ -82,34 +83,40 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<u64> {
+    let args = Arc::new(args);
+    let paths = args.paths();
     if args.files() {
-        return run_files(args);
+        return run_files(args.clone());
     }
     if args.type_list() {
-        return run_types(args);
+        return run_types(args.clone());
     }
-    let args = Arc::new(args);
+    if paths.len() == 1 && (paths[0] == Path::new("-") || paths[0].is_file()) {
+        return run_one(args.clone(), &paths[0]);
+    }
+
     let out = Arc::new(Mutex::new(args.out()));
-    let outbuf = args.outbuf();
     let mut workers = vec![];
 
     let mut workq = {
         let (workq, stealer) = chase_lev::deque();
         for _ in 0..args.threads() {
-            let worker = Worker {
-                args: args.clone(),
-                out: out.clone(),
+            let worker = MultiWorker {
                 chan_work: stealer.clone(),
-                inpbuf: args.input_buffer(),
-                outbuf: Some(outbuf.clone()),
-                grep: args.grep(),
-                match_count: 0,
+                out: out.clone(),
+                outbuf: Some(args.outbuf()),
+                worker: Worker {
+                    args: args.clone(),
+                    inpbuf: args.input_buffer(),
+                    grep: args.grep(),
+                    match_count: 0,
+                },
             };
             workers.push(thread::spawn(move || worker.run()));
         }
         workq
     };
-    for p in args.paths() {
+    for p in paths {
         if p == Path::new("-") {
             workq.push(Work::Stdin)
         } else {
@@ -128,8 +135,27 @@ fn run(args: Args) -> Result<u64> {
     Ok(match_count)
 }
 
-fn run_files(args: Args) -> Result<u64> {
-    let term = NoColorTerminal::new(io::BufWriter::new(io::stdout()));
+fn run_one(args: Arc<Args>, path: &Path) -> Result<u64> {
+    let mut worker = Worker {
+        args: args.clone(),
+        inpbuf: args.input_buffer(),
+        grep: args.grep(),
+        match_count: 0,
+    };
+    let term = args.stdout();
+    let mut printer = args.printer(term);
+    let work =
+        if path == Path::new("-") {
+            WorkReady::Stdin
+        } else {
+            WorkReady::PathFile(path.to_path_buf(), try!(File::open(path)))
+        };
+    worker.do_work(&mut printer, work);
+    Ok(worker.match_count)
+}
+
+fn run_files(args: Arc<Args>) -> Result<u64> {
+    let term = args.stdout();
     let mut printer = args.printer(term);
     let mut file_count = 0;
     for p in args.paths() {
@@ -146,8 +172,8 @@ fn run_files(args: Args) -> Result<u64> {
     Ok(file_count)
 }
 
-fn run_types(args: Args) -> Result<u64> {
-    let term = NoColorTerminal::new(io::BufWriter::new(io::stdout()));
+fn run_types(args: Arc<Args>) -> Result<u64> {
+    let term = args.stdout();
     let mut printer = args.printer(term);
     let mut ty_count = 0;
     for def in args.type_defs() {
@@ -165,22 +191,29 @@ enum Work {
 
 enum WorkReady {
     Stdin,
-    File(DirEntry, File),
+    DirFile(DirEntry, File),
+    PathFile(PathBuf, File),
+}
+
+struct MultiWorker {
+    chan_work: Stealer<Work>,
+    out: Arc<Mutex<Out>>,
+    #[cfg(not(windows))]
+    outbuf: Option<ColoredTerminal<term::TerminfoTerminal<Vec<u8>>>>,
+    #[cfg(windows)]
+    outbuf: Option<ColoredTerminal<WindowsBuffer>>,
+    worker: Worker,
 }
 
 struct Worker {
     args: Arc<Args>,
-    out: Arc<Mutex<Out>>,
-    chan_work: Stealer<Work>,
     inpbuf: InputBuffer,
-    outbuf: Option<OutBuffer>,
     grep: Grep,
     match_count: u64,
 }
 
-impl Worker {
+impl MultiWorker {
     fn run(mut self) -> u64 {
-        self.match_count = 0;
         loop {
             let work = match self.chan_work.steal() {
                 Steal::Empty | Steal::Abort => continue,
@@ -188,7 +221,7 @@ impl Worker {
                 Steal::Data(Work::Stdin) => WorkReady::Stdin,
                 Steal::Data(Work::File(ent)) => {
                     match File::open(ent.path()) {
-                        Ok(file) => WorkReady::File(ent, file),
+                        Ok(file) => WorkReady::DirFile(ent, file),
                         Err(err) => {
                             eprintln!("{}: {}", ent.path().display(), err);
                             continue;
@@ -198,8 +231,8 @@ impl Worker {
             };
             let mut outbuf = self.outbuf.take().unwrap();
             outbuf.clear();
-            let mut printer = self.args.printer(outbuf);
-            self.do_work(&mut printer, work);
+            let mut printer = self.worker.args.printer(outbuf);
+            self.worker.do_work(&mut printer, work);
             let outbuf = printer.into_inner();
             if !outbuf.get_ref().is_empty() {
                 let mut out = self.out.lock().unwrap();
@@ -207,10 +240,12 @@ impl Worker {
             }
             self.outbuf = Some(outbuf);
         }
-        self.match_count
+        self.worker.match_count
     }
+}
 
-    fn do_work<W: Send + Terminal>(
+impl Worker {
+    fn do_work<W: Terminal + Send>(
         &mut self,
         printer: &mut Printer<W>,
         work: WorkReady,
@@ -221,8 +256,19 @@ impl Worker {
                 let stdin = stdin.lock();
                 self.search(printer, &Path::new("<stdin>"), stdin)
             }
-            WorkReady::File(ent, file) => {
+            WorkReady::DirFile(ent, file) => {
                 let mut path = ent.path();
+                if let Ok(p) = path.strip_prefix("./") {
+                    path = p;
+                }
+                if self.args.mmap() {
+                    self.search_mmap(printer, path, &file)
+                } else {
+                    self.search(printer, path, file)
+                }
+            }
+            WorkReady::PathFile(path, file) => {
+                let mut path = &*path;
                 if let Ok(p) = path.strip_prefix("./") {
                     path = p;
                 }
@@ -243,7 +289,7 @@ impl Worker {
         }
     }
 
-    fn search<R: io::Read, W: Send + Terminal>(
+    fn search<R: io::Read, W: Terminal + Send>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,
@@ -258,7 +304,7 @@ impl Worker {
         ).run().map_err(From::from)
     }
 
-    fn search_mmap<W: Send + Terminal>(
+    fn search_mmap<W: Terminal + Send>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,

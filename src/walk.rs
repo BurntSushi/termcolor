@@ -135,8 +135,3 @@ impl Iterator for WalkEventIter {
         }
     }
 }
-
-fn is_hidden(ent: &DirEntry) -> bool {
-    ent.depth() > 0 &&
-    ent.file_name().to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-}

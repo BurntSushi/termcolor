@@ -9,16 +9,20 @@ use grep::{Grep, GrepBuilder};
 use log;
 use num_cpus;
 use regex;
-use term::Terminal;
+use term::{self, Terminal};
+#[cfg(windows)]
+use term::WinConsole;
 use walkdir::WalkDir;
 
 use atty;
 use gitignore::{Gitignore, GitignoreBuilder};
 use ignore::Ignore;
-use out::{Out, OutBuffer};
+use out::{Out, ColoredTerminal};
 use printer::Printer;
 use search_buffer::BufferSearcher;
 use search_stream::{InputBuffer, Searcher};
+#[cfg(windows)]
+use terminal_win::WindowsBuffer;
 use types::{FileTypeDef, Types, TypesBuilder};
 use walk;
 
@@ -442,7 +446,7 @@ impl Args {
 
     /// Create a new printer of individual search results that writes to the
     /// writer given.
-    pub fn printer<W: Send + Terminal>(&self, wtr: W) -> Printer<W> {
+    pub fn printer<W: Terminal + Send>(&self, wtr: W) -> Printer<W> {
         let mut p = Printer::new(wtr)
             .column(self.column)
             .context_separator(self.context_separator.clone())
@@ -469,8 +473,29 @@ impl Args {
     }
 
     /// Create a new buffer for use with searching.
-    pub fn outbuf(&self) -> OutBuffer {
-        OutBuffer::new(self.color)
+    #[cfg(not(windows))]
+    pub fn outbuf(&self) -> ColoredTerminal<term::TerminfoTerminal<Vec<u8>>> {
+        ColoredTerminal::new(vec![], self.color)
+    }
+
+    /// Create a new buffer for use with searching.
+    #[cfg(windows)]
+    pub fn outbuf(&self) -> ColoredTerminal<WindowsBuffer> {
+        ColoredTerminal::new_buffer(self.color)
+    }
+
+    /// Create a new buffer for use with searching.
+    #[cfg(not(windows))]
+    pub fn stdout(
+        &self,
+    ) -> ColoredTerminal<term::TerminfoTerminal<io::BufWriter<io::Stdout>>> {
+        ColoredTerminal::new(io::BufWriter::new(io::stdout()), self.color)
+    }
+
+    /// Create a new buffer for use with searching.
+    #[cfg(windows)]
+    pub fn stdout(&self) -> ColoredTerminal<WinConsole<io::Stdout>> {
+        ColoredTerminal::new_stdout(self.color)
     }
 
     /// Return the paths that should be searched.

@@ -216,7 +216,7 @@ impl Types {
         if self.negated.as_ref().map(|s| s.is_match(&*name)).unwrap_or(false) {
             return Match::Ignored(&self.unmatched_pat);
         }
-        if self.selected.as_ref().map(|s| s.is_match(&*name)).unwrap_or(false) {
+        if self.selected.as_ref().map(|s|s.is_match(&*name)).unwrap_or(false) {
             return Match::Whitelist(&self.unmatched_pat);
         }
         if self.has_selected {
