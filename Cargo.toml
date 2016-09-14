@@ -23,7 +23,7 @@ name = "integration"
 path = "tests/tests.rs"
 
 [dependencies]
-crossbeam = "0.2"
+deque = "0.3"
 docopt = "0.6"
 env_logger = "0.3"
 grep = { version = "0.1", path = "grep" }

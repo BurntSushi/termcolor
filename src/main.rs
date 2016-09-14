@@ -1,4 +1,4 @@
-extern crate crossbeam;
+extern crate deque;
 extern crate docopt;
 extern crate env_logger;
 extern crate grep;
@@ -28,7 +28,7 @@ use std::result;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crossbeam::sync::chase_lev::{self, Steal, Stealer};
+use deque::{Stealer, Stolen};
 use grep::Grep;
 use memmap::{Mmap, Protection};
 use term::Terminal;
@@ -97,8 +97,8 @@ fn run(args: Args) -> Result<u64> {
     let out = Arc::new(Mutex::new(args.out()));
     let mut workers = vec![];
 
-    let mut workq = {
-        let (workq, stealer) = chase_lev::deque();
+    let workq = {
+        let (workq, stealer) = deque::new();
         for _ in 0..args.threads() {
             let worker = MultiWorker {
                 chan_work: stealer.clone(),
@@ -215,10 +215,10 @@ impl MultiWorker {
     fn run(mut self) -> u64 {
         loop {
             let work = match self.chan_work.steal() {
-                Steal::Empty | Steal::Abort => continue,
-                Steal::Data(Work::Quit) => break,
-                Steal::Data(Work::Stdin) => WorkReady::Stdin,
-                Steal::Data(Work::File(ent)) => {
+                Stolen::Empty | Stolen::Abort => continue,
+                Stolen::Data(Work::Quit) => break,
+                Stolen::Data(Work::Stdin) => WorkReady::Stdin,
+                Stolen::Data(Work::File(ent)) => {
                     match File::open(ent.path()) {
                         Ok(file) => WorkReady::DirFile(ent, file),
                         Err(err) => {
