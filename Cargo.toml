@@ -1,10 +1,10 @@
 [package]
-publish = false
 name = "ripgrep"
 version = "0.1.0"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
-Line oriented search tool using Rust's regex library.
+Line oriented search tool using Rust's regex library. Combines the raw
+performance of grep with the usability of the silver searcher.
 """
 documentation = "https://github.com/BurntSushi/ripgrep"
 homepage = "https://github.com/BurntSushi/ripgrep"
