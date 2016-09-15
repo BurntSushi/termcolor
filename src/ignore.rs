@@ -23,7 +23,6 @@ use types::Types;
 
 const IGNORE_NAMES: &'static [&'static str] = &[
     ".gitignore",
-    ".agignore",
     ".rgignore",
 ];
 
