@@ -82,7 +82,10 @@ pub struct Ignore {
     overrides: Overrides,
     /// A file type matcher.
     types: Types,
+    /// Whether to ignore hidden files or not.
     ignore_hidden: bool,
+    /// When true, don't look at .gitignore or .agignore files for ignore
+    /// rules.
     no_ignore: bool,
 }
 
@@ -207,15 +210,17 @@ impl Ignore {
             debug!("{} ignored because it is hidden", path.display());
             return true;
         }
-        for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
-            let mat = id.matched(path, is_dir);
-            if let Some(is_ignored) = self.ignore_match(path, mat) {
-                if is_ignored {
-                    return true;
+        if !self.no_ignore {
+            for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
+                let mat = id.matched(path, is_dir);
+                if let Some(is_ignored) = self.ignore_match(path, mat) {
+                    if is_ignored {
+                        return true;
+                    }
+                    // If this path is whitelisted by an ignore, then
+                    // fallthrough and let the file type matcher have a say.
+                    break;
                 }
-                // If this path is whitelisted by an ignore, then fallthrough
-                // and let the file type matcher have a say.
-                break;
             }
         }
         let mat = self.types.matched(path, is_dir);
