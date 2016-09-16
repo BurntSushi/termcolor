@@ -759,9 +759,6 @@ mod tests {
                 let pat = Pattern::new($pat).unwrap();
                 let path = &Path::new($path).to_str().unwrap();
                 let re = Regex::new(&pat.to_regex_with(&$options)).unwrap();
-                // println!("PATTERN: {}", $pat);
-                // println!("REGEX: {:?}", re);
-                // println!("PATH: {}", path);
                 assert!(!re.is_match(path.as_bytes()));
             }
         };

@@ -61,11 +61,11 @@ pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
     let mut last_slash = 0;
     for (i, &b) in path.iter().enumerate().rev() {
         if b == b'/' {
-            last_slash = i;
+            last_slash = i + 1;
             break;
         }
     }
-    Some(OsStr::from_bytes(&path[last_slash + 1..]))
+    Some(OsStr::from_bytes(&path[last_slash..]))
 }
 
 /// The final component of the path, if it is a normal file.

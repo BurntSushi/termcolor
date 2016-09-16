@@ -124,8 +124,10 @@ impl Gitignore {
     /// Like matched, but takes a path that has already been stripped.
     pub fn matched_stripped(&self, path: &Path, is_dir: bool) -> Match {
         thread_local! {
-            static MATCHES: RefCell<Vec<usize>> = RefCell::new(vec![]);
-        }
+            static MATCHES: RefCell<Vec<usize>> = {
+                RefCell::new(vec![])
+            };
+        };
         MATCHES.with(|matches| {
             let mut matches = matches.borrow_mut();
             self.set.matches_into(path, &mut *matches);
