@@ -10,6 +10,10 @@ use {Error, Result};
 /// If `byte` is not an ASCII character (i.e., greater than `0x7F`), then this
 /// function panics.
 pub fn remove(expr: Expr, byte: u8) -> Result<Expr> {
+    // TODO(burntsushi): There is a bug in this routine where only `\n` is
+    // handled correctly. Namely, `AnyChar` and `AnyByte` need to be translated
+    // to proper character classes instead of the special `AnyCharNoNL` and
+    // `AnyByteNoNL` classes.
     use syntax::Expr::*;
     assert!(byte <= 0x7F);
     let chr = byte as char;

@@ -62,7 +62,7 @@ impl fmt::Display for Error {
         match *self {
             Error::Regex(ref err) => err.fmt(f),
             Error::LiteralNotAllowed(chr) => {
-                write!(f, "Literal '{}' not allowed.", chr)
+                write!(f, "Literal {:?} not allowed.", chr)
             }
             Error::__Nonexhaustive => unreachable!(),
         }
