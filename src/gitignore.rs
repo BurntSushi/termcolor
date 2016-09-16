@@ -126,7 +126,7 @@ impl Gitignore {
         thread_local! {
             static MATCHES: RefCell<Vec<usize>> = {
                 RefCell::new(vec![])
-            };
+            }
         };
         MATCHES.with(|matches| {
             let mut matches = matches.borrow_mut();
