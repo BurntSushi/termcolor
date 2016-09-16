@@ -151,8 +151,8 @@ impl FileTypeDef {
 /// Types is a file type matcher.
 #[derive(Clone, Debug)]
 pub struct Types {
-    selected: Option<glob::Set>,
-    negated: Option<glob::Set>,
+    selected: Option<glob::SetYesNo>,
+    negated: Option<glob::SetYesNo>,
     has_selected: bool,
     unmatched_pat: Pattern,
 }
@@ -165,8 +165,8 @@ impl Types {
     /// If has_selected is true, then at least one file type was selected.
     /// Therefore, any non-matches should be ignored.
     fn new(
-        selected: Option<glob::Set>,
-        negated: Option<glob::Set>,
+        selected: Option<glob::SetYesNo>,
+        negated: Option<glob::SetYesNo>,
         has_selected: bool,
     ) -> Types {
         Types {
@@ -268,7 +268,7 @@ impl TypesBuilder {
                         try!(bset.add_with(glob, &opts));
                     }
                 }
-                Some(try!(bset.build()))
+                Some(try!(bset.build_yesno()))
             };
         let negated_globs =
             if self.negated.is_empty() {
@@ -287,7 +287,7 @@ impl TypesBuilder {
                         try!(bset.add_with(glob, &opts));
                     }
                 }
-                Some(try!(bset.build()))
+                Some(try!(bset.build_yesno()))
             };
         Ok(Types::new(
             selected_globs, negated_globs, !self.selected.is_empty()))

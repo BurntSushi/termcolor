@@ -365,8 +365,7 @@ impl Overrides {
         let path = path.as_ref();
         self.gi.as_ref()
             .map(|gi| {
-                let path = &*path.to_string_lossy();
-                let mat = gi.matched_utf8(path, is_dir).invert();
+                let mat = gi.matched_stripped(path, is_dir).invert();
                 if mat.is_none() && !is_dir {
                     if gi.num_ignores() > 0 {
                         return Match::Ignored(&self.unmatched_pat);

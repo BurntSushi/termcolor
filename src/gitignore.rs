@@ -21,6 +21,7 @@ additional rules such as whitelists (prefix of `!`) or directory-only globs
 // TODO(burntsushi): Implement something similar, but for Mercurial. We can't
 // use this exact implementation because hgignore files are different.
 
+use std::cell::RefCell;
 use std::error::Error as StdError;
 use std::fmt;
 use std::fs::File;
@@ -30,6 +31,7 @@ use std::path::{Path, PathBuf};
 use regex;
 
 use glob;
+use pathutil::strip_prefix;
 
 /// Represents an error that can occur when parsing a gitignore file.
 #[derive(Debug)]
@@ -110,37 +112,35 @@ impl Gitignore {
     /// same directory as this gitignore file.
     pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
         let mut path = path.as_ref();
-        if let Ok(p) = path.strip_prefix(&self.root) {
+        if let Some(p) = strip_prefix("./", path) {
             path = p;
         }
-        self.matched_utf8(&*path.to_string_lossy(), is_dir)
+        if let Some(p) = strip_prefix(&self.root, path) {
+            path = p;
+        }
+        self.matched_stripped(path, is_dir)
     }
 
-    /// Like matched, but takes a path that has already been stripped and
-    /// converted to UTF-8.
-    pub fn matched_utf8(&self, path: &str, is_dir: bool) -> Match {
-        // A single regex with a bunch of alternations of glob patterns is
-        // unfortunately typically faster than a regex, so we use it as a
-        // first pass filter. We still need to run the RegexSet to get the most
-        // recently defined glob that matched.
-        if !self.set.is_match(path) {
-            return Match::None;
+    /// Like matched, but takes a path that has already been stripped.
+    pub fn matched_stripped(&self, path: &Path, is_dir: bool) -> Match {
+        thread_local! {
+            static MATCHES: RefCell<Vec<usize>> = RefCell::new(vec![]);
         }
-        // The regex set can't actually pick the right glob that matched all
-        // on its own. In particular, some globs require that only directories
-        // can match. Thus, only accept a match from the regex set if the given
-        // path satisfies the corresponding glob's directory criteria.
-        for i in self.set.matches(path).iter().rev() {
-            let pat = &self.patterns[i];
-            if !pat.only_dir || is_dir {
-                return if pat.whitelist {
-                    Match::Whitelist(pat)
-                } else {
-                    Match::Ignored(pat)
-                };
+        MATCHES.with(|matches| {
+            let mut matches = matches.borrow_mut();
+            self.set.matches_into(path, &mut *matches);
+            for &i in matches.iter().rev() {
+                let pat = &self.patterns[i];
+                if !pat.only_dir || is_dir {
+                    return if pat.whitelist {
+                        Match::Whitelist(pat)
+                    } else {
+                        Match::Ignored(pat)
+                    };
+                }
             }
-        }
-        Match::None
+            Match::None
+        })
     }
 
     /// Returns the total number of ignore patterns.
@@ -390,6 +390,7 @@ mod tests {
     ignored!(ig23, ROOT, "foo", "./foo");
     ignored!(ig24, ROOT, "target", "grep/target");
     ignored!(ig25, ROOT, "Cargo.lock", "./tabwriter-bin/Cargo.lock");
+    ignored!(ig26, ROOT, "/foo/bar/baz", "./foo/bar/baz");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");

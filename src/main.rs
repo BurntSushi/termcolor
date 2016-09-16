@@ -1,6 +1,7 @@
 extern crate deque;
 extern crate docopt;
 extern crate env_logger;
+extern crate fnv;
 extern crate grep;
 #[cfg(windows)]
 extern crate kernel32;
@@ -36,6 +37,7 @@ use walkdir::DirEntry;
 
 use args::Args;
 use out::{ColoredTerminal, Out};
+use pathutil::strip_prefix;
 use printer::Printer;
 use search_stream::InputBuffer;
 #[cfg(windows)]
@@ -60,6 +62,7 @@ mod gitignore;
 mod glob;
 mod ignore;
 mod out;
+mod pathutil;
 mod printer;
 mod search_buffer;
 mod search_stream;
@@ -257,7 +260,7 @@ impl Worker {
             }
             WorkReady::DirFile(ent, file) => {
                 let mut path = ent.path();
-                if let Ok(p) = path.strip_prefix("./") {
+                if let Some(p) = strip_prefix("./", path) {
                     path = p;
                 }
                 if self.args.mmap() {
@@ -268,7 +271,7 @@ impl Worker {
             }
             WorkReady::PathFile(path, file) => {
                 let mut path = &*path;
-                if let Ok(p) = path.strip_prefix("./") {
+                if let Some(p) = strip_prefix("./", path) {
                     path = p;
                 }
                 if self.args.mmap() {

@@ -26,13 +26,22 @@ to make its way into `glob` proper.
 // at the .gitignore for the chromium repo---just about every pattern satisfies
 // that assumption.)
 
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::error::Error as StdError;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::hash;
 use std::iter;
+use std::path::Path;
 use std::str;
 
+use fnv;
 use regex;
-use regex::bytes::{Regex, RegexSet, SetMatches};
+use regex::bytes::Regex;
+use regex::bytes::RegexSet;
+
+use pathutil::file_name;
 
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,33 +80,165 @@ impl fmt::Display for Error {
     }
 }
 
+/// SetYesNo represents a group of globs that can be matched together in a
+/// single pass. SetYesNo can only determine whether a particular path matched
+/// any pattern in the set.
+#[derive(Clone, Debug)]
+pub struct SetYesNo {
+    re: Regex,
+}
+
+impl SetYesNo {
+    /// Returns true if and only if the given path matches at least one glob
+    /// in this set.
+    pub fn is_match<T: AsRef<Path>>(&self, path: T) -> bool {
+        self.re.is_match(&*path_bytes(path.as_ref()))
+    }
+
+    fn new(
+        pats: &[(Pattern, MatchOptions)],
+    ) -> Result<SetYesNo, regex::Error> {
+        let mut joined = String::new();
+        for &(ref p, ref o) in pats {
+            let part = format!("(?:{})", p.to_regex_with(o));
+            if !joined.is_empty() {
+                joined.push('|');
+            }
+            joined.push_str(&part);
+        }
+        Ok(SetYesNo { re: try!(Regex::new(&joined)) })
+    }
+}
+
+type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;
+
 /// Set represents a group of globs that can be matched together in a single
 /// pass.
 #[derive(Clone, Debug)]
 pub struct Set {
-    re: Regex,
-    set: RegexSet,
+    yesno: SetYesNo,
+    exts: HashMap<OsString, Vec<usize>, Fnv>,
+    literals: HashMap<Vec<u8>, Vec<usize>, Fnv>,
+    base_literals: HashMap<Vec<u8>, Vec<usize>, Fnv>,
+    base_prefixes: Vec<Vec<u8>>,
+    base_prefixes_map: Vec<usize>,
+    base_suffixes: Vec<Vec<u8>>,
+    base_suffixes_map: Vec<usize>,
+    regexes: RegexSet,
+    regexes_map: Vec<usize>,
 }
 
 impl Set {
-    /// Returns true if and only if the given path matches at least one glob
-    /// in this set.
-    pub fn is_match<T: AsRef<[u8]>>(&self, path: T) -> bool {
-        self.re.is_match(path.as_ref())
-    }
-
-    /// Returns every glob pattern (by sequence number) that matches the given
-    /// path.
-    pub fn matches<T: AsRef<[u8]>>(&self, path: T) -> SetMatches {
-        // TODO(burntsushi): If we split this out into a separate crate, don't
-        // expose the regex::SetMatches type in the public API.
-        self.set.matches(path.as_ref())
-    }
-
-    /// Returns the number of glob patterns in this set.
+    /// Returns the sequence number of every glob pattern that matches the
+    /// given path.
     #[allow(dead_code)]
-    pub fn len(&self) -> usize {
-        self.set.len()
+    pub fn matches<T: AsRef<Path>>(&self, path: T) -> Vec<usize> {
+        let mut into = vec![];
+        self.matches_into(path, &mut into);
+        into
+    }
+
+    /// Adds the sequence number of every glob pattern that matches the given
+    /// path to the vec given.
+    pub fn matches_into<T: AsRef<Path>>(
+        &self,
+        path: T,
+        into: &mut Vec<usize>,
+    ) {
+        into.clear();
+        let path = path.as_ref();
+        let path_bytes = &*path_bytes(path);
+        let basename = file_name(path).map(|b| os_str_bytes(b));
+        if !self.yesno.is_match(path) {
+            return;
+        }
+        if !self.exts.is_empty() {
+            if let Some(ext) = path.extension() {
+                if let Some(matches) = self.exts.get(ext) {
+                    into.extend(matches.as_slice());
+                }
+            }
+        }
+        if !self.literals.is_empty() {
+            if let Some(matches) = self.literals.get(path_bytes) {
+                into.extend(matches.as_slice());
+            }
+        }
+        if !self.base_literals.is_empty() {
+            if let Some(ref basename) = basename {
+                if let Some(matches) = self.base_literals.get(&**basename) {
+                    into.extend(matches.as_slice());
+                }
+            }
+        }
+        if !self.base_prefixes.is_empty() {
+            if let Some(ref basename) = basename {
+                let basename = &**basename;
+                for (i, pre) in self.base_prefixes.iter().enumerate() {
+                    if pre.len() <= basename.len() && &**pre == &basename[0..pre.len()] {
+                        into.push(self.base_prefixes_map[i]);
+                    }
+                }
+            }
+        }
+        if !self.base_suffixes.is_empty() {
+            if let Some(ref basename) = basename {
+                let basename = &**basename;
+                for (i, suf) in self.base_suffixes.iter().enumerate() {
+                    if suf.len() > basename.len() {
+                        continue;
+                    }
+                    let (s, e) = (basename.len() - suf.len(), basename.len());
+                    if &**suf == &basename[s..e] {
+                        into.push(self.base_suffixes_map[i]);
+                    }
+                }
+            }
+        }
+        into.extend(self.regexes.matches(path_bytes));
+        into.sort();
+    }
+
+    fn new(pats: &[(Pattern, MatchOptions)]) -> Result<Set, regex::Error> {
+        let fnv = Fnv::default();
+        let mut exts = HashMap::with_hasher(fnv.clone());
+        let mut literals = HashMap::with_hasher(fnv.clone());
+        let mut base_literals = HashMap::with_hasher(fnv.clone());
+        let (mut base_prefixes, mut base_prefixes_map) = (vec![], vec![]);
+        let (mut base_suffixes, mut base_suffixes_map) = (vec![], vec![]);
+        let (mut regexes, mut regexes_map) = (vec![], vec![]);
+        for (i, &(ref p, ref o)) in pats.iter().enumerate() {
+            if let Some(ext) = p.ext() {
+                exts.entry(ext).or_insert(vec![]).push(i);
+            } else if let Some(literal) = p.literal() {
+                literals.entry(literal.into_bytes()).or_insert(vec![]).push(i);
+            } else if let Some(literal) = p.base_literal() {
+                base_literals
+                    .entry(literal.into_bytes()).or_insert(vec![]).push(i);
+            } else if let Some(literal) = p.base_literal_prefix() {
+                base_prefixes.push(literal.into_bytes());
+                base_prefixes_map.push(i);
+            } else if let Some(literal) = p.base_literal_suffix() {
+                base_suffixes.push(literal.into_bytes());
+                base_suffixes_map.push(i);
+            } else {
+                let part = format!("(?:{})", p.to_regex_with(o));
+                regexes.push(part);
+                regexes_map.push(i);
+            }
+        }
+        Ok(Set {
+            yesno: try!(SetYesNo::new(pats)),
+            exts: exts,
+            literals: literals,
+            base_literals: base_literals,
+            base_prefixes: base_prefixes,
+            base_prefixes_map: base_prefixes_map,
+            base_suffixes: base_suffixes,
+            base_suffixes_map: base_suffixes_map,
+            regexes: try!(RegexSet::new(regexes)),
+            regexes_map: regexes_map,
+        })
     }
 }
 
@@ -119,19 +260,12 @@ impl SetBuilder {
     ///
     /// Once a matcher is built, no new patterns can be added to it.
     pub fn build(&self) -> Result<Set, regex::Error> {
-        let it = self.pats.iter().map(|&(ref p, ref o)| p.to_regex_with(o));
-        let set = try!(RegexSet::new(it));
+        Set::new(&self.pats)
+    }
 
-        let mut joined = String::new();
-        for &(ref p, ref o) in &self.pats {
-            let part = format!("(?:{})", p.to_regex_with(o));
-            if !joined.is_empty() {
-                joined.push('|');
-            }
-            joined.push_str(&part);
-        }
-        let re = try!(Regex::new(&joined));
-        Ok(Set { re: re, set: set })
+    /// Like `build`, but returns a matcher that can only answer yes/no.
+    pub fn build_yesno(&self) -> Result<SetYesNo, regex::Error> {
+        SetYesNo::new(&self.pats)
     }
 
     /// Add a new pattern to this set.
@@ -149,8 +283,21 @@ impl SetBuilder {
         pat: &str,
         opts: &MatchOptions,
     ) -> Result<(), Error> {
-        let pat = try!(Pattern::new(pat));
-        self.pats.push((pat, opts.clone()));
+        let parsed = try!(Pattern::new(pat));
+        // if let Some(ext) = parsed.ext() {
+            // eprintln!("ext :: {:?} :: {:?}", ext, pat);
+        // } else if let Some(lit) = parsed.literal() {
+            // eprintln!("literal :: {:?} :: {:?}", lit, pat);
+        // } else if let Some(lit) = parsed.base_literal() {
+            // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
+        // } else if let Some(lit) = parsed.base_literal_prefix() {
+            // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
+        // } else if let Some(lit) = parsed.base_literal_suffix() {
+            // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
+        // } else {
+            // eprintln!("regex :: {:?} :: {:?}", pat, parsed);
+        // }
+        self.pats.push((parsed, opts.clone()));
         Ok(())
     }
 }
@@ -202,6 +349,114 @@ impl Pattern {
         };
         try!(p.parse());
         Ok(p.p)
+    }
+
+    /// Returns an extension if this pattern exclusively matches it.
+    pub fn ext(&self) -> Option<OsString> {
+        if self.tokens.len() <= 3 {
+            return None;
+        }
+        match self.tokens.get(0) {
+            Some(&Token::RecursivePrefix) => {}
+            _ => return None,
+        }
+        match self.tokens.get(1) {
+            Some(&Token::ZeroOrMore) => {}
+            _ => return None,
+        }
+        match self.tokens.get(2) {
+            Some(&Token::Literal(c)) if c == '.' => {}
+            _ => return None,
+        }
+        let mut lit = OsString::new();
+        for t in self.tokens[3..].iter() {
+            match *t {
+                Token::Literal(c) if c == '/' || c == '\\' || c == '.' => {
+                    return None;
+                }
+                Token::Literal(c) => lit.push(c.to_string()),
+                _ => return None,
+            }
+        }
+        Some(lit)
+    }
+
+    /// Returns the pattern as a literal if and only if the pattern exclusiely
+    /// matches the basename of a file path *and* is a literal.
+    ///
+    /// The basic format of these patterns is `**/{literal}`, where `{literal}`
+    /// does not contain a path separator.
+    pub fn base_literal(&self) -> Option<String> {
+        match self.tokens.get(0) {
+            Some(&Token::RecursivePrefix) => {}
+            _ => return None,
+        }
+        let mut lit = String::new();
+        for t in &self.tokens[1..] {
+            match *t {
+                Token::Literal(c) if c == '/' || c == '\\' => return None,
+                Token::Literal(c) => lit.push(c),
+                _ => return None,
+            }
+        }
+        Some(lit)
+    }
+
+    /// Returns the pattern as a literal if and only if the pattern must match
+    /// an entire path exactly.
+    ///
+    /// The basic format of these patterns is `{literal}`.
+    pub fn literal(&self) -> Option<String> {
+        let mut lit = String::new();
+        for t in &self.tokens {
+            match *t {
+                Token::Literal(c) => lit.push(c),
+                _ => return None,
+            }
+        }
+        Some(lit)
+    }
+
+    /// Returns a basename literal prefix of this pattern.
+    pub fn base_literal_prefix(&self) -> Option<String> {
+        match self.tokens.get(0) {
+            Some(&Token::RecursivePrefix) => {}
+            _ => return None,
+        }
+        match self.tokens.last() {
+            Some(&Token::ZeroOrMore) => {}
+            _ => return None,
+        }
+        let mut lit = String::new();
+        for t in &self.tokens[1..self.tokens.len()-1] {
+            match *t {
+                Token::Literal(c) if c == '/' || c == '\\' => return None,
+                Token::Literal(c) => lit.push(c),
+                _ => return None,
+            }
+        }
+        Some(lit)
+    }
+
+    /// Returns a basename literal suffix of this pattern.
+    pub fn base_literal_suffix(&self) -> Option<String> {
+        match self.tokens.get(0) {
+            Some(&Token::RecursivePrefix) => {}
+            _ => return None,
+        }
+        match self.tokens.get(1) {
+            Some(&Token::ZeroOrMore) => {}
+            _ => return None,
+        }
+        let mut lit = String::new();
+        for t in &self.tokens[2..] {
+            match *t {
+                Token::Literal(c) if c == '/' || c == '\\' => return None,
+                Token::Literal(c) => lit.push(c),
+                _ => return None,
+            }
+        }
+        Some(lit)
     }
 
     /// Convert this pattern to a string that is guaranteed to be a valid
@@ -415,13 +670,34 @@ impl<'a> Parser<'a> {
     }
 }
 
+fn path_bytes(path: &Path) -> Cow<[u8]> {
+    os_str_bytes(path.as_os_str())
+}
+
+#[cfg(unix)]
+fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
+    use std::os::unix::ffi::OsStrExt;
+    Cow::Borrowed(s.as_bytes())
+}
+
+#[cfg(not(unix))]
+fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
+    // TODO(burntsushi): On Windows, OS strings are probably UTF-16, so even
+    // if we could get at the raw bytes, they wouldn't be useful. We *must*
+    // convert to UTF-8 before doing path matching. Unfortunate, but necessary.
+    match s.to_string_lossy() {
+        Cow::Owned(s) => Cow::Owned(s.into_bytes()),
+        Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
     use regex::bytes::Regex;
 
-    use super::{Error, Pattern, MatchOptions, SetBuilder, Token};
+    use super::{Error, Pattern, MatchOptions, Set, SetBuilder, Token};
     use super::Token::*;
 
     macro_rules! syntax {
@@ -487,6 +763,37 @@ mod tests {
                 // println!("REGEX: {:?}", re);
                 // println!("PATH: {}", path);
                 assert!(!re.is_match(path.as_bytes()));
+            }
+        };
+    }
+
+    macro_rules! ext {
+        ($name:ident, $pat:expr, $ext:expr) => {
+            #[test]
+            fn $name() {
+                let pat = Pattern::new($pat).unwrap();
+                let ext = pat.ext().map(|e| e.to_string_lossy().into_owned());
+                assert_eq!($ext, ext.as_ref().map(|s| &**s));
+            }
+        };
+    }
+
+    macro_rules! baseliteral {
+        ($name:ident, $pat:expr, $yes:expr) => {
+            #[test]
+            fn $name() {
+                let pat = Pattern::new($pat).unwrap();
+                assert_eq!($yes, pat.base_literal().is_some());
+            }
+        };
+    }
+
+    macro_rules! basesuffix {
+        ($name:ident, $pat:expr, $yes:expr) => {
+            #[test]
+            fn $name() {
+                let pat = Pattern::new($pat).unwrap();
+                assert_eq!($yes, pat.is_literal_suffix());
             }
         };
     }
@@ -585,6 +892,26 @@ mod tests {
     toregex!(re10, "+", r"^\+$");
     toregex!(re11, "**", r"^.*$");
 
+    ext!(ext1, "**/*.rs", Some("rs"));
+
+    baseliteral!(lit1, "**", true);
+    baseliteral!(lit2, "**/a", true);
+    baseliteral!(lit3, "**/ab", true);
+    baseliteral!(lit4, "**/a*b", false);
+    baseliteral!(lit5, "z/**/a*b", false);
+    baseliteral!(lit6, "[ab]", false);
+    baseliteral!(lit7, "?", false);
+
+    /*
+    issuffix!(suf1, "", false);
+    issuffix!(suf2, "a", true);
+    issuffix!(suf3, "ab", true);
+    issuffix!(suf4, "*ab", true);
+    issuffix!(suf5, "*.ab", true);
+    issuffix!(suf6, "?.ab", true);
+    issuffix!(suf7, "ab*", false);
+    */
+
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
     matches!(match3, "a*b*c", "abc");
@@ -681,16 +1008,22 @@ mod tests {
         builder.add("src/lib.rs").unwrap();
         let set = builder.build().unwrap();
 
-        assert!(set.is_match("foo.c"));
-        assert!(set.is_match("src/foo.c"));
-        assert!(!set.is_match("foo.rs"));
-        assert!(!set.is_match("tests/foo.rs"));
-        assert!(set.is_match("src/foo.rs"));
-        assert!(set.is_match("src/grep/src/main.rs"));
+        fn is_match(set: &Set, s: &str) -> bool {
+            let mut matches = vec![];
+            set.matches_into(s, &mut matches);
+            !matches.is_empty()
+        }
 
-        assert_eq!(2, set.matches("src/lib.rs").iter().count());
-        assert!(set.matches("src/lib.rs").matched(0));
-        assert!(!set.matches("src/lib.rs").matched(1));
-        assert!(set.matches("src/lib.rs").matched(2));
+        assert!(is_match(&set, "foo.c"));
+        assert!(is_match(&set, "src/foo.c"));
+        assert!(!is_match(&set, "foo.rs"));
+        assert!(!is_match(&set, "tests/foo.rs"));
+        assert!(is_match(&set, "src/foo.rs"));
+        assert!(is_match(&set, "src/grep/src/main.rs"));
+
+        let matches = set.matches("src/lib.rs");
+        assert_eq!(2, matches.len());
+        assert_eq!(0, matches[0]);
+        assert_eq!(2, matches[1]);
     }
 }

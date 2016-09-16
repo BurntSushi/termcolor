@@ -64,7 +64,9 @@ def bench_linux_literal_default(suite_dir):
         # doesn't read gitignore files. Instead, it has a file whitelist
         # that happens to match up exactly with the gitignores for this search.
         mkcmd('ucg', ['ucg', pat]),
-        mkcmd('git grep', ['git', 'grep', pat], env={'LC_ALL': 'C'}),
+        # I guess setting LC_ALL=en_US.UTF-8 probably isn't necessarily the
+        # default, but I'd guess it to be on most desktop systems.
+        mkcmd('git grep', ['git', 'grep', pat], env={'LC_ALL': 'en_US.UTF-8'}),
         mkcmd('pt', ['pt', pat]),
         # sift reports an extra line here for a binary file matched.
         mkcmd('sift', ['sift', pat]),
@@ -89,11 +91,10 @@ def bench_linux_literal(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', pat]),
-        mkcmd('rg-novcs-mmap', ['rg', '--mmap', '--no-ignore', '-n', pat]),
-        mkcmd('ag', ['ag', '-s', pat]),
-        mkcmd('ag-novcs', ['ag', '--skip-vcs-ignores', '-s', pat]),
-        mkcmd('ucg', ['ucg', '--nosmart-case', pat]),
+        mkcmd('rg (mmap)', ['rg', '-n', '--mmap', pat]),
+        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
+        mkcmd('ag (mmap)', ['ag', '-s', pat]),
+        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', pat]),
         mkcmd('git grep', [
             'git', 'grep', '-I', '-n', pat,
         ], env={'LC_ALL': 'C'}),
@@ -121,13 +122,16 @@ def bench_linux_literal_casei(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', '-i', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', '-i', pat]),
-        mkcmd('rg-novcs-mmap', [
-            'rg', '--mmap', '--no-ignore', '-n', '-i', pat,
+        mkcmd('rg (mmap)', ['rg', '-n', '-i', pat]),
+        mkcmd('rg (whitelist)', [
+            'rg', '-n', '-i', '--no-ignore', '-tall', pat,
         ]),
-        mkcmd('ag', ['ag', '-i', pat]),
-        mkcmd('ag-novcs', ['ag', '--skip-vcs-ignores', '-i', pat]),
+        mkcmd('ag (mmap)', ['ag', '-i', pat]),
         mkcmd('ucg', ['ucg', '-i', pat]),
+        # It'd technically be more appropriate to set LC_ALL=en_US.UTF-8 here,
+        # since that is certainly what ripgrep is doing, but this is for an
+        # ASCII literal, so we should give `git grep` all the opportunity to
+        # do its best.
         mkcmd('git grep', [
             'git', 'grep', '-I', '-n', '-i', pat,
         ], env={'LC_ALL': 'C'}),
