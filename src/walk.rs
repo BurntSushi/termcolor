@@ -26,6 +26,7 @@ impl Iter {
     }
 
     /// Returns true if this entry should be skipped.
+    #[inline(always)]
     fn skip_entry(&self, ent: &DirEntry) -> bool {
         if ent.depth() == 0 {
             // Never skip the root directory.
@@ -41,6 +42,7 @@ impl Iter {
 impl Iterator for Iter {
     type Item = DirEntry;
 
+    #[inline(always)]
     fn next(&mut self) -> Option<DirEntry> {
         while let Some(ev) = self.it.next() {
             match ev {
@@ -108,6 +110,7 @@ impl From<WalkDir> for WalkEventIter {
 impl Iterator for WalkEventIter {
     type Item = walkdir::Result<WalkEvent>;
 
+    #[inline(always)]
     fn next(&mut self) -> Option<walkdir::Result<WalkEvent>> {
         let dent = self.next.take().or_else(|| self.it.next());
         let depth = match dent {

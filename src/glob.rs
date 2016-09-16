@@ -124,6 +124,8 @@ pub struct Set {
     base_prefixes_map: Vec<usize>,
     base_suffixes: Vec<Vec<u8>>,
     base_suffixes_map: Vec<usize>,
+    base_regexes: RegexSet,
+    base_regexes_map: Vec<usize>,
     regexes: RegexSet,
     regexes_map: Vec<usize>,
 }
@@ -195,7 +197,14 @@ impl Set {
                 }
             }
         }
-        into.extend(self.regexes.matches(path_bytes));
+        if let Some(ref basename) = basename {
+            for i in self.base_regexes.matches(&**basename) {
+                into.push(self.base_regexes_map[i]);
+            }
+        }
+        for i in self.regexes.matches(path_bytes) {
+            into.push(self.regexes_map[i]);
+        }
         into.sort();
     }
 
@@ -207,6 +216,7 @@ impl Set {
         let (mut base_prefixes, mut base_prefixes_map) = (vec![], vec![]);
         let (mut base_suffixes, mut base_suffixes_map) = (vec![], vec![]);
         let (mut regexes, mut regexes_map) = (vec![], vec![]);
+        let (mut base_regexes, mut base_regexes_map) = (vec![], vec![]);
         for (i, &(ref p, ref o)) in pats.iter().enumerate() {
             if let Some(ext) = p.ext() {
                 exts.entry(ext).or_insert(vec![]).push(i);
@@ -221,6 +231,10 @@ impl Set {
             } else if let Some(literal) = p.base_literal_suffix() {
                 base_suffixes.push(literal.into_bytes());
                 base_suffixes_map.push(i);
+            } else if p.is_only_basename() {
+                let part = format!("(?:{})", p.to_regex_with(o));
+                base_regexes.push(part);
+                base_regexes_map.push(i);
             } else {
                 let part = format!("(?:{})", p.to_regex_with(o));
                 regexes.push(part);
@@ -236,6 +250,8 @@ impl Set {
             base_prefixes_map: base_prefixes_map,
             base_suffixes: base_suffixes,
             base_suffixes_map: base_suffixes_map,
+            base_regexes: try!(RegexSet::new(base_regexes)),
+            base_regexes_map: base_regexes_map,
             regexes: try!(RegexSet::new(regexes)),
             regexes_map: regexes_map,
         })
@@ -400,6 +416,25 @@ impl Pattern {
             }
         }
         Some(lit)
+    }
+
+    /// Returns true if and only if this pattern only inspects the basename
+    /// of a path.
+    pub fn is_only_basename(&self) -> bool {
+        match self.tokens.get(0) {
+            Some(&Token::RecursivePrefix) => {}
+            _ => return false,
+        }
+        for t in &self.tokens[1..] {
+            match *t {
+                Token::Literal(c) if c == '/' || c == '\\' => return false,
+                Token::RecursivePrefix
+                | Token::RecursiveSuffix
+                | Token::RecursiveZeroOrMore => return false,
+                _ => {}
+            }
+        }
+        true
     }
 
     /// Returns the pattern as a literal if and only if the pattern must match

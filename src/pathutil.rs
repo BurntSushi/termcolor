@@ -11,6 +11,8 @@ improvement on just listing the files to search (!).
 use std::ffi::OsStr;
 use std::path::Path;
 
+use memchr::memrchr;
+
 /// Strip `prefix` from the `path` and return the remainder.
 ///
 /// If `path` doesn't have a prefix `prefix`, then return `None`.
@@ -58,13 +60,7 @@ pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
     } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
         return None;
     }
-    let mut last_slash = 0;
-    for (i, &b) in path.iter().enumerate().rev() {
-        if b == b'/' {
-            last_slash = i + 1;
-            break;
-        }
-    }
+    let last_slash = memrchr(b'/', path).map(|i| i + 1).unwrap_or(0);
     Some(OsStr::from_bytes(&path[last_slash..]))
 }
 
@@ -77,4 +73,26 @@ pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
     path: &'a P,
 ) -> Option<&'a OsStr> {
     path.as_ref().file_name()
+}
+
+/// Returns true if and only if this file path is considered to be hidden.
+#[cfg(unix)]
+pub fn is_hidden<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::ffi::OsStrExt;
+
+    if let Some(name) = file_name(path.as_ref()) {
+        name.as_bytes().get(0) == Some(&b'.')
+    } else {
+        false
+    }
+}
+
+/// Returns true if and only if this file path is considered to be hidden.
+#[cfg(not(unix))]
+pub fn is_hidden<P: AsRef<Path>>(path: P) -> bool {
+    if let Some(name) = file_name(path) {
+        name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+    } else {
+        false
+    }
 }

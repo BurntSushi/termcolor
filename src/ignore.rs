@@ -19,6 +19,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use gitignore::{self, Gitignore, GitignoreBuilder, Match, Pattern};
+use pathutil::is_hidden;
 use types::Types;
 
 const IGNORE_NAMES: &'static [&'static str] = &[
@@ -374,14 +375,6 @@ impl Overrides {
                 mat
             })
             .unwrap_or(Match::None)
-    }
-}
-
-fn is_hidden<P: AsRef<Path>>(path: P) -> bool {
-    if let Some(name) = path.as_ref().file_name() {
-        name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-    } else {
-        false
     }
 }
 
