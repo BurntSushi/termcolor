@@ -1157,6 +1157,7 @@ def collect_benchmarks(suite_dir, filter_pat=None,
                     name,
                     ' '.join(['--download %s' % n for n in e.missing_names]),
                 ))
+            continue
         except MissingCommands as e:
             fmt = 'missing commands: %s, skipping benchmark %s ' \
                   '(run with --allow-missing to run incomplete benchmarks)'
