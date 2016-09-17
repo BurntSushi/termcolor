@@ -11,6 +11,8 @@ for [every release](https://github.com/BurntSushi/ripgrep/releases).
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
+### Screenshot of search results
+
 [![A screenshot of a sample search with ripgrep](http://burntsushi.net/stuff/ripgrep1.png)](http://burntsushi.net/stuff/ripgrep1.png)
 
 ### Quick example comparing tools
