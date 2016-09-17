@@ -9,7 +9,9 @@ use grep::{Grep, GrepBuilder};
 use log;
 use num_cpus;
 use regex;
-use term::{self, Terminal};
+use term::Terminal;
+#[cfg(not(windows))]
+use term;
 #[cfg(windows)]
 use term::WinConsole;
 use walkdir::WalkDir;

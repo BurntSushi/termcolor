@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 
 use term::{self, Terminal};
+#[cfg(not(windows))]
 use term::terminfo::TermInfo;
 #[cfg(windows)]
 use term::WinConsole;
