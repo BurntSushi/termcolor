@@ -35,13 +35,14 @@ use Result;
 /// If you've never heard of Docopt before, see: http://docopt.org
 /// (TL;DR: The CLI parser is generated from the usage string below.)
 const USAGE: &'static str = "
-Usage: rg [options] <pattern> [<path> ...]
+Usage: rg [options] -e PATTERN ... [<path> ...]
+       rg [options] <pattern> [<path> ...]
        rg [options] --files [<path> ...]
        rg [options] --type-list
        rg --help
        rg --version
 
-rg combines the usability of the silver search with the raw speed of grep.
+rg combines the usability of The Silver Searcher with the raw speed of grep.
 
 Common options:
     -a, --text                 Search binary files as if they were text.
@@ -49,6 +50,11 @@ Common options:
     --color WHEN               Whether to use coloring in match.
                                Valid values are never, always or auto.
                                [default: auto]
+    -e, --regexp PATTERN ...   Use PATTERN to search. This option can be
+                               provided multiple times, where all patterns
+                               given are searched.
+    -F, --fixed-strings        Treat the pattern as a literal string instead of
+                               a regular expression.
     -g, --glob GLOB ...        Include or exclude files for searching that
                                match the given glob. This always overrides any
                                other ignore logic. Multiple glob flags may be
@@ -134,9 +140,6 @@ Less common options:
     -p, --pretty
         Alias for --color=always --heading -n.
 
-    -Q, --literal
-        Treat the pattern as a literal string instead of a regular expression.
-
     -j, --threads ARG
         The number of threads to use. Defaults to the number of logical CPUs
         (capped at 6). [default: 0]
@@ -178,7 +181,7 @@ pub struct RawArgs {
     flag_ignore_case: bool,
     flag_invert_match: bool,
     flag_line_number: bool,
-    flag_literal: bool,
+    flag_fixed_strings: bool,
     flag_mmap: bool,
     flag_no_heading: bool,
     flag_no_ignore: bool,
@@ -187,6 +190,7 @@ pub struct RawArgs {
     flag_no_mmap: bool,
     flag_pretty: bool,
     flag_quiet: bool,
+    flag_regexp: Vec<String>,
     flag_replace: Option<String>,
     flag_text: bool,
     flag_threads: usize,
@@ -236,19 +240,7 @@ pub struct Args {
 impl RawArgs {
     /// Convert arguments parsed into a configuration used by ripgrep.
     fn to_args(&self) -> Result<Args> {
-        let pattern = {
-            let pattern =
-                if self.flag_literal {
-                    regex::quote(&self.arg_pattern)
-                } else {
-                    self.arg_pattern.clone()
-                };
-            if self.flag_word_regexp {
-                format!(r"\b{}\b", pattern)
-            } else {
-                pattern
-            }
-        };
+        let pattern = self.pattern();
         let paths =
             if self.arg_path.is_empty() {
                 if atty::on_stdin()
@@ -379,6 +371,34 @@ impl RawArgs {
             types.negate(ty);
         }
         Ok(())
+    }
+
+    fn pattern(&self) -> String {
+        if !self.flag_regexp.is_empty() {
+            if self.flag_fixed_strings {
+                self.flag_regexp.iter().cloned().map(|lit| {
+                    self.word_pattern(regex::quote(&lit))
+                }).collect::<Vec<String>>().join("|")
+            } else {
+                self.flag_regexp.iter().cloned().map(|pat| {
+                    self.word_pattern(pat)
+                }).collect::<Vec<String>>().join("|")
+            }
+        } else {
+            if self.flag_fixed_strings {
+                self.word_pattern(regex::quote(&self.arg_pattern))
+            } else {
+                self.word_pattern(self.arg_pattern.clone())
+            }
+        }
+    }
+
+    fn word_pattern(&self, s: String) -> String {
+        if self.flag_word_regexp {
+            format!(r"\b{}\b", s)
+        } else {
+            s
+        }
     }
 }
 

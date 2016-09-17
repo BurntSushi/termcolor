@@ -166,7 +166,7 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
 
 sherlock!(literal, "()", "file", |wd: WorkDir, mut cmd: Command| {
     wd.create("file", "blib\n()\nblab\n");
-    cmd.arg("-Q");
+    cmd.arg("-F");
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "()\n");
 });
