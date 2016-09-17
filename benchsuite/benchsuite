@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 benchsuite is a benchmark runner for comparing command line search tools.
@@ -10,6 +10,7 @@ import os
 import os.path as path
 from multiprocessing import cpu_count
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -718,6 +719,23 @@ class MissingDependencies(Exception):
         return 'MissingDependency(%s)' % repr(self.missing_names)
 
 
+class MissingCommands(Exception):
+    '''
+    A missing command exception.
+
+    This exception occurs when running a command in a benchmark
+    where the command could not be found on the current system.
+
+    :ivar list(str) missing_names:
+        The names of the command binaries that could not be found.
+    '''
+    def __init__(self, missing_names):
+        self.missing_names = sorted(set(missing_names))
+
+    def __str__(self):
+        return 'MissingCommands(%s)' % repr(self.missing_names)
+
+
 class Benchmark(object):
     '''
     A single benchmark corresponding to a grouping of commands.
@@ -727,7 +745,8 @@ class Benchmark(object):
     '''
 
     def __init__(self, name=None, pattern=None, commands=None,
-                 warmup_count=1, count=3, line_count=True):
+                 warmup_count=1, count=3, line_count=True,
+                 allow_missing_commands=False):
         '''
         Create a single benchmark.
 
@@ -765,15 +784,37 @@ class Benchmark(object):
         self.warmup_count = warmup_count
         self.count = count
         self.line_count = line_count
+        self.allow_missing_commands = allow_missing_commands
+
+    def raise_if_missing(self):
+        '''
+        Raises a MissingCommands exception if applicable.
+
+        A MissingCommands exception is raised when the following
+        criteria are met: 1) allow_missing_commands is False, and 2) at
+        least one command in this benchmark could not be found on this
+        system.
+        '''
+        missing_commands = \
+            [c.binary_name for c in self.commands if not c.exists()]
+        if not self.allow_missing_commands and len(missing_commands) > 0:
+            raise MissingCommands(missing_commands)
 
     def run(self):
         '''
         Runs this benchmark and returns the results.
 
         :rtype: Result
+        :raises:
+            MissingCommands if any command doesn't exist.
+            (Unless allow_missing_commands is enabled.)
         '''
+        self.raise_if_missing()
         result = Result(self)
         for cmd in self.commands:
+            if self.allow_missing_commands and not cmd.exists():
+                # Skip this command if we're OK with it.
+                continue
             # Do a warmup first.
             for _ in range(self.warmup_count):
                 self.run_one(cmd)
@@ -798,6 +839,8 @@ class Benchmark(object):
             it is the number of lines in the search output.
         :rtype: int
         '''
+        if not cmd.exists():
+            raise MissingCommand(cmd.cmd[0])
         cmd.kwargs['stderr'] = subprocess.DEVNULL
         if self.line_count:
             cmd.kwargs['stdout'] = subprocess.PIPE
@@ -867,6 +910,8 @@ class Result(object):
         means = []
         for cmd in self.benchmark.commands:
             mean, _ = self.distribution_for(cmd)
+            if mean is None:
+                continue
             means.append((cmd, mean))
         return min(means, key=lambda tup: tup[1])[0]
 
@@ -889,16 +934,18 @@ class Result(object):
         '''
         Returns the distribution (mean +/- std) of the given command.
 
+        If there are no samples for this command (i.e., it was skipped),
+        then return ``(None, None)``.
+
         :rtype: (float, float)
         :returns:
             A tuple containing the mean and standard deviation, in that
             order.
         '''
-        mean = statistics.mean(
-            s['duration'] for s in self.samples_for(cmd))
-        stdev = statistics.stdev(
-            s['duration'] for s in self.samples_for(cmd))
-        return mean, stdev
+        samples = list(s['duration'] for s in self.samples_for(cmd))
+        if len(samples) == 0:
+            return None, None
+        return statistics.mean(samples), statistics.stdev(samples)
 
 
 class Command(object):
@@ -927,6 +974,15 @@ class Command(object):
         self.cmd = cmd
         self.args = args
         self.kwargs = kwargs
+
+    def exists(self):
+        'Returns true if and only if this command exists.'
+        return shutil.which(self.binary_name) is not None
+
+    @property
+    def binary_name(self):
+        'Return the binary name of this command.'
+        return self.cmd[0]
 
     def run(self):
         '''
@@ -1068,7 +1124,8 @@ def download(suite_dir, choices):
             sys.exit(1)
 
 
-def collect_benchmarks(suite_dir, filter_pat=None):
+def collect_benchmarks(suite_dir, filter_pat=None,
+                       allow_missing_commands=False):
     '''
     Return an iterable of all runnable benchmarks.
 
@@ -1090,6 +1147,9 @@ def collect_benchmarks(suite_dir, filter_pat=None):
             continue
         try:
             benchmark = globals()[fun](suite_dir)
+            benchmark.name = name
+            benchmark.allow_missing_commands = allow_missing_commands
+            benchmark.raise_if_missing()
         except MissingDependencies as e:
             eprint(
                 'missing: %s, skipping benchmark %s (try running with: %s)' % (
@@ -1097,24 +1157,32 @@ def collect_benchmarks(suite_dir, filter_pat=None):
                     name,
                     ' '.join(['--download %s' % n for n in e.missing_names]),
                 ))
+        except MissingCommands as e:
+            fmt = 'missing commands: %s, skipping benchmark %s ' \
+                  '(run with --allow-missing to run incomplete benchmarks)'
+            eprint(fmt % (', '.join(e.missing_names), name))
             continue
-        benchmark.name = name
         yield benchmark
 
 
 def main():
+    download_choices = ['all', 'linux', 'subtitles-en', 'subtitles-ru']
     p = argparse.ArgumentParser('Command line search tool benchmark suite.')
     p.add_argument(
         '--dir', metavar='PATH', default=os.getcwd(),
         help='The directory in which to download data and perform searches.')
     p.add_argument(
         '--download', metavar='CORPUS', action='append',
-        choices=['all', 'linux', 'subtitles-en', 'subtitles-ru'],
+        choices=download_choices,
         help='Download and prepare corpus data, then exit without running '
              'any benchmarks. Note that this command is intended to be '
              'idempotent. WARNING: This downloads over a gigabyte of data, '
              'and also includes building the Linux kernel. If "all" is used '
-             'then the total uncompressed size is around 13 GB.')
+             'then the total uncompressed size is around 13 GB. '
+             'Choices: %s' % ', '.join(download_choices))
+    p.add_argument(
+        '--allow-missing', action='store_true',
+        help='Permit benchmarks to run even if some commands are missing.')
     p.add_argument(
         '-f', '--force', action='store_true',
         help='Overwrite existing files if there is a conflict.')
@@ -1130,6 +1198,13 @@ def main():
         help='A regex pattern that will only run benchmarks that match.')
     args = p.parse_args()
 
+    if args.list:
+        benchmarks = collect_benchmarks(
+            args.dir, filter_pat=args.bench,
+            allow_missing_commands=args.allow_missing)
+        for b in benchmarks:
+            print(b.name)
+        sys.exit(0)
     if args.download is not None and len(args.download) > 0:
         download(args.dir, args.download)
         sys.exit(0)
@@ -1149,7 +1224,9 @@ def main():
         raw_csv_wtr = csv.DictWriter(raw_handle, fields)
         raw_csv_wtr.writerow({x: x for x in fields})
 
-    benchmarks = collect_benchmarks(args.dir, filter_pat=args.bench)
+    benchmarks = collect_benchmarks(
+        args.dir, filter_pat=args.bench,
+        allow_missing_commands=args.allow_missing)
     for i, b in enumerate(benchmarks):
         result = b.run()
         fastest_cmd = result.fastest_cmd()
@@ -1163,6 +1240,12 @@ def main():
         for cmd in b.commands:
             name = cmd.name
             mean, stdev = result.distribution_for(cmd)
+            if mean is None:
+                # If we couldn't get a distribution for this command then
+                # it was skipped.
+                print('{name:{pad}} SKIPPED'.format(
+                    name=name, pad=max_name_len + 2))
+                continue
             line_counts = result.line_counts_for(cmd)
             show_fast_cmd, show_line_counts = '', ''
             if fastest_cmd.name == cmd.name:
