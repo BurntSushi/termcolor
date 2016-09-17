@@ -39,13 +39,23 @@ LINUX_CLONE = 'git://github.com/BurntSushi/linux'
 GREP_ASCII = {'LC_ALL': 'C'}
 GREP_UNICODE = {'LC_ALL': 'en_US.UTF-8'}
 
+# Sift tries really hard to search everything by default. In our code search
+# benchmarks, we don't want that.
+SIFT = [
+    'sift',
+    '--binary-skip',
+    '--exclude-files', '.*',
+    '--exclude-files', '*.pdf',
+]
+
 
 def bench_linux_literal_default(suite_dir):
     '''
     Benchmark the speed of a literal using *default* settings.
 
     This is a purposefully unfair benchmark for use in performance
-    analysis, but it is pedagogically useful.
+    analysis, but it is pedagogically useful to demonstrate how
+    default behaviors differ.
     '''
     require(suite_dir, 'linux')
     cwd = path.join(suite_dir, LINUX_DIR)
@@ -55,8 +65,6 @@ def bench_linux_literal_default(suite_dir):
         kwargs['cwd'] = cwd
         return Command(*args, **kwargs)
 
-    # N.B. This is a purposefully unfair benchmark for illustrative purposes
-    # of how the default modes for each search tool differ.
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', pat]),
         mkcmd('ag', ['ag', pat]),
@@ -66,10 +74,10 @@ def bench_linux_literal_default(suite_dir):
         mkcmd('ucg', ['ucg', pat]),
         # I guess setting LC_ALL=en_US.UTF-8 probably isn't necessarily the
         # default, but I'd guess it to be on most desktop systems.
-        mkcmd('git grep', ['git', 'grep', pat], env={'LC_ALL': 'en_US.UTF-8'}),
         mkcmd('pt', ['pt', pat]),
         # sift reports an extra line here for a binary file matched.
         mkcmd('sift', ['sift', pat]),
+        mkcmd('git grep', ['git', 'grep', pat], env={'LC_ALL': 'en_US.UTF-8'}),
     ])
 
 
@@ -78,8 +86,9 @@ def bench_linux_literal(suite_dir):
     Benchmark the speed of a literal, attempting to be fair.
 
     This tries to use the minimum set of options available in all tools
-    to test how fast they are. For example, it makes sure there is no
-    case insensitive matching and that line numbers are computed.
+    to test how fast they are. For example, it makes sure there is
+    no case insensitive matching and that line numbers are computed
+    (because some tools don't permit disabling line numbers).
     '''
     require(suite_dir, 'linux')
     cwd = path.join(suite_dir, LINUX_DIR)
@@ -90,18 +99,16 @@ def bench_linux_literal(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg (mmap)', ['rg', '-n', '--mmap', pat]),
-        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
-        mkcmd('ag (mmap)', ['ag', '-s', pat]),
-        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', pat]),
-        mkcmd('git grep', [
+        mkcmd('rg (ignore)', ['rg', '-n', pat]),
+        mkcmd('rg (ignore) (mmap)', ['rg', '-n', '--mmap', pat]),
+        mkcmd('ag (ignore) (mmap)', ['ag', '-s', pat]),
+        mkcmd('pt (ignore)', ['pt', pat]),
+        mkcmd('sift (ignore)', SIFT + ['-n', '--git', pat]),
+        mkcmd('git grep (ignore)', [
             'git', 'grep', '-I', '-n', pat,
         ], env={'LC_ALL': 'C'}),
-        mkcmd('pt', ['pt', pat]),
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', pat,
-        ]),
+        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
+        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', pat]),
     ])
 
 
@@ -121,26 +128,21 @@ def bench_linux_literal_casei(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', '-i', pat]),
-        mkcmd('rg (mmap)', ['rg', '-n', '-i', pat]),
-        mkcmd('rg (whitelist)', [
-            'rg', '-n', '-i', '--no-ignore', '-tall', pat,
-        ]),
-        mkcmd('ag (mmap)', ['ag', '-i', pat]),
-        mkcmd('ucg', ['ucg', '-i', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', '-i', pat]),
+        mkcmd('rg (ignore) (mmap)', ['rg', '-n', '-i', '--mmap', pat]),
+        mkcmd('ag (ignore) (mmap)', ['ag', '-i', pat]),
+        mkcmd('sift (ignore)', SIFT + ['-n', '-i', '--git', pat]),
         # It'd technically be more appropriate to set LC_ALL=en_US.UTF-8 here,
         # since that is certainly what ripgrep is doing, but this is for an
         # ASCII literal, so we should give `git grep` all the opportunity to
         # do its best.
-        mkcmd('git grep', [
+        mkcmd('git grep (ignore)', [
             'git', 'grep', '-I', '-n', '-i', pat,
         ], env={'LC_ALL': 'C'}),
-        # sift yields more matches than it should here. Specifically, it gets
-        # matches in Module.symvers and System.map in the repo root. Both of
-        # those files show up in the repo root's .gitignore file.
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', '-i', pat,
+        mkcmd('rg (whitelist)', [
+            'rg', '-n', '-i', '--no-ignore', '-tall', pat,
         ]),
+        mkcmd('ucg (whitelist)', ['ucg', '-i', pat]),
     ])
 
 
@@ -160,20 +162,16 @@ def bench_linux_re_literal_suffix(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', pat]),
-        mkcmd('rg-novcs-mmap', ['rg', '--mmap', '--no-ignore', '-n', pat]),
-        mkcmd('ag', ['ag', '-s', pat]),
-        mkcmd('ag-novcs', ['ag', '--skip-vcs-ignores', '-s', pat]),
-        mkcmd('ucg', ['ucg', '--nosmart-case', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', pat]),
+        mkcmd('ag (ignore)', ['ag', '-s', pat]),
+        mkcmd('sift (ignore)', SIFT + ['-n', '--git', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'C'},
         ),
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', pat,
-        ]),
+        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
+        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', pat]),
     ])
 
 
@@ -193,22 +191,18 @@ def bench_linux_word(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', '-w', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', '-w', pat]),
-        mkcmd('rg-novcs-mmap', [
-            'rg', '--mmap', '--no-ignore', '-n', '-w', pat,
-        ]),
-        mkcmd('ag', ['ag', '-s', '-w', pat]),
-        mkcmd('ag-novcs', ['ag', '--skip-vcs-ignores', '-s', '-w', pat]),
-        mkcmd('ucg', ['ucg', '--nosmart-case', '-w', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', '-w', pat]),
+        mkcmd('ag (ignore)', ['ag', '-s', '-w', pat]),
+        mkcmd('sift (ignore)', SIFT + ['-n', '-w', '--git', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', '-w', pat],
             env={'LC_ALL': 'C'},
         ),
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', '-w', pat,
+        mkcmd('rg (whitelist)', [
+            'rg', '-n', '-w', '--no-ignore', '-tall', pat,
         ]),
+        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', '-w', pat]),
     ])
 
 
@@ -216,7 +210,8 @@ def bench_linux_unicode_greek(suite_dir):
     '''
     Benchmark matching of a Unicode category.
 
-    Only three tools (ripgrep, sift and pt) support this.
+    Only three tools (ripgrep, sift and pt) support this. We omit
+    pt because it is too slow.
     '''
     require(suite_dir, 'linux')
     cwd = path.join(suite_dir, LINUX_DIR)
@@ -228,15 +223,7 @@ def bench_linux_unicode_greek(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', pat]),
-        # sift tries to search a bunch of PDF files and clutters up the
-        # results, even though --binary-skip is provided. They are excluded
-        # here explicitly, but don't have a measurable impact on performance.
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip',
-            '--exclude-files', '.*',
-            '--exclude-files', '*.pdf',
-            pat,
-        ]),
+        mkcmd('sift', SIFT + ['-n', '--git', pat]),
     ])
 
 
@@ -256,15 +243,7 @@ def bench_linux_unicode_greek_casei(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', '-i', pat]),
-        # sift tries to search a bunch of PDF files and clutters up the
-        # results, even though --binary-skip is provided. They are excluded
-        # here explicitly, but don't have a measurable impact on performance.
-        mkcmd('sift', [
-            'sift', '-n', '--binary-skip',
-            '--exclude-files', '.*',
-            '--exclude-files', '*.pdf',
-            pat,
-        ]),
+        mkcmd('sift', SIFT + ['-n', '-i', '--git', pat]),
     ])
 
 
@@ -285,30 +264,25 @@ def bench_linux_unicode_word(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg (no Unicode)', ['rg', '-n', '(?-u)' + pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', pat]),
-        mkcmd('rg-novcs-mmap', [
-            'rg', '--mmap', '--no-ignore', '-n', pat,
-        ]),
-        mkcmd('ag (no Unicode)', ['ag', '-s', pat]),
-        mkcmd('ag-novcs (no Unicode)', [
-            'ag', '--skip-vcs-ignores', '-s', pat,
-        ]),
-        mkcmd('ucg (no Unicode)', ['ucg', '--nosmart-case', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', pat]),
+        mkcmd('rg (ignore) (ASCII)', ['rg', '-n', '(?-u)' + pat]),
+        mkcmd('ag (ignore) (ASCII)', ['ag', '-s', pat]),
+        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'en_US.UTF-8'},
         ),
         mkcmd(
-            'git grep (no Unicode)',
+            'git grep (ignore) (ASCII)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'C'},
         ),
-        mkcmd('sift (no Unicode)', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', pat,
+        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
+        mkcmd('rg (whitelist) (ASCII)', [
+            'rg', '-n', '--no-ignore', '-tall', '(?-u)' + pat,
         ]),
+        mkcmd('ucg (ASCII)', ['ucg', '--nosmart-case', pat]),
     ])
 
 
@@ -330,30 +304,25 @@ def bench_linux_no_literal(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg-whitelist', ['rg', '-tall', '--no-ignore', '-n', pat]),
-        mkcmd('rg (no Unicode)', ['rg', '-n', '(?-u)' + pat]),
-        mkcmd('rg-whitelist (no Unicode)', [
-            'rg', '-tall', '--no-ignore', '-n', '(?-u)' + pat,
-        ]),
-        mkcmd('ag (no Unicode)', ['ag', '-s', pat]),
-        mkcmd('ag-novcs (no Unicode)', [
-            'ag', '--skip-vcs-ignores', '-s', pat,
-        ]),
-        mkcmd('ucg (no Unicode)', ['ucg', '--nosmart-case', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', pat]),
+        mkcmd('rg (ignore) (ASCII)', ['rg', '-n', '(?-u)' + pat]),
+        mkcmd('ag (ignore) (ASCII)', ['ag', '-s', pat]),
+        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'en_US.UTF-8'},
         ),
         mkcmd(
-            'git grep (no Unicode)',
+            'git grep (ignore) (ASCII)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'C'},
         ),
-        mkcmd('sift (no Unicode)', [
-            'sift', '-n', '--binary-skip', '--exclude-files', '.*', pat,
+        mkcmd('rg (whitelist)', ['rg', '-n', '--no-ignore', '-tall', pat]),
+        mkcmd('rg (whitelist) (ASCII)', [
+            'rg', '-n', '--no-ignore', '-tall', '(?-u)' + pat,
         ]),
+        mkcmd('ucg (whitelist) (ASCII)', ['ucg', '--nosmart-case', pat]),
     ])
 
 
@@ -375,21 +344,15 @@ def bench_linux_alternates(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', pat]),
-        mkcmd('rg-novcs-mmap', [
-            'rg', '--mmap', '--no-ignore', '-n', pat,
-        ]),
-        mkcmd('ag', ['ag', '-s', pat]),
-        mkcmd('ag-novcs', [
-            'ag', '--skip-vcs-ignores', '-s', pat,
-        ]),
-        mkcmd('ucg', ['ucg', '--nosmart-case', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', pat]),
+        mkcmd('ag (ignore)', ['ag', '-s', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
             env={'LC_ALL': 'C'},
         ),
+        mkcmd('rg (whitelist)', ['rg', '--no-ignore', '-n', pat]),
+        mkcmd('ucg (whitelist)', ['ucg', '--nosmart-case', pat]),
     ])
 
 
@@ -404,21 +367,15 @@ def bench_linux_alternates_casei(suite_dir):
         return Command(*args, **kwargs)
 
     return Benchmark(pattern=pat, commands=[
-        mkcmd('rg', ['rg', '-n', '-i', pat]),
-        mkcmd('rg-novcs', ['rg', '--no-ignore', '-n', '-i', pat]),
-        mkcmd('rg-novcs-mmap', [
-            'rg', '--mmap', '--no-ignore', '-n', '-i', pat,
-        ]),
-        mkcmd('ag', ['ag', '-i', pat]),
-        mkcmd('ag-novcs', [
-            'ag', '--skip-vcs-ignores', '-i', pat,
-        ]),
-        mkcmd('ucg', ['ucg', '-i', pat]),
+        mkcmd('rg (ignore)', ['rg', '-n', '-i', pat]),
+        mkcmd('ag (ignore)', ['ag', '-i', pat]),
         mkcmd(
-            'git grep',
+            'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', '-i', pat],
             env={'LC_ALL': 'C'},
         ),
+        mkcmd('rg (whitelist)', ['rg', '--no-ignore', '-n', '-i', pat]),
+        mkcmd('ucg (whitelist)', ['ucg', '-i', pat]),
     ])
 
 
@@ -427,22 +384,159 @@ def bench_subtitles_en_literal(suite_dir):
     Benchmark the speed of an ASCII string literal.
     '''
     require(suite_dir, 'subtitles-en')
-    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
     pat = 'Sherlock Holmes'
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-n', pat, ru]),
-        Command('rg (no line numbers)', ['rg', pat, ru]),
-        Command('ag', ['ag', '-s', pat, ru]),
-        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
-        Command('grep', ['grep', '-an', pat, ru], env=GREP_ASCII),
-        Command('grep (no line numbers)', [
-            'grep', '-a', pat, ru,
+        Command('rg', ['rg', pat, en]),
+        Command('pt', ['pt', '-N', pat, en]),
+        Command('sift', ['sift', pat, en]),
+        Command('grep', ['grep', '-a', pat, en], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', pat, en]),
+        Command('ag (lines)', ['ag', '-s', pat, en]),
+        Command('ucg (lines)', ['ucg', '--nosmart-case', pat, en]),
+        Command('pt (lines)', ['pt', pat, en]),
+        Command('sift (lines)', ['sift', '-n', pat, en]),
+        Command('grep (lines)', ['grep', '-an', pat, en], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_en_literal_casei(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string case insensitively.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-i', pat, en]),
+        Command('grep', ['grep', '-ai', pat, en], env=GREP_UNICODE),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-ai', pat, en,
         ], env=GREP_ASCII),
-        Command('pt', ['pt', pat, ru]),
-        Command('pt (no line numbers)', ['pt', '-N', pat, ru]),
-        Command('sift', ['sift', '-n', pat, ru]),
-        Command('sift (no line numbers)', ['sift', pat, ru]),
+        Command('rg (lines)', ['rg', '-n', '-i', pat, en]),
+        Command('ag (lines) (ASCII)', ['ag', '-i', pat, en]),
+        Command('ucg (lines) (ASCII)', ['ucg', '-i', pat, en]),
+    ])
+
+
+def bench_subtitles_en_literal_word(suite_dir):
+    '''
+    Benchmark the speed of finding a literal inside word boundaries.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (ASCII)', [
+            'rg', '-n', r'(?-u:\b)' + pat + r'(?-u:\b)', en,
+        ]),
+        Command('ag (ASCII)', ['ag', '-sw', pat, en]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, en]),
+        Command('grep (ASCII)', [
+            'grep', '-anw', pat, en,
+        ], env=GREP_ASCII),
+        Command('rg', ['rg', '-nw', pat, en]),
+        Command('grep', ['grep', '-anw', pat, en], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_en_alternate(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = '|'.join([
+        'Sherlock Holmes',
+        'John Watson',
+        'Irene Adler',
+        'Inspector Lestrade',
+        'Professor Moriarty',
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (lines)', ['rg', '-n', pat, en]),
+        Command('ag (lines)', ['ag', '-s', pat, en]),
+        Command('ucg (lines)', ['ucg', '--nosmart-case', pat, en]),
+        Command('grep (lines)', [
+            'grep', '-E', '-an', pat, en,
+        ], env=GREP_ASCII),
+        Command('rg', ['rg', pat, en]),
+        Command('grep', [
+            'grep', '-E', '-a', pat, en,
+        ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_en_alternate_casei(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = '|'.join([
+        'Sherlock Holmes',
+        'John Watson',
+        'Irene Adler',
+        'Inspector Lestrade',
+        'Professor Moriarty',
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('ag (ASCII)', ['ag', '-s', '-i', pat, en]),
+        Command('ucg (ASCII)', ['ucg', '-i', pat, en]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-ani', pat, en,
+        ], env=GREP_ASCII),
+        Command('rg', ['rg', '-n', '-i', pat, en]),
+        Command('grep', ['grep', '-E', '-ani', pat, en], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_en_surrounding_words(suite_dir):
+    '''
+    Benchmark a more complex regex with an inner literal.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = r'\w+\s+Holmes\s+\w+'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, en]),
+        Command('grep', ['grep', '-E', '-an', pat, en], env=GREP_UNICODE),
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, en]),
+        Command('ag (ASCII)', ['ag', '-s', pat, en]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, en]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-an', pat, en,
+        ], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_en_no_literal(suite_dir):
+    '''
+    Benchmark the speed of a regex with no literals.
+
+    Note that we don't even try to run grep with Unicode support
+    on this one. While it should eventually get the right answer,
+    I killed it after it had already been running for two minutes
+    and showed no signs of finishing soon.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = r'\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, en]),
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, en]),
+        Command('ag (ASCII)', ['ag', '-s', pat, en]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, en]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-an', pat, en,
+        ], env=GREP_ASCII),
     ])
 
 
@@ -455,18 +549,16 @@ def bench_subtitles_ru_literal(suite_dir):
     pat = 'Шерлок Холмс'  # Sherlock Holmes
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-n', pat, ru]),
-        Command('rg (no line numbers)', ['rg', pat, ru]),
-        Command('ag', ['ag', '-s', pat, ru]),
-        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
-        Command('grep', ['grep', '-an', pat, ru], env=GREP_ASCII),
-        Command('grep (no line numbers)', [
-            'grep', '-a', pat, ru,
-        ], env=GREP_ASCII),
-        Command('pt', ['pt', pat, ru]),
-        Command('pt (no line numbers)', ['pt', '-N', pat, ru]),
-        Command('sift', ['sift', '-n', pat, ru]),
-        Command('sift (no line numbers)', ['sift', pat, ru]),
+        Command('rg', ['rg', pat, ru]),
+        Command('pt', ['pt', '-N', pat, ru]),
+        Command('sift', ['sift', pat, ru]),
+        Command('grep', ['grep', '-a', pat, ru], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', pat, ru]),
+        Command('ag (lines)', ['ag', '-s', pat, ru]),
+        Command('ucg (lines)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('pt (lines)', ['pt', pat, ru]),
+        Command('sift (lines)', ['sift', '-n', pat, ru]),
+        Command('grep (lines)', ['grep', '-an', pat, ru], env=GREP_ASCII),
     ])
 
 
@@ -479,13 +571,14 @@ def bench_subtitles_ru_literal_casei(suite_dir):
     pat = 'Шерлок Холмс'  # Sherlock Holmes
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-n', '-i', pat, ru]),
-        Command('ag (not Unicode)', ['ag', '-i', pat, ru]),
-        Command('ucg (not Unicode)', ['ucg', '-i', pat, ru]),
-        Command('grep', ['grep', '-ani', pat, ru], env=GREP_UNICODE),
-        Command('grep (not Unicode)', [
-            'grep', '-E', '-ani', pat, ru,
+        Command('rg', ['rg', '-i', pat, ru]),
+        Command('grep', ['grep', '-ai', pat, ru], env=GREP_UNICODE),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-ai', pat, ru,
         ], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', '-i', pat, ru]),
+        Command('ag (lines) (ASCII)', ['ag', '-i', pat, ru]),
+        Command('ucg (lines) (ASCII)', ['ucg', '-i', pat, ru]),
     ])
 
 
@@ -498,15 +591,15 @@ def bench_subtitles_ru_literal_word(suite_dir):
     pat = 'Шерлок Холмс'  # Sherlock Holmes
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-nw', pat, ru]),
-        Command('rg (not Unicode)', [
+        Command('rg (ASCII)', [
             'rg', '-n', r'(?-u:\b)' + pat + r'(?-u:\b)', ru,
         ]),
-        Command('ag (not Unicode)', ['ag', '-sw', pat, ru]),
-        Command('ucg (not Unicode)', ['ucg', '--nosmart-case', pat, ru]),
-        Command('grep (not Unicode)', [
+        Command('ag (ASCII)', ['ag', '-sw', pat, ru]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (ASCII)', [
             'grep', '-anw', pat, ru,
         ], env=GREP_ASCII),
+        Command('rg', ['rg', '-nw', pat, ru]),
         Command('grep', ['grep', '-anw', pat, ru], env=GREP_UNICODE),
     ])
 
@@ -526,11 +619,14 @@ def bench_subtitles_ru_alternate(suite_dir):
     ])
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-n', pat, ru]),
-        Command('rg (no line numbers)', ['rg', pat, ru]),
-        Command('ucg', ['ucg', '--nosmart-case', pat, ru]),
-        Command('grep', ['grep', '-E', '-an', pat, ru], env=GREP_ASCII),
-        Command('grep (no line numbers)', [
+        Command('rg (lines)', ['rg', '-n', pat, ru]),
+        Command('ag (lines)', ['ag', '-s', pat, ru]),
+        Command('ucg (lines)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (lines)', [
+            'grep', '-E', '-an', pat, ru,
+        ], env=GREP_ASCII),
+        Command('rg', ['rg', pat, ru]),
+        Command('grep', [
             'grep', '-E', '-a', pat, ru,
         ], env=GREP_ASCII),
     ])
@@ -551,11 +647,31 @@ def bench_subtitles_ru_alternate_casei(suite_dir):
     ])
 
     return Benchmark(pattern=pat, commands=[
-        Command('rg', ['rg', '-n', '-i', pat, ru]),
-        Command('ucg (not Unicode)', ['ucg', '-i', pat, ru]),
-        Command('grep', ['grep', '-E', '-ani', pat, ru], env=GREP_UNICODE),
-        Command('grep (not Unicode)', [
+        Command('ag (ASCII)', ['ag', '-s', '-i', pat, ru]),
+        Command('ucg (ASCII)', ['ucg', '-i', pat, ru]),
+        Command('grep (ASCII)', [
             'grep', '-E', '-ani', pat, ru,
+        ], env=GREP_ASCII),
+        Command('rg', ['rg', '-n', '-i', pat, ru]),
+        Command('grep', ['grep', '-E', '-ani', pat, ru], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_ru_surrounding_words(suite_dir):
+    '''
+    Benchmark a more complex regex with an inner literal.
+    '''
+    require(suite_dir, 'subtitles-en')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = r'\w+\s+Холмс\s+\w+'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('grep', ['grep', '-E', '-an', pat, ru], env=GREP_UNICODE),
+        Command('ag (ASCII)', ['ag', '-s', pat, ru]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-an', pat, ru,
         ], env=GREP_ASCII),
     ])
 
@@ -575,9 +691,10 @@ def bench_subtitles_ru_no_literal(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         Command('rg', ['rg', '-n', pat, ru]),
-        Command('rg (no line numbers)', ['rg', pat, ru]),
-        Command('ucg (no Unicode)', ['ucg', '--nosmart-case', pat, ru]),
-        Command('grep (no Unicode)', [
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, ru]),
+        Command('ag (ASCII)', ['ag', '-s', pat, ru]),
+        Command('ucg (ASCII)', ['ucg', '--nosmart-case', pat, ru]),
+        Command('grep (ASCII)', [
             'grep', '-E', '-an', pat, ru,
         ], env=GREP_ASCII),
     ])
