@@ -67,6 +67,9 @@ Summarizing, `ripgrep` is fast because:
   [Rust's regex engine](https://github.com/rust-lang-nursery/regex).
   Rust's regex engine uses finite automata, SIMD and aggressive literal
   optimizations to make searching very fast.
+* Rust's regex library maintains performance with full Unicode support by
+  building UTF-8 decoding directly into its deterministic finite automaton
+  engine.
 * It supports searching with either memory maps or by searching incrementally
   with an intermediate buffer. The former is better for single files and the
   latter is better for large directories. `ripgrep` chooses the best searching
