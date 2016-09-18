@@ -17,89 +17,22 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 ### Quick example comparing tools
 
-Search the entire Linux kernel directory (after running `make`) for
-`[A-Z]+_SUSPEND`, where all matches must be words.
+This example searches the entire Linux kernel source tree (after running
+`make`) for `[A-Z]+_SUSPEND`, where all matches must be words.
 
-Please remember that a single benchmark is never enough! Please see my
-[blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/) for a very
-detailed comparison with more benchmarks and analysis.
+Please remember that a single benchmark is never enough! See my
+[blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/)
+for a very detailed comparison with more benchmarks and analysis.
 
-First up, `ripgrep`:
-
-```
-$ time rg -n -w '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m0.245s
-user    0m1.647s
-sys     0m0.377s
-```
-
-Compared with The Silver Searcher:
-
-```
-$ time ag -w '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m0.753s
-user    0m2.033s
-sys     0m1.673s
-```
-
-Or `git grep`:
-
-```
-$ time LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m0.823s
-user    0m5.253s
-sys     0m0.463s
-```
-
-Or `git grep` with Unicode enabled (same as `ripgrep` above):
-
-```
-$ time LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m2.880s
-user    0m19.323s
-sys     0m0.350s
-```
-
-Or Sift:
-
-```
-$ time sift --git -n -w '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m3.656s
-user    0m56.790s
-sys     0m0.650s
-```
-
-Or The Platinum Searcher:
-
-```
-$ time pt -w -e '[A-Z]+_SUSPEND' | wc -l
-450
-
-real    0m12.369s
-user    1m50.403s
-sys     0m13.857s
-```
-
-Or Ack:
-
-```
-$ time ack -w '[A-Z]+_SUSPEND' | wc -l
-1878
-
-real    0m16.952s
-user    0m16.257s
-sys     0m0.690s
-```
+| Command | Line count | Wall clock time |
+| ------- | ---------- | --------------- |
+| `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.245s** |
+| `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
+| `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
+| `LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 2.880s |
+| `sift --git -n -w '[A-Z]+_SUSPEND'` | 450 | 3.656s |
+| `pt -w -e '[A-Z]+_SUSPEND'` | 450 | 12.369s |
+| `ack -w '[A-Z]+_SUSPEND'` | 1878 | 16.952s |
 
 (Yes, `ack` [has](https://github.com/petdance/ack2/issues/445) a
 [bug](https://github.com/petdance/ack2/issues/14).)
