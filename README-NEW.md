@@ -228,6 +228,20 @@ with other search tools!):
 $ rg '(\p{Lu}\p{Ll}+)\s+(\p{Lu}\p{Ll}+)' --replace '$2, $1'
 ```
 
+Search only files matching a particular glob:
+
+```
+$ rg foo -g 'README.*'
+```
+
+<!--*-->
+
+Or exclude files matching a particular glob:
+
+```
+$ rg foo -g '!*.min.js'
+```
+
 Search only HTML and CSS files:
 
 ```
