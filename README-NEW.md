@@ -25,8 +25,8 @@ Please remember that a single benchmark is never enough! See my
 [blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/)
 for a very detailed comparison with more benchmarks and analysis.
 
-| Tool | Command | Line count | Wall clock time |
-| ---- | ------- | ---------- | --------------- |
+| Tool | Command | Line count | Time |
+| ---- | ------- | ---------- | ---- |
 | ripgrep | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.245s** |
 | The Silver Searcher | `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
 | git grep | `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
