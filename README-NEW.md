@@ -90,6 +90,20 @@ user    1m50.403s
 sys     0m13.857s
 ```
 
+Or Ack:
+
+```
+$ time ack -w '[A-Z]+_SUSPEND' | wc -l
+1878
+
+real    0m16.952s
+user    0m16.257s
+sys     0m0.690s
+```
+
+(Yes, `ack` [has](https://github.com/petdance/ack2/issues/445) a
+[bug](https://github.com/petdance/ack2/issues/14).)
+
 ### Why should I use `ripgrep`?
 
 * It can replace both The Silver Searcher and GNU grep because it is faster
@@ -97,7 +111,7 @@ sys     0m13.857s
   both, but the feature sets are far more similar than different.)
 * Like The Silver Searcher, `ripgrep` defaults to recursive directory search
   and won't search files ignored by your `.gitignore` files. It also ignores
-  hidden and binary files by default. `ripgrep` also implements proper support
+  hidden and binary files by default. `ripgrep` also implements full support
   for `.gitignore`, where as there are many bugs related to that functionality
   in The Silver Searcher.
 * `ripgrep` can search specific types files. For example, `rg -tpy foo` limits
@@ -105,8 +119,9 @@ sys     0m13.857s
   from your search. `ripgrep` can be taught about new file types with custom
   matching rules.
 * `ripgrep` supports many features found in `grep`, such as showing the context
-  of search results, highlighting matches with color and full Unicode
-  support---except `ripgrep` stays fast!
+  of search results, searching multiple patterns, highlighting matches with
+  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
+  supporting Unicode (which is always on).
 
 ### Is it really faster than everything else?
 
@@ -165,7 +180,7 @@ One last thing before we get started: `ripgrep` assumes UTF-8 *everywhere*. It
 can still search files that are invalid UTF-8 (like, say, latin-1), but it will
 simply not work on UTF-16 encoded files or other more exotic encodings.
 [Support for other encodings may
-happen.](https://github.com/BurntSushi/ripgrep/issues/1).
+happen.](https://github.com/BurntSushi/ripgrep/issues/1)
 
 To recursively search the current directory, while respecting all `.gitignore`
 files:
@@ -238,7 +253,7 @@ extensions.
 ### Building
 
 `ripgrep` is written in Rust, so you'll need to grab a
-[Rust installation](https://www.rust-lang.org/en-US/) in order to compile it.
+[Rust installation](https://www.rust-lang.org/) in order to compile it.
 `ripgrep` compiles with Rust 1.9 (stable) or newer. Building is easy:
 
 ```
