@@ -25,15 +25,15 @@ Please remember that a single benchmark is never enough! See my
 [blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/)
 for a very detailed comparison with more benchmarks and analysis.
 
-| Command | Line count | Wall clock time |
-| ------- | ---------- | --------------- |
-| `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.245s** |
-| `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
-| `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
-| `LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 2.880s |
-| `sift --git -n -w '[A-Z]+_SUSPEND'` | 450 | 3.656s |
-| `pt -w -e '[A-Z]+_SUSPEND'` | 450 | 12.369s |
-| `ack -w '[A-Z]+_SUSPEND'` | 1878 | 16.952s |
+| Tool | Command | Line count | Wall clock time |
+| ---- | ------- | ---------- | --------------- |
+| ripgrep | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.245s** |
+| The Silver Searcher | `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
+| git grep | `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
+| git grep | `LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 2.880s |
+| sift | `sift --git -n -w '[A-Z]+_SUSPEND'` | 450 | 3.656s |
+| The Platinum Searcher | `pt -w -e '[A-Z]+_SUSPEND'` | 450 | 12.369s |
+| ack | `ack -w '[A-Z]+_SUSPEND'` | 1878 | 16.952s |
 
 (Yes, `ack` [has](https://github.com/petdance/ack2/issues/445) a
 [bug](https://github.com/petdance/ack2/issues/14).)
@@ -48,10 +48,10 @@ for a very detailed comparison with more benchmarks and analysis.
   hidden and binary files by default. `ripgrep` also implements full support
   for `.gitignore`, where as there are many bugs related to that functionality
   in The Silver Searcher.
-* `ripgrep` can search specific types files. For example, `rg -tpy foo` limits
-  your search to Python files and `rg -Tjs foo` excludes Javascript files
-  from your search. `ripgrep` can be taught about new file types with custom
-  matching rules.
+* `ripgrep` can search specific types of files. For example, `rg -tpy foo`
+  limits your search to Python files and `rg -Tjs foo` excludes Javascript
+  files from your search. `ripgrep` can be taught about new file types with
+  custom matching rules.
 * `ripgrep` supports many features found in `grep`, such as showing the context
   of search results, searching multiple patterns, highlighting matches with
   color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
