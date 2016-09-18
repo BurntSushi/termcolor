@@ -7,7 +7,7 @@ for [every release](https://github.com/BurntSushi/ripgrep/releases).
 
 [![Linux build status](https://api.travis-ci.org/BurntSushi/ripgrep.png)](https://travis-ci.org/BurntSushi/ripgrep)
 [![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)
-[![](http://meritbadge.herokuapp.com/ripgrep)](https://crates.io/crates/ripgrep)
+[![](https://img.shields.io/crates/v/ripgrep.svg)](https://crates.io/crates/ripgrep)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
