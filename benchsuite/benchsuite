@@ -132,6 +132,7 @@ def bench_linux_literal_casei(suite_dir):
         mkcmd('rg (ignore)', ['rg', '-n', '-i', pat]),
         mkcmd('rg (ignore) (mmap)', ['rg', '-n', '-i', '--mmap', pat]),
         mkcmd('ag (ignore) (mmap)', ['ag', '-i', pat]),
+        mkcmd('pt (ignore)', ['pt', '-i', pat]),
         mkcmd('sift (ignore)', SIFT + ['-n', '-i', '--git', pat]),
         # It'd technically be more appropriate to set LC_ALL=en_US.UTF-8 here,
         # since that is certainly what ripgrep is doing, but this is for an
@@ -165,6 +166,7 @@ def bench_linux_re_literal_suffix(suite_dir):
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg (ignore)', ['rg', '-n', pat]),
         mkcmd('ag (ignore)', ['ag', '-s', pat]),
+        mkcmd('pt (ignore)', ['pt', '-e', pat]),
         mkcmd('sift (ignore)', SIFT + ['-n', '--git', pat]),
         mkcmd(
             'git grep (ignore)',
@@ -194,6 +196,7 @@ def bench_linux_word(suite_dir):
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg (ignore)', ['rg', '-n', '-w', pat]),
         mkcmd('ag (ignore)', ['ag', '-s', '-w', pat]),
+        mkcmd('pt (ignore)', ['pt', '-w', pat]),
         mkcmd('sift (ignore)', SIFT + ['-n', '-w', '--git', pat]),
         mkcmd(
             'git grep (ignore)',
@@ -224,6 +227,7 @@ def bench_linux_unicode_greek(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('pt', ['pt', '-e', pat]),
         mkcmd('sift', SIFT + ['-n', '--git', pat]),
     ])
 
@@ -244,6 +248,7 @@ def bench_linux_unicode_greek_casei(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         mkcmd('rg', ['rg', '-n', '-i', pat]),
+        mkcmd('pt', ['pt', '-i', '-e', pat]),
         mkcmd('sift', SIFT + ['-n', '-i', '--git', pat]),
     ])
 
@@ -268,7 +273,8 @@ def bench_linux_unicode_word(suite_dir):
         mkcmd('rg (ignore)', ['rg', '-n', pat]),
         mkcmd('rg (ignore) (ASCII)', ['rg', '-n', '(?-u)' + pat]),
         mkcmd('ag (ignore) (ASCII)', ['ag', '-s', pat]),
-        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', pat]),
+        mkcmd('pt (ignore) (ASCII)', ['pt', '-e', pat]),
+        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', '--git', pat]),
         mkcmd(
             'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
@@ -308,7 +314,8 @@ def bench_linux_no_literal(suite_dir):
         mkcmd('rg (ignore)', ['rg', '-n', pat]),
         mkcmd('rg (ignore) (ASCII)', ['rg', '-n', '(?-u)' + pat]),
         mkcmd('ag (ignore) (ASCII)', ['ag', '-s', pat]),
-        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', pat]),
+        mkcmd('pt (ignore) (ASCII)', ['pt', '-e', pat]),
+        mkcmd('sift (ignore) (ASCII)', SIFT + ['-n', '--git', pat]),
         mkcmd(
             'git grep (ignore)',
             ['git', 'grep', '-E', '-I', '-n', pat],
@@ -1125,7 +1132,8 @@ def download(suite_dir, choices):
 
 
 def collect_benchmarks(suite_dir, filter_pat=None,
-                       allow_missing_commands=False):
+                       allow_missing_commands=False,
+                       warmup_iter=1, bench_iter=3):
     '''
     Return an iterable of all runnable benchmarks.
 
@@ -1148,6 +1156,8 @@ def collect_benchmarks(suite_dir, filter_pat=None,
         try:
             benchmark = globals()[fun](suite_dir)
             benchmark.name = name
+            benchmark.warmup_count = warmup_iter
+            benchmark.count = bench_iter
             benchmark.allow_missing_commands = allow_missing_commands
             benchmark.raise_if_missing()
         except MissingDependencies as e:
@@ -1157,7 +1167,6 @@ def collect_benchmarks(suite_dir, filter_pat=None,
                     name,
                     ' '.join(['--download %s' % n for n in e.missing_names]),
                 ))
-            continue
         except MissingCommands as e:
             fmt = 'missing commands: %s, skipping benchmark %s ' \
                   '(run with --allow-missing to run incomplete benchmarks)'
@@ -1195,6 +1204,14 @@ def main():
         help='Dump raw data (all samples collected) in CSV format to the '
              'file path provided.')
     p.add_argument(
+        '--warmup-iter', metavar='INTEGER', type=int, default=1,
+        help='The number of iterations to run each command before '
+             'recording measurements.')
+    p.add_argument(
+        '--bench-iter', metavar='INTEGER', type=int, default=3,
+        help='The number of iterations to run each command while '
+             'recording measurements.')
+    p.add_argument(
         'bench', metavar='PAT', nargs='?',
         help='A regex pattern that will only run benchmarks that match.')
     args = p.parse_args()
@@ -1202,7 +1219,8 @@ def main():
     if args.list:
         benchmarks = collect_benchmarks(
             args.dir, filter_pat=args.bench,
-            allow_missing_commands=args.allow_missing)
+            allow_missing_commands=args.allow_missing,
+            warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
         for b in benchmarks:
             print(b.name)
         sys.exit(0)
@@ -1227,7 +1245,8 @@ def main():
 
     benchmarks = collect_benchmarks(
         args.dir, filter_pat=args.bench,
-        allow_missing_commands=args.allow_missing)
+        allow_missing_commands=args.allow_missing,
+        warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
     for i, b in enumerate(benchmarks):
         result = b.run()
         fastest_cmd = result.fastest_cmd()
