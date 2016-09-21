@@ -57,6 +57,9 @@ for a very detailed comparison with more benchmarks and analysis.
   color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
   supporting Unicode (which is always on).
 
+In other words, use `ripgrep` if you like speed, sane defaults, fewer bugs and
+Unicode.
+
 ### Is it really faster than everything else?
 
 Yes. A large number of benchmarks with detailed analysis for each is
@@ -95,6 +98,14 @@ but you'll need to have the
 [Microsoft Visual C++ Build
 Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
 installed.
+
+If you're a `brew` user, then you can install it with a custom formula
+(N.B. `ripgrep` isn't actually in Homebrew yet. This just installs the binary
+directly):
+
+```
+$ brew install https://github.com/BurntSushi/ripgrep/blob/master/pkg/brew/ripgrep.rb
+```
 
 If you're a Rust programmer, `ripgrep` can be installed with `cargo`:
 
