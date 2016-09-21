@@ -104,7 +104,7 @@ If you're a `brew` user, then you can install it with a custom formula
 directly):
 
 ```
-$ brew install https://github.com/BurntSushi/ripgrep/blob/master/pkg/brew/ripgrep.rb
+$ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
 ```
 
 If you're a Rust programmer, `ripgrep` can be installed with `cargo`:
