@@ -118,14 +118,22 @@ fn run(args: Args) -> Result<u64> {
         }
         workq
     };
+    let mut paths_searched: u64 = 0;
     for p in paths {
         if p == Path::new("-") {
-            workq.push(Work::Stdin)
+            paths_searched += 1;
+            workq.push(Work::Stdin);
         } else {
             for ent in try!(args.walker(p)) {
+                paths_searched += 1;
                 workq.push(Work::File(ent));
             }
         }
+    }
+    if !paths.is_empty() && paths_searched == 0 {
+        eprintln!("No files were searched, which means ripgrep probably \
+                   applied a filter you didn't expect. \
+                   Try running again with --debug.");
     }
     for _ in 0..workers.len() {
         workq.push(Work::Quit);
