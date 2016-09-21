@@ -18,8 +18,8 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 ### Quick example comparing tools
 
 This example searches the entire Linux kernel source tree (after running
-`make`) for `[A-Z]+_SUSPEND`, where all matches must be words. Timings were
-collected on a system with an Intel i7-6900K 3.2 GHz.
+`make defconfig && make -j8`) for `[A-Z]+_SUSPEND`, where all matches must be
+words. Timings were collected on a system with an Intel i7-6900K 3.2 GHz.
 
 Please remember that a single benchmark is never enough! See my
 [blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/)
