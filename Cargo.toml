@@ -1,6 +1,6 @@
 [package]
 name = "ripgrep"
-version = "0.1.6"  #:version
+version = "0.1.7"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Line oriented search tool using Rust's regex library. Combines the raw
