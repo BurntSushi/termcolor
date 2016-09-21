@@ -525,6 +525,39 @@ baz/sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
     }
 });
 
+sherlock!(unrestricted1, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "sherlock\n");
+    cmd.arg("-u");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
+sherlock!(unrestricted2, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.remove("sherlock");
+    wd.create(".sherlock", hay::SHERLOCK);
+    cmd.arg("-uu");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+.sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+.sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
+sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("file", "foo\x00bar\nfoo\x00baz\n");
+    cmd.arg("-uuu");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "file:foo\nfile:foo\n");
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

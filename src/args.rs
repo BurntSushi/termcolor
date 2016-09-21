@@ -74,6 +74,12 @@ Common options:
                                to list all available types.
     -T, --type-not TYPE ...    Do not search files matching TYPE. Multiple
                                not-type flags may be provided.
+    -u, --unrestricted ...     Reduce the level of 'smart' searching. A
+                               single -u doesn't respect .gitignore (etc.)
+                               files. Two -u flags will search hidden files
+                               and directories. Three -u flags will search
+                               binary files. -uu is equivalent to grep -r,
+                               and -uuu is equivalent to grep -a -r.
     -v, --invert-match         Invert matching.
     -w, --word-regexp          Only show matches surrounded by word boundaries.
                                This is equivalent to putting \\b before and
@@ -199,6 +205,7 @@ pub struct RawArgs {
     flag_type_list: bool,
     flag_type_add: Vec<String>,
     flag_type_clear: Vec<String>,
+    flag_unrestricted: u32,
     flag_with_filename: bool,
     flag_word_regexp: bool,
 }
@@ -312,6 +319,9 @@ impl RawArgs {
                 .line_terminator(eol)
                 .build()
         );
+        let no_ignore = self.flag_no_ignore || self.flag_unrestricted >= 1;
+        let hidden = self.flag_hidden || self.flag_unrestricted >= 2;
+        let text = self.flag_text || self.flag_unrestricted >= 3;
         let mut args = Args {
             pattern: pattern,
             paths: paths,
@@ -327,18 +337,18 @@ impl RawArgs {
             glob_overrides: glob_overrides,
             grep: grep,
             heading: !self.flag_no_heading && self.flag_heading,
-            hidden: self.flag_hidden,
+            hidden: hidden,
             ignore_case: self.flag_ignore_case,
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
             mmap: mmap,
-            no_ignore: self.flag_no_ignore,
+            no_ignore: no_ignore,
             no_ignore_parent:
                 // --no-ignore implies --no-ignore-parent
-                self.flag_no_ignore_parent || self.flag_no_ignore,
+                self.flag_no_ignore_parent || no_ignore,
             quiet: self.flag_quiet,
             replace: self.flag_replace.clone().map(|s| s.into_bytes()),
-            text: self.flag_text,
+            text: text,
             threads: threads,
             type_defs: btypes.definitions(),
             type_list: self.flag_type_list,

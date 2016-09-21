@@ -120,7 +120,7 @@ simply not work on UTF-16 encoded files or other more exotic encodings.
 happen.](https://github.com/BurntSushi/ripgrep/issues/1)
 
 To recursively search the current directory, while respecting all `.gitignore`
-files:
+files, ignore hidden files and directories and skip binary files:
 
 ```
 $ rg foobar
@@ -131,10 +131,13 @@ directories. `.rgignore` files can be used when `.gitignore` files are
 insufficient. In all cases, `.rgignore` patterns take precedence over
 `.gitignore`.
 
-To ignore all ignore files, use `--no-ignore`:
+To ignore all ignore files, use `-u`. To additionally search hidden files
+and directories, use `-uu`. To additionally search binary files, use `-uuu`.
+(In other words, "search everything, dammit!") In particular, `rg -uuu` is
+equivalent to `grep -r`.
 
 ```
-$ rg --no-ignore foobar
+$ rg -uuu foobar  # equivalent to `grep -r`
 ```
 
 (Tip: If your ignore files aren't being adhered to like you expect, run your
