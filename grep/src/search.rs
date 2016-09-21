@@ -4,6 +4,8 @@ use syntax;
 
 use literals::LiteralSets;
 use nonl;
+use syntax::Expr;
+use word_boundary::strip_unicode_word_boundaries;
 use Result;
 
 /// A matched line.
@@ -127,20 +129,33 @@ impl GrepBuilder {
     pub fn build(self) -> Result<Grep> {
         let expr = try!(self.parse());
         let literals = LiteralSets::create(&expr);
-        let re = try!(
-            RegexBuilder::new(&expr.to_string())
-                .case_insensitive(self.opts.case_insensitive)
-                .multi_line(true)
-                .unicode(true)
-                .size_limit(self.opts.size_limit)
-                .dfa_size_limit(self.opts.dfa_size_limit)
-                .compile()
-        );
+        let re = try!(self.regex(&expr));
+        let required = literals.to_regex().or_else(|| {
+            let expr = match strip_unicode_word_boundaries(&expr) {
+                None => return None,
+                Some(expr) => expr,
+            };
+            debug!("Stripped Unicode word boundaries. New AST:\n{:?}", expr);
+            self.regex(&expr).ok()
+        });
         Ok(Grep {
             re: re,
-            required: literals.to_regex(),
+            required: required,
             opts: self.opts,
         })
+    }
+
+    /// Creates a new regex from the given expression with the current
+    /// configuration.
+    fn regex(&self, expr: &Expr) -> Result<Regex> {
+        RegexBuilder::new(&expr.to_string())
+            .case_insensitive(self.opts.case_insensitive)
+            .multi_line(true)
+            .unicode(true)
+            .size_limit(self.opts.size_limit)
+            .dfa_size_limit(self.opts.dfa_size_limit)
+            .compile()
+            .map_err(From::from)
     }
 
     /// Parses the underlying pattern and ensures the pattern can never match
