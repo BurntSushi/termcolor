@@ -131,7 +131,7 @@ Less common options:
     --mmap
         Search using memory maps when possible. This is enabled by default
         when ripgrep thinks it will be faster. (Note that mmap searching
-        doesn't current support the various context related options.)
+        doesn't currently support the various context related options.)
 
     --no-mmap
         Never use memory maps, even when they might be faster.
@@ -272,6 +272,9 @@ impl RawArgs {
             if before_context > 0 || after_context > 0 || self.flag_no_mmap {
                 false
             } else if self.flag_mmap {
+                true
+            } else if cfg!(windows) {
+                // On Windows, memory maps appear faster than read calls. Neat.
                 true
             } else {
                 // If we're only searching a few paths and all of them are
