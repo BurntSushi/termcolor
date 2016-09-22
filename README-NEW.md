@@ -225,6 +225,11 @@ $ rg --type-add 'foo:*.foo,*.foobar'
 The type `foo` will now match any file ending with the `.foo` or `.foobar`
 extensions.
 
+### Regex syntax
+
+The syntax supported is
+[documented as part of Rust's regex library](https://doc.rust-lang.org/regex/regex/index.html#syntax).
+
 ### Building
 
 `ripgrep` is written in Rust, so you'll need to grab a
