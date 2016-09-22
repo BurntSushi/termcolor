@@ -87,6 +87,8 @@ Summarizing, `ripgrep` is fast because:
 
 ### Installation
 
+The binary name for `ripgrep` is `rg`.
+
 [Binaries for `ripgrep` are available for Windows, Mac and
 Linux.](https://github.com/BurntSushi/ripgrep/releases) Linux binaries are
 static executables. Windows binaries are available either as built with MinGW
@@ -116,6 +118,9 @@ If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
 ```
 $ cargo install ripgrep
 ```
+
+`ripgrep` isn't currently in any other package repositories.
+[I'd like to change that](https://github.com/BurntSushi/ripgrep/issues/10).
 
 ### Whirlwind tour
 
