@@ -1,6 +1,6 @@
 [root]
 name = "ripgrep"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.83 (registry+https://github.com/rust-lang/crates.io-index)",
