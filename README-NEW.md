@@ -87,9 +87,6 @@ Summarizing, `ripgrep` is fast because:
 
 ### Installation
 
-N.B. `ripgrep` is not yet available in any package repositories. I'd like to
-fix that in the future.
-
 [Binaries for `ripgrep` are available for Windows, Mac and
 Linux.](https://github.com/BurntSushi/ripgrep/releases) Linux binaries are
 static executables. Windows binaries are available either as built with MinGW
@@ -99,7 +96,7 @@ but you'll need to have the
 Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
 installed.
 
-If you're a `brew` user, then you can install it with a custom formula
+If you're a **Homebrew** user, then you can install it with a custom formula
 (N.B. `ripgrep` isn't actually in Homebrew yet. This just installs the binary
 directly):
 
@@ -107,7 +104,14 @@ directly):
 $ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
 ```
 
-If you're a Rust programmer, `ripgrep` can be installed with `cargo`:
+If you're an **Archlinux** user, then you can install `ripgrep` from the
+[`ripgrep` AUR package](https://aur.archlinux.org/packages/ripgrep/), e.g.,
+
+```
+$ yaourt -S ripgrep
+```
+
+If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
 
 ```
 $ cargo install ripgrep
