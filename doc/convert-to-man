@@ -1,0 +1,4 @@
+#!/bin/sh
+
+pandoc -s -t man rg.1.md -o rg.1
+sed -i 's/\.TH.*/.TH "rg" "1"/g' rg.1
