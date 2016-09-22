@@ -829,106 +829,116 @@ subtitles_en_alternate_casei,3,10,grep,grep -E -ani Sherlock Holmes|John Watson|
 subtitles_en_alternate_casei,3,10,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.119184970855713,862,LC_ALL=en_US.UTF-8
 subtitles_en_alternate_casei,3,10,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.11840033531189,862,LC_ALL=en_US.UTF-8
 subtitles_en_alternate_casei,3,10,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.127475023269653,862,LC_ALL=en_US.UTF-8
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2685661315917969,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2685365676879883,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26825594902038574,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2685565948486328,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26857686042785645,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2685673236846924,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2685873508453369,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2686903476715088,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26851344108581543,629,
-subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2691619396209717,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4343693256378174,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.435887098312378,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4347646236419678,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.43622088432312,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4347009658813477,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4351134300231934,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.43511700630188,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.438469171524048,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4362833499908447,629,
-subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4365336894989014,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3262784481048584,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32880687713623047,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33181023597717285,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3302192687988281,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32698965072631836,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3246898651123047,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.327211856842041,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3258228302001953,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32668614387512207,629,
-subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32393383979797363,629,
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5148396492004395,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5159575939178467,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5195903778076172,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5168888568878174,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5168604850769043,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5167121887207031,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5178189277648926,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5167827606201172,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5176806449890137,629,LC_ALL=C
-subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5176007747650146,629,LC_ALL=C
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5982167720794678,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5950846672058105,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5948951244354248,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5955064296722412,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5963928699493408,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5964069366455078,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5957674980163574,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5989294052124023,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5955221652984619,629,
-subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5963277816772461,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7286911010742188,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7285332679748535,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7290031909942627,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.729790687561035,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7378180027008057,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7295615673065186,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.728944778442383,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7287449836730957,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.729389190673828,629,
-subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7309396266937256,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8189647197723389,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8174576759338379,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8155303001403809,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8166103363037109,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8098931312561035,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8131756782531738,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8127932548522949,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8122501373291016,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8133888244628906,629,
-subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8097150325775146,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.441138744354248,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.436189889907837,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.440078020095825,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.434608221054077,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.432565212249756,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4389686584472656,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4356141090393066,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4454739093780518,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.439488410949707,629,
-subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.434346914291382,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7611372470855713,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7604682445526123,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7619922161102295,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7595586776733398,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7638401985168457,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7555592060089111,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7571024894714355,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7566506862640381,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7576191425323486,629,
-subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7586743831634521,629,
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9707977771759033,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9695196151733398,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.969646692276001,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9719293117523193,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9729926586151123,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9711306095123291,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9718837738037109,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9717080593109131,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9714086055755615,629,LC_ALL=C
-subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9725701808929443,629,LC_ALL=C
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26776623725891113,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2677316665649414,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26764774322509766,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26764392852783203,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2678048610687256,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26839542388916016,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2679786682128906,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26825690269470215,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2678089141845703,629,
+subtitles_en_literal,3,10,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2678341865539551,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3364849090576172,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33446741104125977,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3352184295654297,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33528780937194824,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33663368225097656,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33841681480407715,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3371107578277588,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3376932144165039,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33527708053588867,629,
+subtitles_en_literal,3,10,rg (no mmap),rg --no-mmap Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.33412981033325195,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4306020736694336,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4329919815063477,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4332242012023926,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.432997941970825,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4360785484313965,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.435281276702881,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.431150436401367,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4315969944000244,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4306139945983887,629,
+subtitles_en_literal,3,10,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4309916496276855,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32330894470214844,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3243591785430908,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3266782760620117,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32552504539489746,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32386016845703125,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3260154724121094,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32358860969543457,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3273475170135498,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3286449909210205,629,
+subtitles_en_literal,3,10,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3271455764770508,629,
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5178654193878174,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5178477764129639,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5173301696777344,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5160887241363525,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5176410675048828,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5159375667572021,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5159437656402588,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5144126415252686,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5155332088470459,629,LC_ALL=C
+subtitles_en_literal,3,10,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.514521598815918,629,LC_ALL=C
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5953242778778076,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5949890613555908,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5955290794372559,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5951504707336426,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5948066711425781,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5955345630645752,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5947279930114746,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5945889949798584,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5973446369171143,629,
+subtitles_en_literal,3,10,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.594796895980835,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.734492301940918,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7287397384643555,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7362167835235596,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7313451766967773,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7278831005096436,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.728785276412964,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7299938201904297,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.727299213409424,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7277636528015137,629,
+subtitles_en_literal,3,10,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7295165061950684,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7461349964141846,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7452898025512695,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7452714443206787,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.744922399520874,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7460696697235107,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7454876899719238,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7456295490264893,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7443864345550537,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7447819709777832,629,
+subtitles_en_literal,3,10,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7446470260620117,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4404242038726807,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4294676780700684,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.429917097091675,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.431140422821045,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4285945892333984,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4293277263641357,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4368669986724854,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4359662532806396,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4405126571655273,629,
+subtitles_en_literal,3,10,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.433344841003418,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7574958801269531,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7570157051086426,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7525804042816162,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7591047286987305,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.755040168762207,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7555766105651855,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7529222965240479,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.758681058883667,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7559700012207031,629,
+subtitles_en_literal,3,10,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7559340000152588,629,
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9682326316833496,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9697835445404053,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9684174060821533,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9705235958099365,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9682950973510742,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9695034027099609,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9688384532928467,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9686503410339355,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9681143760681152,629,LC_ALL=C
+subtitles_en_literal,3,10,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9680168628692627,629,LC_ALL=C
 subtitles_en_literal_casei,3,10,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3666412830352783,642,
 subtitles_en_literal_casei,3,10,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3665914535522461,642,
 subtitles_en_literal_casei,3,10,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.36571455001831055,642,
@@ -1269,106 +1279,116 @@ subtitles_ru_alternate_casei,3,10,grep,grep -E -ani Шерлок Холмс|Дж
 subtitles_ru_alternate_casei,3,10,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.726403951644897,735,LC_ALL=en_US.UTF-8
 subtitles_ru_alternate_casei,3,10,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.729755640029907,735,LC_ALL=en_US.UTF-8
 subtitles_ru_alternate_casei,3,10,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.736154317855835,735,LC_ALL=en_US.UTF-8
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32834887504577637,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3257181644439697,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32579779624938965,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32550573348999023,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3251991271972656,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32482481002807617,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3257458209991455,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32505273818969727,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3256075382232666,583,
-subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3257737159729004,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.913933992385864,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.91672420501709,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.93865704536438,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.912230730056763,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.924107789993286,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.913493633270264,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.910245656967163,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.929053544998169,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.933871507644653,583,
-subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.92923879623413,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.4273202419281,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.42229461669922,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.41881561279297,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.411447525024414,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.422499895095825,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.436785459518433,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.42813205718994,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.441976308822632,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.414398193359375,583,
-subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.416250228881836,583,
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7879621982574463,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.790905237197876,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7873954772949219,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7874820232391357,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7852168083190918,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7829320430755615,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7825570106506348,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7833132743835449,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7849481105804443,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7824337482452393,583,LC_ALL=C
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.926008939743042,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9255211353302002,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9263231754302979,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9263668060302734,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9270217418670654,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9276778697967529,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9267323017120361,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9328517913818359,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9268991947174072,583,
-subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9271001815795898,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.479653835296631,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.4785614013671875,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.4798760414123535,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.478492975234985,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.485419750213623,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.47809624671936,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.481511116027832,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.478480815887451,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.479968786239624,583,
-subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.487597942352295,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8880422115325928,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8907015323638916,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.9017963409423828,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.917555809020996,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.898529052734375,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8895699977874756,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.890930414199829,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8942396640777588,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8976736068725586,583,
-subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.9005537033081055,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.934978246688843,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.936828136444092,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.93298625946045,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.933864831924438,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.934249639511108,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.953744649887085,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.936256647109985,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.9343900680542,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.932713747024536,583,
-subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.935580015182495,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.171340465545654,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.173388481140137,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.177132844924927,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.176610231399536,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.173747777938843,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.18108868598938,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.178091049194336,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.19625186920166,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.168304681777954,583,
-subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.183668613433838,583,
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2991704940795898,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3094096183776855,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3007333278656006,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.30155611038208,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2973709106445312,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2963788509368896,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2972149848937988,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2982215881347656,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.300095796585083,583,LC_ALL=C
-subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.308290719985962,583,LC_ALL=C
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3251616954803467,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3260176181793213,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.325009822845459,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3253958225250244,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3255586624145508,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32509374618530273,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32692670822143555,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32549190521240234,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32480716705322266,583,
+subtitles_ru_literal,3,10,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3243875503540039,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4499814510345459,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.45062875747680664,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4532792568206787,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4568295478820801,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.45064687728881836,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4510054588317871,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.45026254653930664,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4513223171234131,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.4508659839630127,583,
+subtitles_ru_literal,3,10,rg (no mmap),rg --no-mmap Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.45338964462280273,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.911964416503906,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.907763004302979,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.93012261390686,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.91182827949524,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.911576986312866,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.928250551223755,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.926709175109863,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.9106764793396,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.90697717666626,583,
+subtitles_ru_literal,3,10,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.926398754119873,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.41078209877014,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.421114921569824,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.42653226852417,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.411635160446167,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.41897940635681,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.415560722351074,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.41150665283203,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.434045553207397,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.408607959747314,583,
+subtitles_ru_literal,3,10,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.418298482894897,583,
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7815132141113281,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7787928581237793,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7789037227630615,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7791144847869873,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7804174423217773,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7803263664245605,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.779409646987915,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7803800106048584,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7826926708221436,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7790436744689941,583,LC_ALL=C
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9256212711334229,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9252862930297852,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9253382682800293,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9255073070526123,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.925473690032959,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9254281520843506,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9273276329040527,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9264523983001709,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9256389141082764,583,
+subtitles_ru_literal,3,10,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9267659187316895,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.481263160705566,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.478214979171753,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.479391813278198,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.480245590209961,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.479216575622559,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.480084419250488,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.4808125495910645,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.479414224624634,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.477892637252808,583,
+subtitles_ru_literal,3,10,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.488618850708008,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8875257968902588,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8994288444519043,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8891081809997559,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8927254676818848,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8885462284088135,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8860197067260742,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8897171020507812,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8881864547729492,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8842110633850098,583,
+subtitles_ru_literal,3,10,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.8878448009490967,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.960192918777466,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.926759719848633,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.929388761520386,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.947829723358154,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.930480718612671,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.931763648986816,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.929036140441895,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.93698763847351,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.929525375366211,583,
+subtitles_ru_literal,3,10,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.932105541229248,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.172893047332764,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.174585819244385,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.17912483215332,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.173067092895508,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.189521074295044,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.172780513763428,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.16919755935669,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.16868829727173,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.19803738594055,583,
+subtitles_ru_literal,3,10,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.171013832092285,583,
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2980215549468994,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2992823123931885,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2971000671386719,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2973082065582275,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2979285717010498,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.299248218536377,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.307051658630371,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3012950420379639,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.300577163696289,583,LC_ALL=C
+subtitles_ru_literal,3,10,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2991137504577637,583,LC_ALL=C
 subtitles_ru_literal_casei,3,10,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1314334869384766,604,
 subtitles_ru_literal_casei,3,10,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1306557655334473,604,
 subtitles_ru_literal_casei,3,10,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1315603256225586,604,

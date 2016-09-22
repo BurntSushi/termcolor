@@ -122,16 +122,17 @@ grep           5.125 +/- 0.006 (lines: 862)
 
 subtitles_en_literal (pattern: Sherlock Holmes)
 -----------------------------------------------
-rg*            0.269 +/- 0.000 (lines: 629)*
-pt             3.436 +/- 0.001 (lines: 629)
-sift           0.327 +/- 0.002 (lines: 629)
-grep           0.517 +/- 0.001 (lines: 629)
-rg (lines)     0.596 +/- 0.001 (lines: 629)
+rg*            0.268 +/- 0.000 (lines: 629)*
+rg (no mmap)   0.336 +/- 0.001 (lines: 629)
+pt             3.433 +/- 0.002 (lines: 629)
+sift           0.326 +/- 0.002 (lines: 629)
+grep           0.516 +/- 0.001 (lines: 629)
+rg (lines)     0.595 +/- 0.001 (lines: 629)
 ag (lines)     2.730 +/- 0.003 (lines: 629)
-ucg (lines)    0.814 +/- 0.003 (lines: 629)
-pt (lines)     3.438 +/- 0.004 (lines: 629)
-sift (lines)   0.759 +/- 0.003 (lines: 629)
-grep (lines)   0.971 +/- 0.001 (lines: 629)
+ucg (lines)    0.745 +/- 0.001 (lines: 629)
+pt (lines)     3.434 +/- 0.005 (lines: 629)
+sift (lines)   0.756 +/- 0.002 (lines: 629)
+grep (lines)   0.969 +/- 0.001 (lines: 629)
 
 subtitles_en_literal_casei (pattern: Sherlock Holmes)
 -----------------------------------------------------
@@ -187,16 +188,17 @@ grep           8.729 +/- 0.004 (lines: 735)
 
 subtitles_ru_literal (pattern: Шерлок Холмс)
 --------------------------------------------
-rg*            0.326 +/- 0.001 (lines: 583)*
-pt             12.922 +/- 0.010 (lines: 583)
-sift           16.424 +/- 0.010 (lines: 583)
-grep           0.786 +/- 0.003 (lines: 583)
-rg (lines)     0.927 +/- 0.002 (lines: 583)
+rg*            0.325 +/- 0.001 (lines: 583)*
+rg (no mmap)   0.452 +/- 0.002 (lines: 583)
+pt             12.917 +/- 0.009 (lines: 583)
+sift           16.418 +/- 0.008 (lines: 583)
+grep           0.780 +/- 0.001 (lines: 583)
+rg (lines)     0.926 +/- 0.001 (lines: 583)
 ag (lines)     4.481 +/- 0.003 (lines: 583)
-ucg (lines)    1.897 +/- 0.009 (lines: 583)
-pt (lines)     12.937 +/- 0.006 (lines: 583)
-sift (lines)   17.178 +/- 0.008 (lines: 583)
-grep (lines)   1.301 +/- 0.005 (lines: 583)
+ucg (lines)    1.889 +/- 0.004 (lines: 583)
+pt (lines)     12.935 +/- 0.011 (lines: 583)
+sift (lines)   17.177 +/- 0.010 (lines: 583)
+grep (lines)   1.300 +/- 0.003 (lines: 583)
 
 subtitles_ru_literal_casei (pattern: Шерлок Холмс)
 --------------------------------------------------

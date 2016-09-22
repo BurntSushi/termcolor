@@ -397,6 +397,7 @@ def bench_subtitles_en_literal(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         Command('rg', ['rg', pat, en]),
+        Command('rg (no mmap)', ['rg', '--no-mmap', pat, en]),
         Command('pt', ['pt', '-N', pat, en]),
         Command('sift', ['sift', pat, en]),
         Command('grep', ['grep', '-a', pat, en], env=GREP_ASCII),
@@ -558,6 +559,7 @@ def bench_subtitles_ru_literal(suite_dir):
 
     return Benchmark(pattern=pat, commands=[
         Command('rg', ['rg', pat, ru]),
+        Command('rg (no mmap)', ['rg', '--no-mmap', pat, ru]),
         Command('pt', ['pt', '-N', pat, ru]),
         Command('sift', ['sift', pat, ru]),
         Command('grep', ['grep', '-a', pat, ru], env=GREP_ASCII),
