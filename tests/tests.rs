@@ -550,12 +550,23 @@ sherlock!(unrestricted2, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
+#[cfg(not(windows))]
 sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create("file", "foo\x00bar\nfoo\x00baz\n");
     cmd.arg("-uuu");
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "file:foo\nfile:foo\n");
+});
+
+// On Windows, this test uses memory maps, so the NUL bytes don't get replaced.
+#[cfg(windows)]
+sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("file", "foo\x00bar\nfoo\x00baz\n");
+    cmd.arg("-uuu");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "file:foo\x00bar\nfile:foo\x00baz\n");
 });
 
 #[test]
