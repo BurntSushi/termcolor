@@ -66,8 +66,8 @@ sherlock!(columns, |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--column");
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
-57:For the Doctor Watsons of this world, as opposed to the Sherlock
-49:be, to a very large extent, the result of luck. Sherlock Holmes
+58:For the Doctor Watsons of this world, as opposed to the Sherlock
+50:be, to a very large extent, the result of luck. Sherlock Holmes
 ";
     assert_eq!(lines, expected);
 });
@@ -574,10 +574,10 @@ sherlock!(vimgrep, "Sherlock|Watson", ".", |wd: WorkDir, mut cmd: Command| {
 
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
-sherlock:1:15:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:1:56:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:3:48:be, to a very large extent, the result of luck. Sherlock Holmes
-sherlock:5:11:but Doctor Watson has to have it taken out for him and dusted,
+sherlock:1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:3:49:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
 ";
     assert_eq!(lines, expected);
 });

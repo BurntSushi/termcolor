@@ -213,7 +213,7 @@ impl<W: Terminal + Send> Printer<W> {
             self.line_number(line_number, b':');
         }
         if let Some(c) = column {
-            self.write(c.to_string().as_bytes());
+            self.write((c + 1).to_string().as_bytes());
             self.write(b":");
         }
         if self.replace.is_some() {
