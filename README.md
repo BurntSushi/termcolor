@@ -94,8 +94,7 @@ Linux.](https://github.com/BurntSushi/ripgrep/releases) Linux binaries are
 static executables. Windows binaries are available either as built with MinGW
 (GNU) or with Microsoft Visual C++ (MSVC). When possible, prefer MSVC over GNU,
 but you'll need to have the
-[Microsoft Visual C++ Build
-Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
+[Microsoft VC++ 2015 redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 installed.
 
 If you're a **Homebrew** user, then you can install it with a custom formula
