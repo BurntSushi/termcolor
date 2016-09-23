@@ -789,6 +789,15 @@ clean!(regression_127, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/128
+clean!(regression_128, "x", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_bytes("foo", b"01234567\x0b\n\x0b\n\x0b\n\x0b\nx");
+    cmd.arg("-n");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:5:x\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/131
 //
 // TODO(burntsushi): Darwin doesn't like this test for some reason.

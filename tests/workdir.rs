@@ -43,9 +43,14 @@ impl WorkDir {
 
     /// Create a new file with the given name and contents in this directory.
     pub fn create<P: AsRef<Path>>(&self, name: P, contents: &str) {
+        self.create_bytes(name, contents.as_bytes());
+    }
+
+    /// Create a new file with the given name and contents in this directory.
+    pub fn create_bytes<P: AsRef<Path>>(&self, name: P, contents: &[u8]) {
         let path = self.dir.join(name);
         let mut file = nice_err(&path, File::create(&path));
-        nice_err(&path, file.write_all(contents.as_bytes()));
+        nice_err(&path, file.write_all(contents));
         nice_err(&path, file.flush());
     }
 
