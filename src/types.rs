@@ -70,6 +70,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("txt", &["*.txt"]),
     ("toml", &["*.toml", "Cargo.lock"]),
     ("vala", &["*.vala"]),
+    ("vb", &["*.vb"]),
     ("vimscript", &["*.vim"]),
     ("xml", &["*.xml"]),
     ("yacc", &["*.y"]),
