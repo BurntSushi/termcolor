@@ -59,7 +59,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("php", &["*.php", "*.php3", "*.php4", "*.php5", "*.phtml"]),
     ("py", &["*.py"]),
     ("readme", &["README*", "*README"]),
-    ("rr", &["*.R"]),
+    ("r", &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
     ("rst", &["*.rst"]),
     ("ruby", &["*.rb"]),
     ("rust", &["*.rs"]),
