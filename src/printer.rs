@@ -28,6 +28,8 @@ pub struct Printer<W> {
     ///
     /// N.B. If with_filename is false, then this setting has no effect.
     heading: bool,
+    /// Whether to show every match on its own line.
+    line_per_match: bool,
     /// Whether to suppress all output.
     quiet: bool,
     /// A string to use as a replacement of each match in a matching line.
@@ -46,6 +48,7 @@ impl<W: Terminal + Send> Printer<W> {
             context_separator: "--".to_string().into_bytes(),
             eol: b'\n',
             heading: false,
+            line_per_match: false,
             quiet: false,
             replace: None,
             with_filename: false,
@@ -76,6 +79,12 @@ impl<W: Terminal + Send> Printer<W> {
     /// N.B. If with_filename is false, then this setting has no effect.
     pub fn heading(mut self, yes: bool) -> Printer<W> {
         self.heading = yes;
+        self
+    }
+
+    /// Whether to show every match on its own line.
+    pub fn line_per_match(mut self, yes: bool) -> Printer<W> {
+        self.line_per_match = yes;
         self
     }
 
@@ -166,6 +175,34 @@ impl<W: Terminal + Send> Printer<W> {
         end: usize,
         line_number: Option<u64>,
     ) {
+        if !self.line_per_match {
+            let column =
+                if self.column {
+                    Some(re.find(&buf[start..end])
+                            .map(|(s, _)| s + 1).unwrap_or(0) as u64)
+                } else {
+                    None
+                };
+            return self.write_match(
+                re, path, buf, start, end, line_number, column);
+        }
+        for (s, _) in re.find_iter(&buf[start..end]) {
+            let column = if self.column { Some(s as u64) } else { None };
+            self.write_match(
+                re, path.as_ref(), buf, start, end, line_number, column);
+        }
+    }
+
+    fn write_match<P: AsRef<Path>>(
+        &mut self,
+        re: &Regex,
+        path: P,
+        buf: &[u8],
+        start: usize,
+        end: usize,
+        line_number: Option<u64>,
+        column: Option<u64>,
+    ) {
         if self.heading && self.with_filename && !self.has_printed {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
@@ -175,8 +212,7 @@ impl<W: Terminal + Send> Printer<W> {
         if let Some(line_number) = line_number {
             self.line_number(line_number, b':');
         }
-        if self.column {
-            let c = re.find(&buf[start..end]).map(|(s, _)| s + 1).unwrap_or(0);
+        if let Some(c) = column {
             self.write(c.to_string().as_bytes());
             self.write(b":");
         }
@@ -185,14 +221,14 @@ impl<W: Terminal + Send> Printer<W> {
                 &buf[start..end], &**self.replace.as_ref().unwrap());
             self.write(&line);
         } else {
-            self.write_match(re, &buf[start..end]);
+            self.write_matched_line(re, &buf[start..end]);
         }
         if buf[start..end].last() != Some(&self.eol) {
             self.write_eol();
         }
     }
 
-    pub fn write_match(&mut self, re: &Regex, buf: &[u8]) {
+    fn write_matched_line(&mut self, re: &Regex, buf: &[u8]) {
         if !self.wtr.supports_color() {
             self.write(buf);
             return;

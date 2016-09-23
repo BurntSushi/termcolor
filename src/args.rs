@@ -153,6 +153,11 @@ Less common options:
     --version
         Show the version number of ripgrep and exit.
 
+    --vimgrep
+        Show results with every match on its own line, including line
+        numbers and column numbers. (With this option, a line with more
+        than one match of the regex will be printed more than once.)
+
 File type management options:
     --type-list
         Show all supported file types and their associated globs.
@@ -206,6 +211,7 @@ pub struct RawArgs {
     flag_type_add: Vec<String>,
     flag_type_clear: Vec<String>,
     flag_unrestricted: u32,
+    flag_vimgrep: bool,
     flag_with_filename: bool,
     flag_word_regexp: bool,
 }
@@ -231,6 +237,7 @@ pub struct Args {
     ignore_case: bool,
     invert_match: bool,
     line_number: bool,
+    line_per_match: bool,
     mmap: bool,
     no_ignore: bool,
     no_ignore_parent: bool,
@@ -302,7 +309,9 @@ impl RawArgs {
                 self.flag_threads
             };
         let color =
-            if self.flag_color == "auto" {
+            if self.flag_vimgrep {
+                false
+            } else if self.flag_color == "auto" {
                 atty::on_stdout() || self.flag_pretty
             } else {
                 self.flag_color == "always"
@@ -344,6 +353,7 @@ impl RawArgs {
             ignore_case: self.flag_ignore_case,
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
+            line_per_match: self.flag_vimgrep,
             mmap: mmap,
             no_ignore: no_ignore,
             no_ignore_parent:
@@ -366,6 +376,10 @@ impl RawArgs {
             if !self.flag_no_heading {
                 args.heading = true;
             }
+        }
+        if self.flag_vimgrep {
+            args.column = true;
+            args.line_number = true;
         }
         Ok(args)
     }
@@ -490,6 +504,7 @@ impl Args {
             .context_separator(self.context_separator.clone())
             .eol(self.eol)
             .heading(self.heading)
+            .line_per_match(self.line_per_match)
             .quiet(self.quiet)
             .with_filename(self.with_filename);
         if let Some(ref rep) = self.replace {

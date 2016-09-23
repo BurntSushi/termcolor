@@ -153,6 +153,11 @@ the raw speed of grep.
 --version
 : Show the version number of ripgrep and exit.
 
+--vimgrep
+: Show results with every match on its own line, including line
+  numbers and column numbers. (With this option, a line with more
+  than one match of the regex will be printed more than once.)
+
 # FILE TYPE MANAGEMENT OPTIONS
 
 --type-list

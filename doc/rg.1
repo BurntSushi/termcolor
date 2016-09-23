@@ -237,6 +237,14 @@ Defaults to the number of logical CPUs (capped at 6).
 Show the version number of ripgrep and exit.
 .RS
 .RE
+.TP
+.B \-\-vimgrep
+Show results with every match on its own line, including line numbers
+and column numbers.
+(With this option, a line with more than one match of the regex will be
+printed more than once.)
+.RS
+.RE
 .SH FILE TYPE MANAGEMENT OPTIONS
 .TP
 .B \-\-type\-list

@@ -569,6 +569,19 @@ sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "file:foo\x00bar\nfile:foo\x00baz\n");
 });
 
+sherlock!(vimgrep, "Sherlock|Watson", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--vimgrep");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:1:15:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:1:56:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:3:48:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:5:11:but Doctor Watson has to have it taken out for him and dusted,
+";
+    assert_eq!(lines, expected);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");
