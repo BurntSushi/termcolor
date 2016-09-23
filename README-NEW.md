@@ -154,11 +154,11 @@ insufficient. In all cases, `.rgignore` patterns take precedence over
 To ignore all ignore files, use `-u`. To additionally search hidden files
 and directories, use `-uu`. To additionally search binary files, use `-uuu`.
 (In other words, "search everything, dammit!") In particular, `rg -uuu` is
-equivalent to `grep -a -r`.
+similar to `grep -a -r`.
 
 ```
-$ rg -uu foobar  # equivalent to `grep -r`
-$ rg -uuu foobar  # equivalent to `grep -a -r`
+$ rg -uu foobar  # similar to `grep -r`
+$ rg -uuu foobar  # similar to `grep -a -r`
 ```
 
 (Tip: If your ignore files aren't being adhered to like you expect, run your
