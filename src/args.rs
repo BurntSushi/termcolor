@@ -47,6 +47,7 @@ rg recursively searches your current directory for a regex pattern.
 Common options:
     -a, --text                 Search binary files as if they were text.
     -c, --count                Only show count of line matches for each file.
+    -l, --files-with-matches   Only show path of each file with matches.
     --color WHEN               Whether to use coloring in match.
                                Valid values are never, always or auto.
                                [default: auto]
@@ -199,6 +200,7 @@ pub struct RawArgs {
     flag_context: usize,
     flag_context_separator: String,
     flag_count: bool,
+    flag_files_with_matches: bool,
     flag_debug: bool,
     flag_files: bool,
     flag_follow: bool,
@@ -246,6 +248,7 @@ pub struct Args {
     column: bool,
     context_separator: Vec<u8>,
     count: bool,
+    files_with_matches: bool,
     eol: u8,
     files: bool,
     follow: bool,
@@ -370,6 +373,7 @@ impl RawArgs {
             column: self.flag_column,
             context_separator: unescape(&self.flag_context_separator),
             count: self.flag_count,
+            files_with_matches: self.flag_files_with_matches,
             eol: eol,
             files: self.flag_files,
             follow: self.flag_follow,
@@ -554,7 +558,7 @@ impl Args {
     /// to the writer given.
     pub fn out(&self) -> Out {
         let mut out = Out::new(self.color);
-        if self.heading && !self.count {
+        if self.heading && !self.count && !self.files_with_matches {
             out = out.file_separator(b"".to_vec());
         } else if self.before_context > 0 || self.after_context > 0 {
             out = out.file_separator(self.context_separator.clone());
@@ -608,6 +612,7 @@ impl Args {
             .after_context(self.after_context)
             .before_context(self.before_context)
             .count(self.count)
+            .files_with_matches(self.files_with_matches)
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
@@ -626,6 +631,7 @@ impl Args {
     ) -> BufferSearcher<'a, W> {
         BufferSearcher::new(printer, grep, path, buf)
             .count(self.count)
+            .files_with_matches(self.files_with_matches)
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
