@@ -5,7 +5,7 @@ whether a *single* file path should be searched or not.
 In general, there are two ways to ignore a particular file:
 
 1. Specify an ignore rule in some "global" configuration, such as a
-   $HOME/.rgignore or on the command line.
+   $HOME/.ignore or on the command line.
 2. A specific ignore file (like .gitignore) found during directory traversal.
 
 The `IgnoreDir` type handles ignore patterns for any one particular directory
@@ -24,6 +24,7 @@ use types::Types;
 
 const IGNORE_NAMES: &'static [&'static str] = &[
     ".gitignore",
+    ".ignore",
     ".rgignore",
 ];
 

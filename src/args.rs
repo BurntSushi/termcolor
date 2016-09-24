@@ -137,7 +137,7 @@ Less common options:
         Never use memory maps, even when they might be faster.
 
     --no-ignore
-        Don't respect ignore files (.gitignore, .rgignore, etc.)
+        Don't respect ignore files (.gitignore, .ignore, etc.)
         This implies --no-ignore-parent.
 
     --no-ignore-parent
