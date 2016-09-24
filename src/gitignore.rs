@@ -118,6 +118,9 @@ impl Gitignore {
         if let Some(p) = strip_prefix(&self.root, path) {
             path = p;
         }
+        if let Some(p) = strip_prefix("/", path) {
+            path = p;
+        }
         self.matched_stripped(path, is_dir)
     }
 
@@ -225,9 +228,10 @@ impl GitignoreBuilder {
     /// The path given should be the path at which the globs for this gitignore
     /// file should be matched.
     pub fn new<P: AsRef<Path>>(root: P) -> GitignoreBuilder {
+        let root = strip_prefix("./", root.as_ref()).unwrap_or(root.as_ref());
         GitignoreBuilder {
             builder: glob::SetBuilder::new(),
-            root: root.as_ref().to_path_buf(),
+            root: root.to_path_buf(),
             patterns: vec![],
         }
     }
@@ -401,6 +405,7 @@ mod tests {
     ignored!(ig26, ROOT, "/foo/bar/baz", "./foo/bar/baz");
     ignored!(ig27, ROOT, "foo/", "xyz/foo", true);
     ignored!(ig28, ROOT, "src/*.rs", "src/grep/src/main.rs");
+    ignored!(ig29, "./src", "/llvm/", "./src/llvm", true);
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
