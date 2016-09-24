@@ -330,7 +330,7 @@ impl GitignoreBuilder {
         if has_slash {
             opts.require_literal_separator = true;
         }
-        // If there was no leading slash, then this is a pattern that must
+        // If there was a leading slash, then this is a pattern that must
         // match the entire path name. Otherwise, we should let it match
         // anywhere, so use a **/ prefix.
         if !is_absolute {
