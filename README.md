@@ -236,7 +236,7 @@ The syntax supported is
 `ripgrep` compiles with Rust 1.9 (stable) or newer. Building is easy:
 
 ```
-$ git clone git://github.com/BurntSushi/ripgrep
+$ git clone https://github.com/BurntSushi/ripgrep
 $ cd ripgrep
 $ cargo build --release
 $ ./target/release/rg --version
