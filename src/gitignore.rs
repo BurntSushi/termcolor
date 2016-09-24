@@ -284,6 +284,7 @@ impl GitignoreBuilder {
         };
         let mut opts = glob::MatchOptions::default();
         let has_slash = line.chars().any(|c| c == '/');
+        let is_absolute = line.chars().nth(0).unwrap() == '/';
         // If the line starts with an escaped '!', then remove the escape.
         // Otherwise, if it starts with an unescaped '!', then this is a
         // whitelist pattern.
@@ -320,14 +321,19 @@ impl GitignoreBuilder {
             }
         }
         // If there is a literal slash, then we note that so that globbing
-        // doesn't let wildcards match slashes. Otherwise, we need to let
-        // the pattern match anywhere, so we add a `**/` prefix to achieve
-        // that behavior.
+        // doesn't let wildcards match slashes.
         pat.pat = line.to_string();
         if has_slash {
             opts.require_literal_separator = true;
-        } else {
-            pat.pat = format!("**/{}", pat.pat);
+        }
+        // If there was no leading slash, then this is a pattern that must
+        // match the entire path name. Otherwise, we should let it match
+        // anywhere, so use a **/ prefix.
+        if !is_absolute {
+            // ... but only if we don't already have a **/ prefix.
+            if !pat.pat.starts_with("**/") {
+                pat.pat = format!("**/{}", pat.pat);
+            }
         }
         try!(self.builder.add_with(&pat.pat, &opts));
         self.patterns.push(pat);
@@ -393,10 +399,12 @@ mod tests {
     ignored!(ig24, ROOT, "target", "grep/target");
     ignored!(ig25, ROOT, "Cargo.lock", "./tabwriter-bin/Cargo.lock");
     ignored!(ig26, ROOT, "/foo/bar/baz", "./foo/bar/baz");
+    ignored!(ig27, ROOT, "foo/", "xyz/foo", true);
+    ignored!(ig28, ROOT, "src/*.rs", "src/grep/src/main.rs");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
-    not_ignored!(ignot3, ROOT, "src/*.rs", "src/grep/src/main.rs");
+    not_ignored!(ignot3, ROOT, "/src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot4, ROOT, "/*.c", "mozilla-sha1/sha1.c");
     not_ignored!(ignot5, ROOT, "/src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot6, ROOT, "*.rs\n!src/main.rs", "src/main.rs");

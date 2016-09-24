@@ -34,6 +34,18 @@ macro_rules! sherlock {
     };
 }
 
+macro_rules! clean {
+    ($name:ident, $query:expr, $path:expr, $fun:expr) => {
+        #[test]
+        fn $name() {
+            let wd = WorkDir::new(stringify!($name));
+            let mut cmd = wd.command();
+            cmd.arg($query).arg($path);
+            $fun(wd, cmd);
+        }
+    };
+}
+
 sherlock!(single_file, |wd: WorkDir, mut cmd| {
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
@@ -585,6 +597,43 @@ sherlock:3:49:be, to a very large extent, the result of luck. Sherlock Holmes
 sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
 ";
     assert_eq!(lines, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/16
+clean!(regression_16, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "ghi/");
+    wd.create_dir("ghi");
+    wd.create_dir("def/ghi");
+    wd.create("ghi/toplevel.txt", "xyz");
+    wd.create("def/ghi/subdir.txt", "xyz");
+    wd.assert_err(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/49
+clean!(regression_49, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "foo/bar");
+    wd.create_dir("test/foo/bar");
+    wd.create("test/foo/bar/baz", "test");
+    wd.assert_err(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/50
+clean!(regression_50, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "XXX/YYY/");
+    wd.create_dir("abc/def/XXX/YYY");
+    wd.create_dir("ghi/XXX/YYY");
+    wd.create("abc/def/XXX/YYY/bar", "test");
+    wd.create("ghi/XXX/YYY/bar", "test");
+    wd.assert_err(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/65
+clean!(regression_65, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "a/");
+    wd.create_dir("a");
+    wd.create("a/foo", "xyz");
+    wd.create("a/bar", "xyz");
+    wd.assert_err(&mut cmd);
 });
 
 #[test]
