@@ -14,12 +14,13 @@ of `IgnoreDir`s for use during directory traversal.
 */
 
 use std::error::Error as StdError;
+use std::ffi::OsString;
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use gitignore::{self, Gitignore, GitignoreBuilder, Match, Pattern};
-use pathutil::is_hidden;
+use pathutil::{file_name, is_hidden};
 use types::Types;
 
 const IGNORE_NAMES: &'static [&'static str] = &[
@@ -78,7 +79,9 @@ impl From<gitignore::Error> for Error {
 pub struct Ignore {
     /// A stack of ignore patterns at each directory level of traversal.
     /// A directory that contributes no ignore patterns is `None`.
-    stack: Vec<Option<IgnoreDir>>,
+    stack: Vec<IgnoreDir>,
+    /// A stack of parent directories above the root of the current search.
+    parent_stack: Vec<IgnoreDir>,
     /// A set of override globs that are always checked first. A match (whether
     /// it's whitelist or blacklist) trumps anything in stack.
     overrides: Overrides,
@@ -96,6 +99,7 @@ impl Ignore {
     pub fn new() -> Ignore {
         Ignore {
             stack: vec![],
+            parent_stack: vec![],
             overrides: Overrides::new(None),
             types: Types::empty(),
             ignore_hidden: true,
@@ -142,7 +146,7 @@ impl Ignore {
         let mut ignore_dir_results = vec![];
         while let Some(parent) = path.parent() {
             if self.no_ignore {
-                ignore_dir_results.push(Ok(None));
+                ignore_dir_results.push(Ok(IgnoreDir::empty(parent)));
             } else {
                 if saw_git {
                     ignore_names.retain(|&name| name != ".gitignore");
@@ -157,7 +161,7 @@ impl Ignore {
         }
 
         for ignore_dir_result in ignore_dir_results.into_iter().rev() {
-            try!(self.push_ignore_dir(ignore_dir_result));
+            self.parent_stack.push(try!(ignore_dir_result));
         }
         Ok(())
     }
@@ -168,7 +172,7 @@ impl Ignore {
     /// stack (and therefore should be popped).
     pub fn push<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         if self.no_ignore {
-            self.stack.push(None);
+            self.stack.push(IgnoreDir::empty(path));
             return Ok(());
         }
         self.push_ignore_dir(IgnoreDir::new(path))
@@ -179,7 +183,7 @@ impl Ignore {
     /// If the result given contains an error, then it is returned.
     pub fn push_ignore_dir(
         &mut self,
-        result: Result<Option<IgnoreDir>, Error>,
+        result: Result<IgnoreDir, Error>,
     ) -> Result<(), Error> {
         match result {
             Ok(id) => {
@@ -188,7 +192,7 @@ impl Ignore {
             }
             Err(err) => {
                 // Don't leave the stack in an inconsistent state.
-                self.stack.push(None);
+                self.stack.push(IgnoreDir::empty("error"));
                 Err(err)
             }
         }
@@ -213,10 +217,24 @@ impl Ignore {
             return true;
         }
         if !self.no_ignore {
-            for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
+            for id in self.stack.iter().rev() {
                 let mat = id.matched(path, is_dir);
-                // println!("{}, {:?}, {:?}, {:?}\n", path.display(), is_dir, mat, id);
                 if let Some(is_ignored) = self.ignore_match(path, mat) {
+                    if is_ignored {
+                        return true;
+                    }
+                    // If this path is whitelisted by an ignore, then
+                    // fallthrough and let the file type matcher have a say.
+                    break;
+                }
+            }
+            let mut path = path.to_path_buf();
+            for id in self.parent_stack.iter().rev() {
+                if let Some(ref dirname) = id.name {
+                    path = Path::new(dirname).join(path);
+                }
+                let mat = id.matched(&*path, is_dir);
+                if let Some(is_ignored) = self.ignore_match(&*path, mat) {
                     if is_ignored {
                         return true;
                     }
@@ -262,6 +280,8 @@ impl Ignore {
 pub struct IgnoreDir {
     /// The path to this directory as given.
     path: PathBuf,
+    /// The directory name, if one exists.
+    name: Option<OsString>,
     /// A single accumulation of glob patterns for this directory, matched
     /// using gitignore semantics.
     ///
@@ -278,8 +298,17 @@ impl IgnoreDir {
     ///
     /// If no ignore glob patterns could be found in the directory then `None`
     /// is returned.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Option<IgnoreDir>, Error> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<IgnoreDir, Error> {
         IgnoreDir::with_ignore_names(path, IGNORE_NAMES.iter())
+    }
+
+    /// Create a new IgnoreDir that never matches anything with the given path.
+    pub fn empty<P: AsRef<Path>>(path: P) -> IgnoreDir {
+        IgnoreDir {
+            path: path.as_ref().to_path_buf(),
+            name: file_name(path.as_ref()).map(|s| s.to_os_string()),
+            gi: None,
+        }
     }
 
     /// Create a new matcher for the given directory using only the ignore
@@ -294,12 +323,9 @@ impl IgnoreDir {
     pub fn with_ignore_names<P: AsRef<Path>, S, I>(
         path: P,
         names: I,
-    ) -> Result<Option<IgnoreDir>, Error>
+    ) -> Result<IgnoreDir, Error>
     where P: AsRef<Path>, S: AsRef<str>, I: Iterator<Item=S> {
-        let mut id = IgnoreDir {
-            path: path.as_ref().to_path_buf(),
-            gi: None,
-        };
+        let mut id = IgnoreDir::empty(path);
         let mut ok = false;
         let mut builder = GitignoreBuilder::new(&id.path);
         // The ordering here is important. Later globs have higher precedence.
@@ -307,11 +333,10 @@ impl IgnoreDir {
             ok = builder.add_path(id.path.join(name.as_ref())).is_ok() || ok;
         }
         if !ok {
-            Ok(None)
-        } else {
-            id.gi = Some(try!(builder.build()));
-            Ok(Some(id))
+            return Ok(id);
         }
+        id.gi = Some(try!(builder.build()));
+        Ok(id)
     }
 
     /// Returns true if and only if the given file path should be ignored
@@ -393,6 +418,9 @@ mod tests {
                 let gi = builder.build().unwrap();
                 let id = IgnoreDir {
                     path: Path::new($root).to_path_buf(),
+                    name: Path::new($root).file_name().map(|s| {
+                        s.to_os_string()
+                    }),
                     gi: Some(gi),
                 };
                 assert!(id.matched($path, false).is_ignored());
@@ -410,6 +438,9 @@ mod tests {
                 let gi = builder.build().unwrap();
                 let id = IgnoreDir {
                     path: Path::new($root).to_path_buf(),
+                    name: Path::new($root).file_name().map(|s| {
+                        s.to_os_string()
+                    }),
                     gi: Some(gi),
                 };
                 assert!(!id.matched($path, false).is_ignored());
