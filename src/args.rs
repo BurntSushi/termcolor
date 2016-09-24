@@ -42,7 +42,7 @@ Usage: rg [options] -e PATTERN ... [<path> ...]
        rg --help
        rg --version
 
-rg combines the usability of The Silver Searcher with the raw speed of grep.
+rg recursively searches your current directory for a regex pattern.
 
 Common options:
     -a, --text                 Search binary files as if they were text.
