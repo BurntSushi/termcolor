@@ -53,6 +53,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("matlab", &["*.m"]),
     ("mk", &["mkfile"]),
     ("ml", &["*.ml"]),
+    ("nim", &["*.nim"]),
     ("objc", &["*.h", "*.m"]),
     ("objcpp", &["*.h", "*.mm"]),
     ("ocaml", &["*.ml", "*.mli", "*.mll", "*.mly"]),
