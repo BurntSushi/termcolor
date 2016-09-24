@@ -114,6 +114,10 @@ Less common options:
         Prefix each match with the file name that contains it. This is the
         default when more than one file is searched.
 
+    --no-filename
+        Never show the filename for a match. This is the default when
+        one file is searched.
+
     --heading
         Show the file name above clusters of matches from each file.
         This is the default mode at a tty.
@@ -203,6 +207,7 @@ pub struct RawArgs {
     flag_no_ignore_parent: bool,
     flag_no_line_number: bool,
     flag_no_mmap: bool,
+    flag_no_filename: bool,
     flag_pretty: bool,
     flag_quiet: bool,
     flag_regexp: Vec<String>,
@@ -321,10 +326,13 @@ impl RawArgs {
                 self.flag_color == "always"
             };
         let eol = b'\n';
+
         let mut with_filename = self.flag_with_filename;
         if !with_filename {
             with_filename = paths.len() > 1 || paths[0].is_dir();
         }
+        with_filename = with_filename && !self.flag_no_filename;
+
         let mut btypes = TypesBuilder::new();
         btypes.add_defaults();
         try!(self.add_types(&mut btypes));

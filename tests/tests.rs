@@ -652,6 +652,18 @@ clean!(regression_65, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/20
+sherlock!(feature_20, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--no-filename");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

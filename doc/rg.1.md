@@ -114,6 +114,10 @@ the raw speed of grep.
 : Prefix each match with the file name that contains it. This is the
   default when more than one file is searched.
 
+--no-filename
+: Never show the filename for a match. This is the default when
+  one file is searched.
+
 --heading
 : Show the file name above clusters of matches from each file.
   This is the default mode at a tty.
