@@ -36,6 +36,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
         "*.f", "*.F", "*.f77", "*.F77", "*.pfo",
         "*.f90", "*.F90", "*.f95", "*.F95",
     ]),
+    ("fsharp", &["*.fs", "*.fsx", "*.fsi"]),
     ("go", &["*.go"]),
     ("groovy", &["*.groovy"]),
     ("haskell", &["*.hs", "*.lhs"]),
