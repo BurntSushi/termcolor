@@ -934,16 +934,6 @@ mod tests {
     baseliteral!(lit6, "[ab]", false);
     baseliteral!(lit7, "?", false);
 
-    /*
-    issuffix!(suf1, "", false);
-    issuffix!(suf2, "a", true);
-    issuffix!(suf3, "ab", true);
-    issuffix!(suf4, "*ab", true);
-    issuffix!(suf5, "*.ab", true);
-    issuffix!(suf6, "?.ab", true);
-    issuffix!(suf7, "ab*", false);
-    */
-
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
     matches!(match3, "a*b*c", "abc");
@@ -975,6 +965,7 @@ mod tests {
     matches!(matchrec20, "**/.*", "abc/.abc");
     matches!(matchrec21, ".*/**", ".abc");
     matches!(matchrec22, ".*/**", ".abc/abc");
+    matches!(matchnot23, "foo/**", "foo");
 
     matches!(matchrange1, "a[0-9]b", "a0b");
     matches!(matchrange2, "a[0-9]b", "a9b");

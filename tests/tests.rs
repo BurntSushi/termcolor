@@ -625,6 +625,17 @@ clean!(regression_25, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/30
+clean!(regression_30, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "vendor/**\n!vendor/manifest");
+    wd.create_dir("vendor");
+    wd.create("vendor/manifest", "test");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "vendor/manifest:test\n";
+    assert_eq!(lines, expected);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/49
 clean!(regression_49, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "foo/bar");

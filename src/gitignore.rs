@@ -339,6 +339,12 @@ impl GitignoreBuilder {
                 pat.pat = format!("**/{}", pat.pat);
             }
         }
+        // If the pattern ends with `/**`, then we should only match everything
+        // inside a directory, but not the directory itself. Standard globs
+        // will match the directory. So we add `/*` to force the issue.
+        if pat.pat.ends_with("/**") {
+            pat.pat = format!("{}/*", pat.pat);
+        }
         try!(self.builder.add_with(&pat.pat, &opts));
         self.patterns.push(pat);
         Ok(())
@@ -419,4 +425,5 @@ mod tests {
     not_ignored!(ignot10, ROOT, "**/foo/bar", "foo/src/bar");
     not_ignored!(ignot11, ROOT, "#foo", "#foo");
     not_ignored!(ignot12, ROOT, "\n\n\n", "foo");
+    not_ignored!(ignot13, ROOT, "foo/**", "foo", true);
 }
