@@ -703,11 +703,9 @@ fn files() {
     cmd.arg("--files");
     let lines: String = wd.stdout(&mut cmd);
     if cfg!(windows) {
-        assert!(lines == "./dir\\file\n./file\n"
-                || lines == "./file\n./dir\\file\n");
+        assert!(lines == "dir\\file\nfile\n" || lines == "file\ndir\\file\n");
     } else {
-        assert!(lines == "./file\n./dir/file\n"
-                || lines == "./dir/file\n./file\n");
+        assert!(lines == "file\ndir/file\n" || lines == "dir/file\nfile\n");
     }
 }
 

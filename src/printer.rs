@@ -4,6 +4,7 @@ use regex::bytes::Regex;
 use term::{Attr, Terminal};
 use term::color;
 
+use pathutil::strip_prefix;
 use types::FileTypeDef;
 
 /// Printer encapsulates all output logic for searching.
@@ -138,7 +139,8 @@ impl<W: Terminal + Send> Printer<W> {
 
     /// Prints the given path.
     pub fn path<P: AsRef<Path>>(&mut self, path: P) {
-        self.write(path.as_ref().to_string_lossy().as_bytes());
+        let path = strip_prefix("./", path.as_ref()).unwrap_or(path.as_ref());
+        self.write(path.to_string_lossy().as_bytes());
         self.write_eol();
     }
 
