@@ -362,10 +362,6 @@ impl Overrides {
     /// Match::None (and interpreting non-matches as ignored) unless is_dir
     /// is true.
     pub fn matched<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> Match {
-        // File types don't apply to directories.
-        if is_dir {
-            return Match::None;
-        }
         let path = path.as_ref();
         self.gi.as_ref()
             .map(|gi| {
