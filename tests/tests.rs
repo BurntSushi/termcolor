@@ -377,6 +377,11 @@ sherlock!(ignore_git, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+sherlock!(ignore_generic, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".ignore", "sherlock\n");
+    wd.assert_err(&mut cmd);
+});
+
 sherlock!(ignore_ripgrep, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".rgignore", "sherlock\n");
     wd.assert_err(&mut cmd);

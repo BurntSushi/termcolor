@@ -9,7 +9,7 @@ The motivation for this submodule is performance and portability:
 2. We could shell out to a `git` sub-command like ls-files or status, but it
    seems better to not rely on the existence of external programs for a search
    tool. Besides, we need to implement this logic anyway to support things like
-   an .rgignore file.
+   an .ignore file.
 
 The key implementation detail here is that a single gitignore file is compiled
 into a single RegexSet, which can be used to report which globs match a

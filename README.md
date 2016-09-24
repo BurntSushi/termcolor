@@ -145,9 +145,9 @@ files, ignore hidden files and directories and skip binary files:
 $ rg foobar
 ```
 
-The above command also respects all `.rgignore` files, including in parent
-directories. `.rgignore` files can be used when `.gitignore` files are
-insufficient. In all cases, `.rgignore` patterns take precedence over
+The above command also respects all `.ignore` files, including in parent
+directories. `.ignore` files can be used when `.gitignore` files are
+insufficient. In all cases, `.ignore` patterns take precedence over
 `.gitignore`.
 
 To ignore all ignore files, use `-u`. To additionally search hidden files
