@@ -164,8 +164,12 @@ the raw speed of grep.
 : Show all supported file types and their associated globs.
 
 --type-add *ARG* ...
-: Add a new glob for a particular file type.
+: Add a new glob for a particular file type. Note that this must be
+  passed to every invocation of rg.
+
   Example: --type-add html:*.html,*.htm
 
 --type-clear *TYPE* ...
-: Clear the file type globs for TYPE.
+: Clear the file type globs previously defined for TYPE. This only clears
+  the default type definitions that are found inside of ripgrep. Note
+  that this must be passed to every invocation of rg.
