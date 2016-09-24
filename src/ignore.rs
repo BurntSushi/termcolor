@@ -215,6 +215,7 @@ impl Ignore {
         if !self.no_ignore {
             for id in self.stack.iter().rev().filter_map(|id| id.as_ref()) {
                 let mat = id.matched(path, is_dir);
+                // println!("{}, {:?}, {:?}, {:?}\n", path.display(), is_dir, mat, id);
                 if let Some(is_ignored) = self.ignore_match(path, mat) {
                     if is_ignored {
                         return true;
@@ -257,6 +258,7 @@ impl Ignore {
 
 /// IgnoreDir represents a set of ignore patterns retrieved from a single
 /// directory.
+#[derive(Debug)]
 pub struct IgnoreDir {
     /// The path to this directory as given.
     path: PathBuf,
