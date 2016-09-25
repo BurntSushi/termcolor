@@ -12,9 +12,9 @@ rg [*options*] --files [*<*path*> ...*]
 
 rg [*options*] --type-list
 
-rg --help
+rg [*options*] --help
 
-rg --version
+rg [*options*] --version
 
 # DESCRIPTION
 

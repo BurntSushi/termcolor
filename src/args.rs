@@ -39,8 +39,8 @@ Usage: rg [options] -e PATTERN ... [<path> ...]
        rg [options] <pattern> [<path> ...]
        rg [options] --files [<path> ...]
        rg [options] --type-list
-       rg --help
-       rg --version
+       rg [options] --help
+       rg [options] --version
 
 rg recursively searches your current directory for a regex pattern.
 
