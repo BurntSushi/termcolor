@@ -46,6 +46,14 @@ macro_rules! clean {
     };
 }
 
+fn path(unix: &str) -> String {
+    if cfg!(windows) {
+        unix.replace("/", "\\")
+    } else {
+        unix.to_string()
+    }
+}
+
 sherlock!(single_file, |wd: WorkDir, mut cmd| {
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
@@ -541,19 +549,11 @@ sherlock!(symlink_follow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.current_dir(wd.path().join("foo/bar"));
 
     let lines: String = wd.stdout(&mut cmd);
-    if cfg!(windows) {
-        let expected = "\
-baz\\sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
-baz\\sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
-";
-        assert_eq!(lines, expected);
-    } else {
-        let expected = "\
+    let expected = "\
 baz/sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
 baz/sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
 ";
-        assert_eq!(lines, expected);
-    }
+    assert_eq!(lines, path(expected));
 });
 
 sherlock!(unrestricted1, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
@@ -630,23 +630,28 @@ clean!(regression_25, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create("src/llvm/foo", "test");
 
     let lines: String = wd.stdout(&mut cmd);
-    let expected = "src/llvm/foo:test\n";
+    let expected = path("src/llvm/foo:test\n");
     assert_eq!(lines, expected);
 
     cmd.current_dir(wd.path().join("src"));
     let lines: String = wd.stdout(&mut cmd);
-    let expected = "llvm/foo:test\n";
+    let expected = path("llvm/foo:test\n");
     assert_eq!(lines, expected);
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/30
 clean!(regression_30, "test", ".", |wd: WorkDir, mut cmd: Command| {
-    wd.create(".gitignore", "vendor/**\n!vendor/manifest");
+    if cfg!(windows) {
+        wd.create(".gitignore", "vendor/**\n!vendor\\manifest");
+    } else {
+        wd.create(".gitignore", "vendor/**\n!vendor/manifest");
+    }
     wd.create_dir("vendor");
     wd.create("vendor/manifest", "test");
+    cmd.arg("--debug");
 
     let lines: String = wd.stdout(&mut cmd);
-    let expected = "vendor/manifest:test\n";
+    let expected = path("vendor/manifest:test\n");
     assert_eq!(lines, expected);
 });
 
@@ -686,7 +691,7 @@ clean!(regression_67, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create("dir/bar", "test");
 
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "dir/bar:test\n");
+    assert_eq!(lines, path("dir/bar:test\n"));
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/20
@@ -775,11 +780,8 @@ fn files() {
     let mut cmd = wd.command();
     cmd.arg("--files");
     let lines: String = wd.stdout(&mut cmd);
-    if cfg!(windows) {
-        assert!(lines == "dir\\file\nfile\n" || lines == "file\ndir\\file\n");
-    } else {
-        assert!(lines == "file\ndir/file\n" || lines == "dir/file\nfile\n");
-    }
+    assert!(lines == path("file\ndir/file\n")
+            || lines == path("dir/file\nfile\n"));
 }
 
 // See: https://github.com/BurntSushi/ripgrep/issues/64
@@ -794,11 +796,7 @@ fn regression_64() {
     let mut cmd = wd.command();
     cmd.arg("--files").arg("foo");
     let lines: String = wd.stdout(&mut cmd);
-    if cfg!(windows) {
-        assert_eq!(lines, "foo\\abc\n");
-    } else {
-        assert_eq!(lines, "foo/abc\n");
-    }
+    assert_eq!(lines, path("foo/abc\n"));
 }
 
 #[test]
