@@ -105,11 +105,10 @@ directly):
 $ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
 ```
 
-If you're an **Archlinux** user, then you can install `ripgrep` from the
-[`ripgrep` AUR package](https://aur.archlinux.org/packages/ripgrep/), e.g.,
+If you're an **Arch Linux** user, then you can install `ripgrep` from the official repos:
 
 ```
-$ yaourt -S ripgrep
+$ pacman -Syu ripgrep
 ```
 
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
