@@ -687,6 +687,18 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     assert_eq!(lines, expected);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/68
+clean!(feature_68, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "foo");
+    wd.create(".ignore", "bar");
+    wd.create("foo", "test");
+    wd.create("bar", "test");
+    cmd.arg("--no-ignore-vcs");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:test\n");
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

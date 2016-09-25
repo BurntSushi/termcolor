@@ -147,6 +147,10 @@ Less common options:
     --no-ignore-parent
         Don't respect ignore files in parent directories.
 
+    --no-ignore-vcs
+        Don't respect version control ignore files (e.g., .gitignore).
+        Note that .ignore files will continue to be respected.
+
     -p, --pretty
         Alias for --color=always --heading -n.
 
@@ -205,6 +209,7 @@ pub struct RawArgs {
     flag_no_heading: bool,
     flag_no_ignore: bool,
     flag_no_ignore_parent: bool,
+    flag_no_ignore_vcs: bool,
     flag_no_line_number: bool,
     flag_no_mmap: bool,
     flag_no_filename: bool,
@@ -250,6 +255,7 @@ pub struct Args {
     mmap: bool,
     no_ignore: bool,
     no_ignore_parent: bool,
+    no_ignore_vcs: bool,
     quiet: bool,
     replace: Option<Vec<u8>>,
     text: bool,
@@ -374,6 +380,9 @@ impl RawArgs {
             no_ignore_parent:
                 // --no-ignore implies --no-ignore-parent
                 self.flag_no_ignore_parent || no_ignore,
+            no_ignore_vcs:
+                // --no-ignore implies --no-ignore-vcs
+                self.flag_no_ignore_vcs || no_ignore,
             quiet: self.flag_quiet,
             replace: self.flag_replace.clone().map(|s| s.into_bytes()),
             text: text,
@@ -639,6 +648,7 @@ impl Args {
         let mut ig = Ignore::new();
         ig.ignore_hidden(!self.hidden);
         ig.no_ignore(self.no_ignore);
+        ig.no_ignore_vcs(self.no_ignore_vcs);
         ig.add_types(self.types.clone());
         if !self.no_ignore_parent {
             try!(ig.push_parents(path));

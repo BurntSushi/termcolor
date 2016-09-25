@@ -147,6 +147,10 @@ the raw speed of grep.
 --no-ignore-parent
 : Don't respect ignore files in parent directories.
 
+--no-ignore-vcs
+: Don't respect version control ignore files (e.g., .gitignore).
+  Note that .ignore files will continue to be respected.
+
 -p, --pretty
 : Alias for --color=always --heading -n.
 

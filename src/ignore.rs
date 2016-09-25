@@ -89,9 +89,11 @@ pub struct Ignore {
     types: Types,
     /// Whether to ignore hidden files or not.
     ignore_hidden: bool,
-    /// When true, don't look at .gitignore or .agignore files for ignore
+    /// When true, don't look at .gitignore or .ignore files for ignore
     /// rules.
     no_ignore: bool,
+    /// When true, don't look at .gitignore files for ignore rules.
+    no_ignore_vcs: bool,
 }
 
 impl Ignore {
@@ -104,6 +106,7 @@ impl Ignore {
             types: Types::empty(),
             ignore_hidden: true,
             no_ignore: false,
+            no_ignore_vcs: true,
         }
     }
 
@@ -116,6 +119,12 @@ impl Ignore {
     /// When set, ignore files are ignored.
     pub fn no_ignore(&mut self, yes: bool) -> &mut Ignore {
         self.no_ignore = yes;
+        self
+    }
+
+    /// When set, VCS ignore files are ignored.
+    pub fn no_ignore_vcs(&mut self, yes: bool) -> &mut Ignore {
+        self.no_ignore_vcs = yes;
         self
     }
 
@@ -143,6 +152,9 @@ impl Ignore {
         let mut path = &*path;
         let mut saw_git = path.join(".git").is_dir();
         let mut ignore_names = IGNORE_NAMES.to_vec();
+        if self.no_ignore_vcs {
+            ignore_names.retain(|&name| name != ".gitignore");
+        }
         let mut ignore_dir_results = vec![];
         while let Some(parent) = path.parent() {
             if self.no_ignore {
@@ -173,9 +185,12 @@ impl Ignore {
     pub fn push<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         if self.no_ignore {
             self.stack.push(IgnoreDir::empty(path));
-            return Ok(());
+            Ok(())
+        } else if self.no_ignore_vcs {
+            self.push_ignore_dir(IgnoreDir::without_vcs(path))
+        } else {
+            self.push_ignore_dir(IgnoreDir::new(path))
         }
-        self.push_ignore_dir(IgnoreDir::new(path))
     }
 
     /// Pushes the result of building a directory matcher on to the stack.
@@ -305,11 +320,16 @@ pub struct IgnoreDir {
 
 impl IgnoreDir {
     /// Create a new matcher for the given directory.
-    ///
-    /// If no ignore glob patterns could be found in the directory then `None`
-    /// is returned.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<IgnoreDir, Error> {
         IgnoreDir::with_ignore_names(path, IGNORE_NAMES.iter())
+    }
+
+    /// Create a new matcher for the given directory.
+    ///
+    /// Don't respect VCS ignore files.
+    pub fn without_vcs<P: AsRef<Path>>(path: P) -> Result<IgnoreDir, Error> {
+        let names = IGNORE_NAMES.iter().filter(|name| **name != ".gitignore");
+        IgnoreDir::with_ignore_names(path, names)
     }
 
     /// Create a new IgnoreDir that never matches anything with the given path.
