@@ -47,7 +47,6 @@ rg recursively searches your current directory for a regex pattern.
 Common options:
     -a, --text                 Search binary files as if they were text.
     -c, --count                Only show count of line matches for each file.
-    -l, --files-with-matches   Only show path of each file with matches.
     --color WHEN               Whether to use coloring in match.
                                Valid values are never, always or auto.
                                [default: auto]
@@ -111,6 +110,9 @@ Less common options:
 
     --files
         Print each file that would be searched (but don't search).
+
+    -l, --files-with-matches
+        Only show path of each file with matches.
 
     -H, --with-filename
         Prefix each match with the file name that contains it. This is the

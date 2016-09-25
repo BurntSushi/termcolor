@@ -29,9 +29,6 @@ the raw speed of grep.
 -c, --count
 : Only show count of line matches for each file.
 
--l, --files-with-matches
-: Only show path of each file with matches.
-
 --color *WHEN*
 : Whether to use coloring in match. Valid values are never, always or auto.
   [default: auto]
@@ -113,6 +110,9 @@ the raw speed of grep.
 
 --files
 : Print each file that would be searched (but don't search).
+
+-l, --files-with-matches
+: Only show path of each file with matches.
 
 -H, --with-filename
 : Prefix each match with the file name that contains it. This is the
