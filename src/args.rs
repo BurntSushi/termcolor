@@ -279,7 +279,8 @@ impl RawArgs {
             if self.arg_path.is_empty() {
                 if atty::on_stdin()
                     || self.flag_files
-                    || self.flag_type_list {
+                    || self.flag_type_list
+                    || !atty::stdin_is_readable() {
                     vec![Path::new("./").to_path_buf()]
                 } else {
                     vec![Path::new("-").to_path_buf()]

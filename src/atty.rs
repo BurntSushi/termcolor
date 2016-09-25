@@ -5,6 +5,29 @@ both here.
 */
 
 #[cfg(unix)]
+pub fn stdin_is_readable() -> bool {
+    use std::fs::File;
+    use std::os::unix::fs::FileTypeExt;
+    use std::os::unix::io::{FromRawFd, IntoRawFd};
+    use libc;
+
+    let file = unsafe { File::from_raw_fd(libc::STDIN_FILENO) };
+    let md = file.metadata();
+    let _ = file.into_raw_fd();
+    let ft = match md {
+        Err(_) => return false,
+        Ok(md) => md.file_type(),
+    };
+    ft.is_file() || ft.is_fifo()
+}
+
+#[cfg(windows)]
+pub fn stdin_is_readable() -> bool {
+    // ???
+    true
+}
+
+#[cfg(unix)]
 pub fn on_stdin() -> bool {
     use libc;
     0 < unsafe { libc::isatty(libc::STDIN_FILENO) }
