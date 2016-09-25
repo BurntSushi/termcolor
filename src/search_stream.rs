@@ -265,7 +265,8 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn terminate(&self) -> bool {
-        return self.opts.files_with_matches && self.match_count > 0;
+        self.match_count > 0
+        && (self.printer.is_quiet() || self.opts.files_with_matches)
     }
 
     #[inline(always)]

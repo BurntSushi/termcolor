@@ -116,6 +116,11 @@ impl<W: Terminal + Send> Printer<W> {
         self.has_printed
     }
 
+    /// Returns true if the printer has been configured to be quiet.
+    pub fn is_quiet(&self) -> bool {
+        self.quiet
+    }
+
     /// Flushes the underlying writer and returns it.
     pub fn into_inner(mut self) -> W {
         let _ = self.wtr.flush();

@@ -66,7 +66,8 @@ Common options:
     -n, --line-number          Show line numbers (1-based). This is enabled
                                by default at a tty.
     -N, --no-line-number       Suppress line numbers.
-    -q, --quiet                Do not print anything to stdout.
+    -q, --quiet                Do not print anything to stdout. If a match is
+                               found in a file, stop searching that file.
     -r, --replace ARG          Replace every match with the string given.
                                Capture group indices (e.g., $5) and names
                                (e.g., $foo) are supported.

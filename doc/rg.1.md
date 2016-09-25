@@ -61,7 +61,8 @@ the raw speed of grep.
 : Suppress line numbers.
 
 -q, --quiet
-: Do not print anything to stdout.
+: Do not print anything to stdout. If a match is found in a file, stop
+  searching that file.
 
 -r, --replace *ARG*
 : Replace every match with the string given. Capture group indices (e.g., $5)

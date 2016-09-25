@@ -104,7 +104,7 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
                 self.print_match(m.start(), m.end());
             }
             last_end = m.end();
-            if self.opts.files_with_matches {
+            if self.printer.is_quiet() || self.opts.files_with_matches {
                 break;
             }
         }
