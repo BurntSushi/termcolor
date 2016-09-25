@@ -292,6 +292,9 @@ impl RawArgs {
             } else if cfg!(windows) {
                 // On Windows, memory maps appear faster than read calls. Neat.
                 true
+            } else if cfg!(darwin) {
+                // On Mac, memory maps appear to suck. Neat.
+                false
             } else {
                 // If we're only searching a few paths and all of them are
                 // files, then memory maps are probably faster.
