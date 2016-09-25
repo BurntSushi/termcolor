@@ -279,6 +279,9 @@ impl GitignoreBuilder {
         if line.is_empty() || line.starts_with("#") {
             return Ok(());
         }
+        if !line.ends_with("\\ ") {
+            line = line.trim_right();
+        }
         let mut pat = Pattern {
             from: from.as_ref().to_path_buf(),
             original: line.to_string(),
@@ -401,6 +404,7 @@ mod tests {
     ignored!(ig27, ROOT, "foo/", "xyz/foo", true);
     ignored!(ig28, ROOT, "src/*.rs", "src/grep/src/main.rs");
     ignored!(ig29, "./src", "/llvm/", "./src/llvm", true);
+    ignored!(ig30, ROOT, "node_modules/ ", "node_modules", true);
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
