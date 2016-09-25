@@ -114,5 +114,5 @@ pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
 /// the empty string.
 #[cfg(not(unix))]
 pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
-    path.as_ref().parent().map(|p| p.is_empty()).unwrap_or(false)
+    path.as_ref().parent().map(|p| p.as_os_str().is_empty()).unwrap_or(false)
 }
