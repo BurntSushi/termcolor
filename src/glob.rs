@@ -43,12 +43,19 @@ use regex::bytes::RegexSet;
 
 use pathutil::file_name;
 
+lazy_static! {
+    static ref FILE_SEPARATORS: String = regex::quote(r"/\");
+}
+
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     InvalidRecursive,
     UnclosedClass,
     InvalidRange(char, char),
+    UnopenedAlternates,
+    UnclosedAlternates,
+    NestedAlternates,
 }
 
 impl StdError for Error {
@@ -63,6 +70,17 @@ impl StdError for Error {
             Error::InvalidRange(_, _) => {
                 "invalid character range"
             }
+            Error::UnopenedAlternates => {
+                "unopened alternate group; missing '{' \
+                (maybe escape '}' with '[}]'?)"
+            }
+            Error::UnclosedAlternates => {
+                "unclosed alternate group; missing '}' \
+                (maybe escape '{' with '[{]'?)"
+            }
+            Error::NestedAlternates => {
+                "nested alternate groups are not allowed"
+            }
         }
     }
 }
@@ -70,7 +88,11 @@ impl StdError for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::InvalidRecursive | Error::UnclosedClass => {
+            Error::InvalidRecursive
+            | Error::UnclosedClass
+            | Error::UnopenedAlternates
+            | Error::UnclosedAlternates
+            | Error::NestedAlternates => {
                 write!(f, "{}", self.description())
             }
             Error::InvalidRange(s, e) => {
@@ -322,7 +344,7 @@ impl SetBuilder {
 ///
 /// It cannot be used directly to match file paths, but it can be converted
 /// to a regular expression string.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Pattern {
     tokens: Vec<Token>,
 }
@@ -350,6 +372,7 @@ enum Token {
         negated: bool,
         ranges: Vec<(char, char)>,
     },
+    Alternates(Vec<Pattern>),
 }
 
 impl Pattern {
@@ -358,13 +381,19 @@ impl Pattern {
     /// If the pattern is not a valid glob, then an error is returned.
     pub fn new(pat: &str) -> Result<Pattern, Error> {
         let mut p = Parser {
-            p: Pattern::default(),
+            stack: vec![Pattern::default()],
             chars: pat.chars().peekable(),
             prev: None,
             cur: None,
         };
         try!(p.parse());
-        Ok(p.p)
+        if p.stack.is_empty() {
+            Err(Error::UnopenedAlternates)
+        } else if p.stack.len() > 1 {
+            Err(Error::UnclosedAlternates)
+        } else {
+            Ok(p.stack.pop().unwrap())
+        }
     }
 
     /// Returns an extension if this pattern exclusively matches it.
@@ -506,7 +535,6 @@ impl Pattern {
     /// regular expression and will represent the matching semantics of this
     /// glob pattern and the options given.
     pub fn to_regex_with(&self, options: &MatchOptions) -> String {
-        let seps = regex::quote(r"/\");
         let mut re = String::new();
         re.push_str("(?-u)");
         if options.case_insensitive {
@@ -520,7 +548,20 @@ impl Pattern {
             re.push('$');
             return re;
         }
-        for tok in &self.tokens {
+        self.tokens_to_regex(options, &self.tokens, &mut re);
+        re.push('$');
+        re
+    }
+
+    fn tokens_to_regex(
+        &self,
+        options: &MatchOptions,
+        tokens: &[Token],
+        re: &mut String,
+    ) {
+        let seps = &*FILE_SEPARATORS;
+
+        for tok in tokens {
             match *tok {
                 Token::Literal(c) => {
                     re.push_str(&regex::quote(&c.to_string()));
@@ -566,15 +607,22 @@ impl Pattern {
                     }
                     re.push(']');
                 }
+                Token::Alternates(ref patterns) => {
+                    let mut parts = vec![];
+                    for pat in patterns {
+                        let mut altre = String::new();
+                        self.tokens_to_regex(options, &pat.tokens, &mut altre);
+                        parts.push(altre);
+                    }
+                    re.push_str(&parts.join("|"));
+                }
             }
         }
-        re.push('$');
-        re
     }
 }
 
 struct Parser<'a> {
-    p: Pattern,
+    stack: Vec<Pattern>,
     chars: iter::Peekable<str::Chars<'a>>,
     prev: Option<char>,
     cur: Option<char>,
@@ -584,44 +632,101 @@ impl<'a> Parser<'a> {
     fn parse(&mut self) -> Result<(), Error> {
         while let Some(c) = self.bump() {
             match c {
-                '?' => self.p.tokens.push(Token::Any),
+                '?' => try!(self.push_token(Token::Any)),
                 '*' => try!(self.parse_star()),
                 '[' => try!(self.parse_class()),
-                c => self.p.tokens.push(Token::Literal(c)),
+                '{' => try!(self.push_alternate()),
+                '}' => try!(self.pop_alternate()),
+                ',' => try!(self.parse_comma()),
+                c => try!(self.push_token(Token::Literal(c))),
             }
         }
         Ok(())
     }
 
+    fn push_alternate(&mut self) -> Result<(), Error> {
+        if self.stack.len() > 1 {
+            return Err(Error::NestedAlternates);
+        }
+        Ok(self.stack.push(Pattern::default()))
+    }
+
+    fn pop_alternate(&mut self) -> Result<(), Error> {
+        let mut alts = vec![];
+        while self.stack.len() >= 2 {
+            alts.push(self.stack.pop().unwrap());
+        }
+        self.push_token(Token::Alternates(alts))
+    }
+
+    fn push_token(&mut self, tok: Token) -> Result<(), Error> {
+        match self.stack.last_mut() {
+            None => Err(Error::UnopenedAlternates),
+            Some(ref mut pat) => Ok(pat.tokens.push(tok)),
+        }
+    }
+
+    fn pop_token(&mut self) -> Result<Token, Error> {
+        match self.stack.last_mut() {
+            None => Err(Error::UnopenedAlternates),
+            Some(ref mut pat) => Ok(pat.tokens.pop().unwrap()),
+        }
+    }
+
+    fn have_tokens(&self) -> Result<bool, Error> {
+        match self.stack.last() {
+            None => Err(Error::UnopenedAlternates),
+            Some(ref pat) => Ok(!pat.tokens.is_empty()),
+        }
+    }
+
+    fn parse_comma(&mut self) -> Result<(), Error> {
+        // If we aren't inside a group alternation, then don't
+        // treat commas specially. Otherwise, we need to start
+        // a new alternate.
+        if self.stack.len() <= 1 {
+            self.push_token(Token::Literal(','))
+        } else {
+            Ok(self.stack.push(Pattern::default()))
+        }
+    }
+
     fn parse_star(&mut self) -> Result<(), Error> {
         let prev = self.prev;
         if self.chars.peek() != Some(&'*') {
-            self.p.tokens.push(Token::ZeroOrMore);
+            try!(self.push_token(Token::ZeroOrMore));
             return Ok(());
         }
         assert!(self.bump() == Some('*'));
-        if self.p.tokens.is_empty() {
-            self.p.tokens.push(Token::RecursivePrefix);
+        if !try!(self.have_tokens()) {
+            try!(self.push_token(Token::RecursivePrefix));
             let next = self.bump();
             if !next.is_none() && next != Some('/') {
                 return Err(Error::InvalidRecursive);
             }
             return Ok(());
         }
-        self.p.tokens.pop().unwrap();
+        try!(self.pop_token());
         if prev != Some('/') {
-            return Err(Error::InvalidRecursive);
+            if self.stack.len() <= 1
+                || (prev != Some(',') && prev != Some('{')) {
+                return Err(Error::InvalidRecursive);
+            }
         }
-        let next = self.bump();
-        if next.is_none() {
-            self.p.tokens.push(Token::RecursiveSuffix);
-            return Ok(());
+        match self.chars.peek() {
+            None => {
+                assert!(self.bump().is_none());
+                self.push_token(Token::RecursiveSuffix)
+            }
+            Some(&',') | Some(&'}') if self.stack.len() >= 2 => {
+                self.push_token(Token::RecursiveSuffix)
+            }
+            Some(&'/') => {
+                assert!(self.bump() == Some('/'));
+                self.push_token(Token::RecursiveZeroOrMore)
+            }
+            _ => Err(Error::InvalidRecursive),
         }
-        if next != Some('/') {
-            return Err(Error::InvalidRecursive);
-        }
-        self.p.tokens.push(Token::RecursiveZeroOrMore);
-        Ok(())
     }
 
     fn parse_class(&mut self) -> Result<(), Error> {
@@ -691,11 +796,10 @@ impl<'a> Parser<'a> {
             // it as a literal.
             ranges.push(('-', '-'));
         }
-        self.p.tokens.push(Token::Class {
+        self.push_token(Token::Class {
             negated: negated,
             ranges: ranges,
-        });
-        Ok(())
+        })
     }
 
     fn bump(&mut self) -> Option<char> {
@@ -994,6 +1098,20 @@ mod tests {
     matches!(matchcasei2, "aBcDeFg", "abcdefg", CASEI);
     matches!(matchcasei3, "aBcDeFg", "ABCDEFG", CASEI);
     matches!(matchcasei4, "aBcDeFg", "AbCdEfG", CASEI);
+
+    matches!(matchalt1, "a,b", "a,b");
+    matches!(matchalt2, ",", ",");
+    matches!(matchalt3, "{a,b}", "a");
+    matches!(matchalt4, "{a,b}", "b");
+    matches!(matchalt5, "{**/src/**,foo}", "abc/src/bar");
+    matches!(matchalt6, "{**/src/**,foo}", "foo");
+    matches!(matchalt7, "{[}],foo}", "}");
+    matches!(matchalt8, "{foo}", "foo");
+    matches!(matchalt9, "{}", "");
+    matches!(matchalt10, "{,}", "");
+    matches!(matchalt11, "{*.foo,*.bar,*.wat}", "test.foo");
+    matches!(matchalt12, "{*.foo,*.bar,*.wat}", "test.bar");
+    matches!(matchalt13, "{*.foo,*.bar,*.wat}", "test.wat");
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     nmatches!(matchslash2, "abc?def", "abc/def", SLASHLIT);
