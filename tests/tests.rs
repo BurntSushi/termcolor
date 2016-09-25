@@ -292,6 +292,20 @@ sherlock!(glob_negate, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "file.py:Sherlock\n");
 });
 
+sherlock!(count, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--count");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "sherlock:2\n";
+    assert_eq!(lines, expected);
+});
+
+sherlock!(files_with_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--files-with-matches");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "sherlock\n";
+    assert_eq!(lines, expected);
+});
+
 sherlock!(after_context, |wd: WorkDir, mut cmd: Command| {
     cmd.arg("-A").arg("1");
     let lines: String = wd.stdout(&mut cmd);

@@ -16,6 +16,7 @@ disable_cross_doctests() {
 }
 
 run_test_suite() {
+    cargo clean --target $TARGET --verbose
     cargo build --target $TARGET --verbose
     cargo test --target $TARGET --verbose
 

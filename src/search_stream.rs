@@ -80,6 +80,7 @@ pub struct Options {
     pub after_context: usize,
     pub before_context: usize,
     pub count: bool,
+    pub files_with_matches: bool,
     pub eol: u8,
     pub invert_match: bool,
     pub line_number: bool,
@@ -92,11 +93,21 @@ impl Default for Options {
             after_context: 0,
             before_context: 0,
             count: false,
+            files_with_matches: false,
             eol: b'\n',
             invert_match: false,
             line_number: false,
             text: false,
         }
+    }
+
+}
+
+impl Options {
+    /// Both --count and --files-with-matches options imply that we should not
+    /// display matches at all.
+    pub fn skip_matches(&self) -> bool {
+        return self.count || self.files_with_matches;
     }
 }
 
@@ -158,6 +169,14 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
         self
     }
 
+    /// If enabled, searching will print the path instead of each match.
+    ///
+    /// Disabled by default.
+    pub fn files_with_matches(mut self, yes: bool) -> Self {
+        self.opts.files_with_matches = yes;
+        self
+    }
+
     /// Set the end-of-line byte used by this searcher.
     pub fn eol(mut self, eol: u8) -> Self {
         self.opts.eol = eol;
@@ -193,7 +212,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
         self.line_count = if self.opts.line_number { Some(0) } else { None };
         self.last_match = Match::default();
         self.after_context_remaining = 0;
-        loop {
+        while !self.terminate() {
             let upto = self.inp.lastnl;
             self.print_after_context(upto);
             if !try!(self.fill()) {
@@ -202,7 +221,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
             if !self.opts.text && self.inp.is_binary {
                 break;
             }
-            while self.inp.pos < self.inp.lastnl {
+            while !self.terminate() && self.inp.pos < self.inp.lastnl {
                 let matched = self.grep.read_match(
                     &mut self.last_match,
                     &mut self.inp.buf[..self.inp.lastnl],
@@ -234,10 +253,19 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
                 }
             }
         }
-        if self.opts.count && self.match_count > 0 {
-            self.printer.path_count(self.path, self.match_count);
+        if self.match_count > 0 {
+            if self.opts.count {
+                self.printer.path_count(self.path, self.match_count);
+            } else if self.opts.files_with_matches {
+                self.printer.path(self.path);
+            }
         }
         Ok(self.match_count)
+    }
+
+    #[inline(always)]
+    fn terminate(&self) -> bool {
+        return self.opts.files_with_matches && self.match_count > 0;
     }
 
     #[inline(always)]
@@ -281,7 +309,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_before_context(&mut self, upto: usize) {
-        if self.opts.count || self.opts.before_context == 0 {
+        if self.opts.skip_matches() || self.opts.before_context == 0 {
             return;
         }
         let start = self.last_printed;
@@ -304,7 +332,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_after_context(&mut self, upto: usize) {
-        if self.opts.count || self.after_context_remaining == 0 {
+        if self.opts.skip_matches() || self.after_context_remaining == 0 {
             return;
         }
         let start = self.last_printed;
@@ -322,7 +350,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
         self.match_count += 1;
-        if self.opts.count {
+        if self.opts.skip_matches() {
             return;
         }
         self.print_separator(start);
@@ -990,6 +1018,14 @@ fn main() {
             "Sherlock", SHERLOCK, |s| s.count(true));
         assert_eq!(2, count);
         assert_eq!(out, "/baz.rs:2\n");
+    }
+
+    #[test]
+    fn files_with_matches() {
+        let (count, out) = search_smallcap(
+            "Sherlock", SHERLOCK, |s| s.files_with_matches(true));
+        assert_eq!(1, count);
+        assert_eq!(out, "/baz.rs\n");
     }
 
     #[test]
