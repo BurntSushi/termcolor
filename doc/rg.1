@@ -272,11 +272,15 @@ Show all supported file types and their associated globs.
 .TP
 .B \-\-type\-add \f[I]ARG\f[] ...
 Add a new glob for a particular file type.
+Only one glob can be added at a time.
+Multiple \-\-type\-add flags can be provided.
+Unless \-\-type\-clear is used, globs are added to any existing globs
+inside of ripgrep.
 Note that this must be passed to every invocation of rg.
 .RS
 .RE
 .PP
-Example: \-\-type\-add html:\f[I]\&.html,\f[].htm
+Example: \f[C]\-\-type\-add\ html:*.html\f[]
 .TP
 .B \-\-type\-clear \f[I]TYPE\f[] ...
 Clear the file type globs previously defined for TYPE.
