@@ -663,6 +663,18 @@ clean!(regression_65, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/67
+clean!(regression_67, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "/*\n!/dir");
+    wd.create_dir("dir");
+    wd.create_dir("foo");
+    wd.create("foo/bar", "test");
+    wd.create("dir/bar", "test");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "dir/bar:test\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--no-filename");

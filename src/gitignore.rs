@@ -276,7 +276,7 @@ impl GitignoreBuilder {
         from: P,
         mut line: &str,
     ) -> Result<(), Error> {
-        if line.is_empty() {
+        if line.is_empty() || line.starts_with("#") {
             return Ok(());
         }
         let mut pat = Pattern {
@@ -289,24 +289,14 @@ impl GitignoreBuilder {
         let mut opts = glob::MatchOptions::default();
         let has_slash = line.chars().any(|c| c == '/');
         let is_absolute = line.chars().nth(0).unwrap() == '/';
-        // If the line starts with an escaped '!', then remove the escape.
-        // Otherwise, if it starts with an unescaped '!', then this is a
-        // whitelist pattern.
-        match line.chars().nth(0) {
-            Some('#') => return Ok(()),
-            Some('\\') => {
-                match line.chars().nth(1) {
-                    Some('!') | Some('#') => {
-                        line = &line[1..];
-                    }
-                    _ => {}
-                }
-            }
-            Some('!') => {
+        if line.starts_with("\\!") || line.starts_with("\\#") {
+            line = &line[1..];
+        } else {
+            if line.starts_with("!") {
                 pat.whitelist = true;
                 line = &line[1..];
             }
-            Some('/') => {
+            if line.starts_with("/") {
                 // `man gitignore` says that if a glob starts with a slash,
                 // then the glob can only match the beginning of a path
                 // (relative to the location of gitignore). We achieve this by
@@ -314,7 +304,6 @@ impl GitignoreBuilder {
                 opts.require_literal_separator = true;
                 line = &line[1..];
             }
-            _ => {}
         }
         // If it ends with a slash, then this should only match directories,
         // but the slash should otherwise not be used while globbing.
