@@ -52,6 +52,7 @@ pub struct GrepBuilder {
 #[derive(Clone, Debug)]
 struct Options {
     case_insensitive: bool,
+    case_smart: bool,
     line_terminator: u8,
     size_limit: usize,
     dfa_size_limit: usize,
@@ -61,6 +62,7 @@ impl Default for Options {
     fn default() -> Options {
         Options {
             case_insensitive: false,
+            case_smart: false,
             line_terminator: b'\n',
             size_limit: 10 * (1 << 20),
             dfa_size_limit: 10 * (1 << 20),
@@ -95,6 +97,18 @@ impl GrepBuilder {
     /// Set the case sensitive flag (`i`) on the regex.
     pub fn case_insensitive(mut self, yes: bool) -> GrepBuilder {
         self.opts.case_insensitive = yes;
+        self
+    }
+
+    /// Whether to enable smart case search or not (disabled by default).
+    ///
+    /// Smart case uses case insensitive search if the regex is contains all
+    /// lowercase literal characters. Otherwise, a case sensitive search is
+    /// used instead.
+    ///
+    /// Enabling the case_insensitive flag overrides this.
+    pub fn case_smart(mut self, yes: bool) -> GrepBuilder {
+        self.opts.case_smart = yes;
         self
     }
 
@@ -148,8 +162,11 @@ impl GrepBuilder {
     /// Creates a new regex from the given expression with the current
     /// configuration.
     fn regex(&self, expr: &Expr) -> Result<Regex> {
+        let casei =
+            self.opts.case_insensitive
+            || (self.opts.case_smart && !has_uppercase_literal(expr));
         RegexBuilder::new(&expr.to_string())
-            .case_insensitive(self.opts.case_insensitive)
+            .case_insensitive(casei)
             .multi_line(true)
             .unicode(true)
             .size_limit(self.opts.size_limit)
@@ -271,6 +288,23 @@ impl<'b, 's> Iterator for Iter<'b, 's> {
         }
         self.start = mat.end;
         Some(mat)
+    }
+}
+
+fn has_uppercase_literal(expr: &Expr) -> bool {
+    use syntax::Expr::*;
+    match *expr {
+        Literal { ref chars, casei } => {
+            casei || chars.iter().any(|c| c.is_uppercase())
+        }
+        LiteralBytes { ref bytes, casei } => {
+            casei || bytes.iter().any(|&b| b'A' <= b && b <= b'Z')
+        }
+        Group { ref e, .. } => has_uppercase_literal(e),
+        Repeat { ref e, .. } => has_uppercase_literal(e),
+        Concat(ref es) => es.iter().any(has_uppercase_literal),
+        Alternate(ref es) => es.iter().any(has_uppercase_literal),
+        _ => false,
     }
 }
 

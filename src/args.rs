@@ -154,6 +154,10 @@ Less common options:
     -p, --pretty
         Alias for --color=always --heading -n.
 
+    -S, --smart-case
+        Search case insensitively if the pattern is all lowercase.
+        Search case sensitively otherwise.
+
     -j, --threads ARG
         The number of threads to use. Defaults to the number of logical CPUs
         (capped at 6). [default: 0]
@@ -217,6 +221,7 @@ pub struct RawArgs {
     flag_quiet: bool,
     flag_regexp: Vec<String>,
     flag_replace: Option<String>,
+    flag_smart_case: bool,
     flag_text: bool,
     flag_threads: usize,
     flag_type: Vec<String>,
@@ -348,6 +353,7 @@ impl RawArgs {
         let types = try!(btypes.build());
         let grep = try!(
             GrepBuilder::new(&pattern)
+                .case_smart(self.flag_smart_case)
                 .case_insensitive(self.flag_ignore_case)
                 .line_terminator(eol)
                 .build()

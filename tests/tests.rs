@@ -699,6 +699,18 @@ clean!(feature_68, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "foo:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/70
+sherlock!(feature_70, "sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--smart-case");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

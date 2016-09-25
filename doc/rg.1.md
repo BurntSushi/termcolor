@@ -154,6 +154,10 @@ the raw speed of grep.
 -p, --pretty
 : Alias for --color=always --heading -n.
 
+-S, --smart-case
+: Search case insensitively if the pattern is all lowercase.
+  Search case sensitively otherwise.
+
 -j, --threads *ARG*
 : The number of threads to use. Defaults to the number of logical CPUs
   (capped at 6). [default: 0]
