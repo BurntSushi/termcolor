@@ -217,30 +217,40 @@ impl Ignore {
             return true;
         }
         if !self.no_ignore {
+            let mut whitelisted = false;
             for id in self.stack.iter().rev() {
                 let mat = id.matched(path, is_dir);
+                // println!("path: {}, mat: {:?}, id: {:?}",
+                         // path.display(), mat, id);
                 if let Some(is_ignored) = self.ignore_match(path, mat) {
                     if is_ignored {
                         return true;
                     }
                     // If this path is whitelisted by an ignore, then
                     // fallthrough and let the file type matcher have a say.
+                    whitelisted = true;
                     break;
                 }
             }
-            let mut path = path.to_path_buf();
-            for id in self.parent_stack.iter().rev() {
-                if let Some(ref dirname) = id.name {
-                    path = Path::new(dirname).join(path);
-                }
-                let mat = id.matched(&*path, is_dir);
-                if let Some(is_ignored) = self.ignore_match(&*path, mat) {
-                    if is_ignored {
-                        return true;
+            // If the file has been whitelisted, then we have to stop checking
+            // parent directories. The only thing that can override a whitelist
+            // at this point is a type filter.
+            if !whitelisted {
+                let mut path = path.to_path_buf();
+                for id in self.parent_stack.iter().rev() {
+                    if let Some(ref dirname) = id.name {
+                        path = Path::new(dirname).join(path);
                     }
-                    // If this path is whitelisted by an ignore, then
-                    // fallthrough and let the file type matcher have a say.
-                    break;
+                    let mat = id.matched(&*path, is_dir);
+                    if let Some(is_ignored) = self.ignore_match(&*path, mat) {
+                        if is_ignored {
+                            return true;
+                        }
+                        // If this path is whitelisted by an ignore, then
+                        // fallthrough and let the file type matcher have a
+                        // say.
+                        break;
+                    }
                 }
             }
         }
