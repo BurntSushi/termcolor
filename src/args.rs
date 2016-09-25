@@ -463,7 +463,7 @@ impl Args {
                 }
             }
         }
-        let raw: RawArgs =
+        let mut raw: RawArgs =
             Docopt::new(USAGE)
                 .and_then(|d| d.argv(argv).version(Some(version())).decode())
                 .unwrap_or_else(|e| e.exit());
@@ -478,6 +478,13 @@ impl Args {
             errored!("failed to initialize logger: {}", err);
         }
 
+        // *sigh*... If --files is given, then the first path ends up in
+        // pattern.
+        if raw.flag_files {
+            if !raw.arg_pattern.is_empty() {
+                raw.arg_path.insert(0, raw.arg_pattern.clone());
+            }
+        }
         raw.to_args().map_err(From::from)
     }
 

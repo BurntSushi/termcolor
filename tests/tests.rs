@@ -744,6 +744,25 @@ fn files() {
     }
 }
 
+// See: https://github.com/BurntSushi/ripgrep/issues/64
+#[test]
+fn regression_64() {
+    let wd = WorkDir::new("regression_64");
+    wd.create_dir("dir");
+    wd.create_dir("foo");
+    wd.create("dir/abc", "");
+    wd.create("foo/abc", "");
+
+    let mut cmd = wd.command();
+    cmd.arg("--files").arg("foo");
+    let lines: String = wd.stdout(&mut cmd);
+    if cfg!(windows) {
+        assert_eq!(lines, "foo\\abc\n");
+    } else {
+        assert_eq!(lines, "foo/abc\n");
+    }
+}
+
 #[test]
 fn type_list() {
     let wd = WorkDir::new("type_list");
