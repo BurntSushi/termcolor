@@ -28,6 +28,7 @@ use std::process;
 use std::result;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::cmp;
 
 use deque::{Stealer, Stolen};
 use grep::Grep;
@@ -102,7 +103,7 @@ fn run(args: Args) -> Result<u64> {
 
     let workq = {
         let (workq, stealer) = deque::new();
-        for _ in 0..args.threads() {
+        for _ in 0..cmp::max(1, args.threads() - 1) {
             let worker = MultiWorker {
                 chan_work: stealer.clone(),
                 out: out.clone(),
