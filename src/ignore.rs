@@ -227,16 +227,10 @@ impl Ignore {
         if let Some(is_ignored) = self.ignore_match(path, mat) {
             return is_ignored;
         }
-        if self.ignore_hidden && is_hidden(&path) {
-            debug!("{} ignored because it is hidden", path.display());
-            return true;
-        }
+        let mut whitelisted = false;
         if !self.no_ignore {
-            let mut whitelisted = false;
             for id in self.stack.iter().rev() {
                 let mat = id.matched(path, is_dir);
-                // println!("path: {}, mat: {:?}, id: {:?}",
-                         // path.display(), mat, id);
                 if let Some(is_ignored) = self.ignore_match(path, mat) {
                     if is_ignored {
                         return true;
@@ -264,6 +258,7 @@ impl Ignore {
                         // If this path is whitelisted by an ignore, then
                         // fallthrough and let the file type matcher have a
                         // say.
+                        whitelisted = true;
                         break;
                     }
                 }
@@ -271,7 +266,14 @@ impl Ignore {
         }
         let mat = self.types.matched(path, is_dir);
         if let Some(is_ignored) = self.ignore_match(path, mat) {
-            return is_ignored;
+            if is_ignored {
+                return true;
+            }
+            whitelisted = true;
+        }
+        if !whitelisted && self.ignore_hidden && is_hidden(&path) {
+            debug!("{} ignored because it is hidden", path.display());
+            return true;
         }
         false
     }

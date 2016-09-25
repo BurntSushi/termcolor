@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 use regex;
 
 use glob;
-use pathutil::strip_prefix;
+use pathutil::{is_file_name, strip_prefix};
 
 /// Represents an error that can occur when parsing a gitignore file.
 #[derive(Debug)]
@@ -115,8 +115,15 @@ impl Gitignore {
         if let Some(p) = strip_prefix("./", path) {
             path = p;
         }
-        if let Some(p) = strip_prefix(&self.root, path) {
-            path = p;
+        // Strip any common prefix between the candidate path and the root
+        // of the gitignore, to make sure we get relative matching right.
+        // BUT, a file name might not have any directory components to it,
+        // in which case, we don't want to accidentally strip any part of the
+        // file name.
+        if !is_file_name(path) {
+            if let Some(p) = strip_prefix(&self.root, path) {
+                path = p;
+            }
         }
         if let Some(p) = strip_prefix("/", path) {
             path = p;

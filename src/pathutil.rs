@@ -98,3 +98,21 @@ pub fn is_hidden<P: AsRef<Path>>(path: P) -> bool {
         false
     }
 }
+
+/// Returns true if this file path is just a file name. i.e., Its parent is
+/// the empty string.
+#[cfg(unix)]
+pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::ffi::OsStrExt;
+    use memchr::memchr;
+
+    let path = path.as_ref().as_os_str().as_bytes();
+    memchr(b'/', path).is_none()
+}
+
+/// Returns true if this file path is just a file name. i.e., Its parent is
+/// the empty string.
+#[cfg(not(unix))]
+pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().parent().map(|p| p.is_empty()).unwrap_or(false)
+}
