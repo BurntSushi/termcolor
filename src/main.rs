@@ -322,7 +322,11 @@ impl Worker {
     ) -> Result<u64> {
         if try!(file.metadata()).len() == 0 {
             // Opening a memory map with an empty file results in an error.
-            return Ok(0);
+            // However, this may not actually be an empty file! For example,
+            // /proc/cpuinfo reports itself as an empty file, but it can
+            // produce data when it's read from. Therefore, we fall back to
+            // regular read calls.
+            return self.search(printer, path, file);
         }
         let mmap = try!(Mmap::open(file, Protection::Read));
         Ok(self.args.searcher_buffer(
