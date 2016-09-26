@@ -145,14 +145,14 @@ impl<W: Terminal + Send> Printer<W> {
     /// Prints the given path.
     pub fn path<P: AsRef<Path>>(&mut self, path: P) {
         let path = strip_prefix("./", path.as_ref()).unwrap_or(path.as_ref());
-        self.write(path.to_string_lossy().as_bytes());
+        self.write_path(path);
         self.write_eol();
     }
 
     /// Prints the given path and a count of the number of matches found.
     pub fn path_count<P: AsRef<Path>>(&mut self, path: P, count: u64) {
         if self.with_filename {
-            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write_path(path);
             self.write(b":");
         }
         self.write(count.to_string().as_bytes());
@@ -186,7 +186,7 @@ impl<W: Terminal + Send> Printer<W> {
             let column =
                 if self.column {
                     Some(re.find(&buf[start..end])
-                            .map(|(s, _)| s + 1).unwrap_or(0) as u64)
+                           .map(|(s, _)| s + 1).unwrap_or(0) as u64)
                 } else {
                     None
                 };
@@ -213,7 +213,7 @@ impl<W: Terminal + Send> Printer<W> {
         if self.heading && self.with_filename && !self.has_printed {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
-            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write_path(path.as_ref());
             self.write(b":");
         }
         if let Some(line_number) = line_number {
@@ -263,7 +263,7 @@ impl<W: Terminal + Send> Printer<W> {
         if self.heading && self.with_filename && !self.has_printed {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
-            self.write(path.as_ref().to_string_lossy().as_bytes());
+            self.write_path(path.as_ref());
             self.write(b"-");
         }
         if let Some(line_number) = line_number {
@@ -280,7 +280,7 @@ impl<W: Terminal + Send> Printer<W> {
             let _ = self.wtr.fg(color::BRIGHT_GREEN);
             let _ = self.wtr.attr(Attr::Bold);
         }
-        self.write(path.as_ref().to_string_lossy().as_bytes());
+        self.write_path(path.as_ref());
         self.write_eol();
         if self.wtr.supports_color() {
             let _ = self.wtr.reset();
@@ -297,6 +297,19 @@ impl<W: Terminal + Send> Printer<W> {
             let _ = self.wtr.reset();
         }
         self.write(&[sep]);
+    }
+
+    #[cfg(unix)]
+    fn write_path<P: AsRef<Path>>(&mut self, path: P) {
+        use std::os::unix::ffi::OsStrExt;
+
+        let path = path.as_ref().as_os_str().as_bytes();
+        self.write(path);
+    }
+
+    #[cfg(not(unix))]
+    fn write_path<P: AsRef<Path>>(&mut self, p: P) {
+        self.write(path.as_ref().to_string_lossy().as_bytes());
     }
 
     fn write(&mut self, buf: &[u8]) {
