@@ -22,7 +22,7 @@ extern crate winapi;
 
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io;
 use std::path::Path;
 use std::process;
 use std::result;
@@ -157,31 +157,28 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
         match_count: 0,
     };
     let paths = args.paths();
-    let filesep = args.file_separator();
     let mut term = args.stdout();
 
     let mut paths_searched: u64 = 0;
     for p in paths {
         if p == Path::new("-") {
-            if worker.match_count > 0 {
-                if let Some(ref sep) = filesep {
-                    let _ = term.write_all(sep);
-                    let _ = term.write_all(b"\n");
-                }
-            }
             paths_searched += 1;
             let mut printer = args.printer(&mut term);
+            if worker.match_count > 0 {
+                if let Some(sep) = args.file_separator() {
+                    printer = printer.file_separator(sep);
+                }
+            }
             worker.do_work(&mut printer, WorkReady::Stdin);
         } else {
             for ent in try!(args.walker(p)) {
-                if worker.match_count > 0 {
-                    if let Some(ref sep) = filesep {
-                        let _ = term.write_all(sep);
-                        let _ = term.write_all(b"\n");
-                    }
-                }
                 paths_searched += 1;
                 let mut printer = args.printer(&mut term);
+                if worker.match_count > 0 {
+                    if let Some(sep) = args.file_separator() {
+                        printer = printer.file_separator(sep);
+                    }
+                }
                 let file = match File::open(ent.path()) {
                     Ok(file) => file,
                     Err(err) => {

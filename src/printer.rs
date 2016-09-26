@@ -25,6 +25,8 @@ pub struct Printer<W> {
     /// printed via the match directly, but occasionally we need to insert them
     /// ourselves (for example, to print a context separator).
     eol: u8,
+    /// A file separator to show before any matches are printed.
+    file_separator: Option<Vec<u8>>,
     /// Whether to show file name as a heading or not.
     ///
     /// N.B. If with_filename is false, then this setting has no effect.
@@ -51,6 +53,7 @@ impl<W: Terminal + Send> Printer<W> {
             column: false,
             context_separator: "--".to_string().into_bytes(),
             eol: b'\n',
+            file_separator: None,
             heading: false,
             line_per_match: false,
             quiet: false,
@@ -76,6 +79,13 @@ impl<W: Terminal + Send> Printer<W> {
     /// Set the end-of-line terminator. The default is `\n`.
     pub fn eol(mut self, eol: u8) -> Printer<W> {
         self.eol = eol;
+        self
+    }
+
+    /// If set, the separator is printed before any matches. By default, no
+    /// separator is printed.
+    pub fn file_separator(mut self, sep: Vec<u8>) -> Printer<W> {
+        self.file_separator = Some(sep);
         self
     }
 
@@ -230,6 +240,7 @@ impl<W: Terminal + Send> Printer<W> {
         column: Option<u64>,
     ) {
         if self.heading && self.with_filename && !self.has_printed {
+            self.write_file_sep();
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
             self.write_path(path.as_ref());
@@ -284,6 +295,7 @@ impl<W: Terminal + Send> Printer<W> {
         line_number: Option<u64>,
     ) {
         if self.heading && self.with_filename && !self.has_printed {
+            self.write_file_sep();
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
             self.write_path(path.as_ref());
@@ -354,5 +366,16 @@ impl<W: Terminal + Send> Printer<W> {
     fn write_eol(&mut self) {
         let eol = self.eol;
         self.write(&[eol]);
+    }
+
+    fn write_file_sep(&mut self) {
+        if self.quiet {
+            return;
+        }
+        if let Some(ref sep) = self.file_separator {
+            self.has_printed = true;
+            let _ = self.wtr.write_all(sep);
+            let _ = self.wtr.write_all(b"\n");
+        }
     }
 }

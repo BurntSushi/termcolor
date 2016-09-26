@@ -54,6 +54,13 @@ fn path(unix: &str) -> String {
     }
 }
 
+fn sort_lines(lines: &str) -> String {
+    let mut lines: Vec<String> =
+        lines.trim().lines().map(|s| s.to_owned()).collect();
+    lines.sort();
+    format!("{}\n", lines.join("\n"))
+}
+
 sherlock!(single_file, |wd: WorkDir, mut cmd| {
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
@@ -714,6 +721,18 @@ clean!(regression_93, r"(\d{1,3}\.){3}\d{1,3}", ".",
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "foo:192.168.1.1\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/99
+clean!(regression_99, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("foo1", "test");
+    wd.create("foo2", "zzz");
+    wd.create("bar", "test");
+    cmd.arg("-j1").arg("--heading");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(sort_lines(&lines), sort_lines("bar\ntest\n\nfoo1\ntest\n"));
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/105

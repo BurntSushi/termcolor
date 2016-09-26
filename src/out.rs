@@ -48,8 +48,6 @@ impl Out {
 
     /// If set, the separator is printed between matches from different files.
     /// By default, no separator is printed.
-    ///
-    /// If sep is empty, then no file separator is printed.
     pub fn file_separator(mut self, sep: Vec<u8>) -> Out {
         self.file_separator = Some(sep);
         self
