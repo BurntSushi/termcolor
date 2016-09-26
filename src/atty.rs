@@ -27,30 +27,35 @@ pub fn stdin_is_readable() -> bool {
     true
 }
 
+/// Returns true if there is a tty on stdin.
 #[cfg(unix)]
 pub fn on_stdin() -> bool {
     use libc;
     0 < unsafe { libc::isatty(libc::STDIN_FILENO) }
 }
 
+/// Returns true if there is a tty on stdout.
 #[cfg(unix)]
 pub fn on_stdout() -> bool {
     use libc;
     0 < unsafe { libc::isatty(libc::STDOUT_FILENO) }
 }
 
+/// Returns true if there is a tty on stdin.
 #[cfg(windows)]
 pub fn on_stdin() -> bool {
-    use kernel32;
-    use winapi;
-
-    unsafe {
-        let fd = winapi::winbase::STD_INPUT_HANDLE;
-        let mut out = 0;
-        kernel32::GetConsoleMode(kernel32::GetStdHandle(fd), &mut out) != 0
-    }
+    // BUG: https://github.com/BurntSushi/ripgrep/issues/19
+    // It's not clear to me how to determine whether there is a tty on stdin.
+    // Checking GetConsoleMode(GetStdHandle(stdin)) != 0 appears to report
+    // that stdin is a pipe, even if it's not in a cygwin terminal, for
+    // example.
+    //
+    // To fix this, we just assume there is always a tty on stdin. If Windows
+    // users need to search stdin, they'll have to pass -. Ug.
+    true
 }
 
+/// Returns true if there is a tty on stdout.
 #[cfg(windows)]
 pub fn on_stdout() -> bool {
     use kernel32;
