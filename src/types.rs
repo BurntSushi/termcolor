@@ -18,7 +18,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("awk", &["*.awk"]),
     ("c", &["*.c", "*.h", "*.H"]),
     ("cbor", &["*.cbor"]),
-    ("clojure", &["*.clj", "*.cljs"]),
+    ("clojure", &["*.clj", "*.cljc", "*.cljs", "*.cljx"]),
     ("cmake", &["CMakeLists.txt"]),
     ("coffeescript", &["*.coffee"]),
     ("cpp", &[
