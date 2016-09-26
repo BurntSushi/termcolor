@@ -33,6 +33,9 @@ pub struct Printer<W> {
     line_per_match: bool,
     /// Whether to suppress all output.
     quiet: bool,
+    /// Whether to print NUL bytes after a file path instead of new lines
+    /// or `:`.
+    null: bool,
     /// A string to use as a replacement of each match in a matching line.
     replace: Option<Vec<u8>>,
     /// Whether to prefix each match with the corresponding file name.
@@ -51,6 +54,7 @@ impl<W: Terminal + Send> Printer<W> {
             heading: false,
             line_per_match: false,
             quiet: false,
+            null: false,
             replace: None,
             with_filename: false,
         }
@@ -86,6 +90,13 @@ impl<W: Terminal + Send> Printer<W> {
     /// Whether to show every match on its own line.
     pub fn line_per_match(mut self, yes: bool) -> Printer<W> {
         self.line_per_match = yes;
+        self
+    }
+
+    /// Whether to cause NUL bytes to follow file paths instead of other
+    /// visual separators (like `:`, `-` and `\n`).
+    pub fn null(mut self, yes: bool) -> Printer<W> {
+        self.null = yes;
         self
     }
 
@@ -146,14 +157,22 @@ impl<W: Terminal + Send> Printer<W> {
     pub fn path<P: AsRef<Path>>(&mut self, path: P) {
         let path = strip_prefix("./", path.as_ref()).unwrap_or(path.as_ref());
         self.write_path(path);
-        self.write_eol();
+        if self.null {
+            self.write(b"\x00");
+        } else {
+            self.write_eol();
+        }
     }
 
     /// Prints the given path and a count of the number of matches found.
     pub fn path_count<P: AsRef<Path>>(&mut self, path: P, count: u64) {
         if self.with_filename {
             self.write_path(path);
-            self.write(b":");
+            if self.null {
+                self.write(b"\x00");
+            } else {
+                self.write(b":");
+            }
         }
         self.write(count.to_string().as_bytes());
         self.write_eol();
@@ -214,7 +233,11 @@ impl<W: Terminal + Send> Printer<W> {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
             self.write_path(path.as_ref());
-            self.write(b":");
+            if self.null {
+                self.write(b"\x00");
+            } else {
+                self.write(b":");
+            }
         }
         if let Some(line_number) = line_number {
             self.line_number(line_number, b':');
@@ -264,7 +287,11 @@ impl<W: Terminal + Send> Printer<W> {
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
             self.write_path(path.as_ref());
-            self.write(b"-");
+            if self.null {
+                self.write(b"\x00");
+            } else {
+                self.write(b"-");
+            }
         }
         if let Some(line_number) = line_number {
             self.line_number(line_number, b'-');
@@ -281,7 +308,11 @@ impl<W: Terminal + Send> Printer<W> {
             let _ = self.wtr.attr(Attr::Bold);
         }
         self.write_path(path.as_ref());
-        self.write_eol();
+        if self.null {
+            self.write(b"\x00");
+        } else {
+            self.write_eol();
+        }
         if self.wtr.supports_color() {
             let _ = self.wtr.reset();
         }

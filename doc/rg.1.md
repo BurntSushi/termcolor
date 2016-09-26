@@ -155,6 +155,12 @@ the raw speed of grep.
 : Don't respect version control ignore files (e.g., .gitignore).
   Note that .ignore files will continue to be respected.
 
+--null
+: Whenever a file name is printed, follow it with a NUL byte.
+  This includes printing filenames before matches, and when printing
+  a list of matching files such as with --count, --files-with-matches
+  and --files.
+
 -p, --pretty
 : Alias for --color=always --heading -n.
 

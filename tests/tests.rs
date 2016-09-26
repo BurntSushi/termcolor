@@ -770,6 +770,48 @@ sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
     assert_eq!(lines, expected);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/89
+sherlock!(feature_89_files_with_matches, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--null").arg("--files-with-matches");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "sherlock\x00");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/89
+sherlock!(feature_89_count, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--null").arg("--count");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "sherlock\x002\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/89
+sherlock!(feature_89_files, "NADA", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--null").arg("--files");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "sherlock\x00");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/89
+sherlock!(feature_89_match, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--null").arg("-C1");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock\x00For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock\x00Holmeses, success in the province of detective work must always
+sherlock\x00be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock\x00can extract a clew from a wisp of straw or a flake of cigar ash;
+";
+    assert_eq!(lines, expected);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");
