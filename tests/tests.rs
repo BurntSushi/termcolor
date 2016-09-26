@@ -138,7 +138,11 @@ be, to a very large extent, the result of luck. Sherlock Holmes
 foo
 Sherlock Holmes lives on Baker Street.
 ";
-    assert!(lines == expected1 || lines == expected2);
+    if lines != expected1 {
+        assert_eq!(lines, expected2);
+    } else {
+        assert_eq!(lines, expected1);
+    }
 });
 
 sherlock!(inverted, |wd: WorkDir, mut cmd: Command| {
@@ -587,7 +591,7 @@ sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("-uuu");
 
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "file:foo\nfile:foo\n");
+    assert_eq!(lines, "file:foo\x00bar\nfile:foo\x00baz\n");
 });
 
 // On Windows, this test uses memory maps, so the NUL bytes don't get replaced.
@@ -785,7 +789,7 @@ fn binary_search_no_mmap() {
     let mut cmd = wd.command();
     cmd.arg("-a").arg("--no-mmap").arg("foo").arg("file");
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "foo\nfoo\n");
+    assert_eq!(lines, "foo\x00bar\nfoo\x00baz\n");
 }
 
 #[test]

@@ -532,10 +532,6 @@ impl InputBuffer {
             if self.first && is_binary(&self.buf[self.end..self.end + n]) {
                 self.is_binary = true;
             }
-            if self.is_binary {
-                replace_buf(
-                    &mut self.buf[self.end..self.end + n], b'\x00', self.eol);
-            }
             self.first = false;
             // We assume that reading 0 bytes means we've hit EOF.
             if n == 0 {
@@ -658,6 +654,7 @@ pub fn count_lines(buf: &[u8], eol: u8) -> u64 {
 }
 
 /// Replaces a with b in buf.
+#[allow(dead_code)]
 fn replace_buf(buf: &mut [u8], a: u8, b: u8) {
     if a == b {
         return;
@@ -999,7 +996,7 @@ fn main() {
         let text = "Sherlock\n\x00Holmes\n";
         let (count, out) = search("Sherlock|Holmes", text, |s| s.text(true));
         assert_eq!(2, count);
-        assert_eq!(out, "/baz.rs:Sherlock\n/baz.rs:Holmes\n");
+        assert_eq!(out, "/baz.rs:Sherlock\n/baz.rs:\x00Holmes\n");
     }
 
     #[test]
