@@ -429,4 +429,10 @@ mod tests {
     not_ignored!(ignot11, ROOT, "#foo", "#foo");
     not_ignored!(ignot12, ROOT, "\n\n\n", "foo");
     not_ignored!(ignot13, ROOT, "foo/**", "foo", true);
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/106
+    #[test]
+    fn regression_106() {
+        Gitignore::from_str("/", " ").unwrap();
+    }
 }
