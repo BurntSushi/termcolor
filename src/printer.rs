@@ -186,7 +186,7 @@ impl<W: Terminal + Send> Printer<W> {
             let column =
                 if self.column {
                     Some(re.find(&buf[start..end])
-                           .map(|(s, _)| s + 1).unwrap_or(0) as u64)
+                           .map(|(s, _)| s).unwrap_or(0) as u64)
                 } else {
                     None
                 };

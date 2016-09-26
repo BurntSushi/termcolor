@@ -86,8 +86,8 @@ sherlock!(columns, |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--column");
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
-58:For the Doctor Watsons of this world, as opposed to the Sherlock
-50:be, to a very large extent, the result of luck. Sherlock Holmes
+57:For the Doctor Watsons of this world, as opposed to the Sherlock
+49:be, to a very large extent, the result of luck. Sherlock Holmes
 ";
     assert_eq!(lines, expected);
 });
@@ -714,6 +714,24 @@ clean!(regression_93, r"(\d{1,3}\.){3}\d{1,3}", ".",
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "foo:192.168.1.1\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/105
+clean!(regression_105_part1, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "zztest");
+    cmd.arg("--vimgrep");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:1:3:zztest\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/105
+clean!(regression_105_part2, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "zztest");
+    cmd.arg("--column");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:3:zztest\n");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/20
