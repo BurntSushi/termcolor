@@ -564,12 +564,21 @@ impl Args {
     /// to the writer given.
     pub fn out(&self) -> Out {
         let mut out = Out::new(self.color);
-        if self.heading && !self.count && !self.files_with_matches {
-            out = out.file_separator(b"".to_vec());
-        } else if self.before_context > 0 || self.after_context > 0 {
-            out = out.file_separator(self.context_separator.clone());
+        if let Some(filesep) = self.file_separator() {
+            out = out.file_separator(filesep);
         }
         out
+    }
+
+    /// Retrieve the configured file separator.
+    pub fn file_separator(&self) -> Option<Vec<u8>> {
+        if self.heading && !self.count && !self.files_with_matches {
+            Some(b"".to_vec())
+        } else if self.before_context > 0 || self.after_context > 0 {
+            Some(self.context_separator.clone())
+        } else {
+            None
+        }
     }
 
     /// Create a new buffer for use with searching.

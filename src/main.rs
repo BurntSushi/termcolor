@@ -22,7 +22,7 @@ extern crate winapi;
 
 use std::error::Error;
 use std::fs::File;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::result;
@@ -88,6 +88,7 @@ fn main() {
 fn run(args: Args) -> Result<u64> {
     let args = Arc::new(args);
     let paths = args.paths();
+    let threads = cmp::max(1, args.threads() - 1);
     if args.files() {
         return run_files(args.clone());
     }
@@ -97,13 +98,16 @@ fn run(args: Args) -> Result<u64> {
     if paths.len() == 1 && (paths[0] == Path::new("-") || paths[0].is_file()) {
         return run_one(args.clone(), &paths[0]);
     }
+    if threads == 1 {
+        return run_one_thread(args.clone());
+    }
 
     let out = Arc::new(Mutex::new(args.out()));
     let mut workers = vec![];
 
     let workq = {
         let (workq, stealer) = deque::new();
-        for _ in 0..cmp::max(1, args.threads() - 1) {
+        for _ in 0..threads {
             let worker = MultiWorker {
                 chan_work: stealer.clone(),
                 out: out.clone(),
@@ -144,6 +148,52 @@ fn run(args: Args) -> Result<u64> {
         match_count += worker.join().unwrap();
     }
     Ok(match_count)
+}
+
+fn run_one_thread(args: Arc<Args>) -> Result<u64> {
+    let mut worker = Worker {
+        args: args.clone(),
+        inpbuf: args.input_buffer(),
+        grep: args.grep(),
+        match_count: 0,
+    };
+    let paths = args.paths();
+    let filesep = args.file_separator();
+    let mut term = args.stdout();
+
+    let mut paths_searched: u64 = 0;
+    for p in paths {
+        if p == Path::new("-") {
+            if worker.match_count > 0 {
+                if let Some(ref sep) = filesep {
+                    let _ = term.write_all(sep);
+                    let _ = term.write_all(b"\n");
+                }
+            }
+            paths_searched += 1;
+            let mut printer = args.printer(&mut term);
+            worker.do_work(&mut printer, WorkReady::Stdin);
+        } else {
+            for ent in try!(args.walker(p)) {
+                if worker.match_count > 0 {
+                    if let Some(ref sep) = filesep {
+                        let _ = term.write_all(sep);
+                        let _ = term.write_all(b"\n");
+                    }
+                }
+                paths_searched += 1;
+                let mut printer = args.printer(&mut term);
+                let file = try!(File::open(ent.path()));
+                worker.do_work(&mut printer, WorkReady::DirFile(ent, file));
+            }
+        }
+    }
+    if !paths.is_empty() && paths_searched == 0 {
+        eprintln!("No files were searched, which means ripgrep probably \
+                   applied a filter you didn't expect. \
+                   Try running again with --debug.");
+    }
+    Ok(worker.match_count)
 }
 
 fn run_one(args: Arc<Args>, path: &Path) -> Result<u64> {

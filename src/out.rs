@@ -317,3 +317,60 @@ impl<T: Terminal + Send> term::Terminal for ColoredTerminal<T> {
         }
     }
 }
+
+impl<'a, T: Terminal + Send> term::Terminal for &'a mut ColoredTerminal<T> {
+    type Output = T::Output;
+
+    fn fg(&mut self, fg: term::color::Color) -> term::Result<()> {
+        (**self).fg(fg)
+    }
+
+    fn bg(&mut self, bg: term::color::Color) -> term::Result<()> {
+        (**self).bg(bg)
+    }
+
+    fn attr(&mut self, attr: term::Attr) -> term::Result<()> {
+        (**self).attr(attr)
+    }
+
+    fn supports_attr(&self, attr: term::Attr) -> bool {
+        (**self).supports_attr(attr)
+    }
+
+    fn reset(&mut self) -> term::Result<()> {
+        (**self).reset()
+    }
+
+    fn supports_reset(&self) -> bool {
+        (**self).supports_reset()
+    }
+
+    fn supports_color(&self) -> bool {
+        (**self).supports_color()
+    }
+
+    fn cursor_up(&mut self) -> term::Result<()> {
+        (**self).cursor_up()
+    }
+
+    fn delete_line(&mut self) -> term::Result<()> {
+        (**self).delete_line()
+    }
+
+    fn carriage_return(&mut self) -> term::Result<()> {
+        (**self).carriage_return()
+    }
+
+    fn get_ref(&self) -> &Self::Output {
+        (**self).get_ref()
+    }
+
+    fn get_mut(&mut self) -> &mut Self::Output {
+        (**self).get_mut()
+    }
+
+    fn into_inner(self) -> Self::Output {
+        // Good golly miss molly...
+        unimplemented!()
+    }
+}
