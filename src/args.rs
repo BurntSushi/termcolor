@@ -673,15 +673,20 @@ impl Args {
     pub fn walker(&self, path: &Path) -> Result<walk::Iter> {
         let wd = WalkDir::new(path).follow_links(self.follow);
         let mut ig = Ignore::new();
-        ig.ignore_hidden(!self.hidden);
-        ig.no_ignore(self.no_ignore);
-        ig.no_ignore_vcs(self.no_ignore_vcs);
-        ig.add_types(self.types.clone());
-        if !self.no_ignore_parent {
-            try!(ig.push_parents(path));
-        }
-        if let Some(ref overrides) = self.glob_overrides {
-            ig.add_override(overrides.clone());
+        // Only register ignore rules if this is a directory. If it's a file,
+        // then it was explicitly given by the end user, so we always search
+        // it.
+        if path.is_dir() {
+            ig.ignore_hidden(!self.hidden);
+            ig.no_ignore(self.no_ignore);
+            ig.no_ignore_vcs(self.no_ignore_vcs);
+            ig.add_types(self.types.clone());
+            if !self.no_ignore_parent {
+                try!(ig.push_parents(path));
+            }
+            if let Some(ref overrides) = self.glob_overrides {
+                ig.add_override(overrides.clone());
+            }
         }
         Ok(walk::Iter::new(ig, wd))
     }
