@@ -8,7 +8,6 @@ Note that this implementation is incredibly suspicious. We need something more
 principled.
 */
 use std::cmp;
-use std::iter;
 
 use regex::bytes::Regex;
 use syntax::{
@@ -181,8 +180,6 @@ fn repeat_range_literals<F: FnMut(&Expr, &mut Literals)>(
     lits: &mut Literals,
     mut f: F,
 ) {
-    use syntax::Expr::*;
-
     if min == 0 {
         // This is a bit conservative. If `max` is set, then we could
         // treat this as a finite set of alternations. For now, we
@@ -190,8 +187,12 @@ fn repeat_range_literals<F: FnMut(&Expr, &mut Literals)>(
         lits.cut();
     } else {
         let n = cmp::min(lits.limit_size(), min as usize);
-        let es = iter::repeat(e.clone()).take(n).collect();
-        f(&Concat(es), lits);
+        // We only extract literals from a single repetition, even though
+        // we could do more. e.g., `a{3}` will have `a` extracted instead of
+        // `aaa`. The reason is that inner literal extraction can't be unioned
+        // across repetitions. e.g., extracting `foofoofoo` from `(\w+foo){3}`
+        // is wrong.
+        f(e, lits);
         if n < min as usize {
             lits.cut();
         }

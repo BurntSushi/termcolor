@@ -703,6 +703,15 @@ clean!(regression_90, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, ".foo:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/93
+clean!(regression_93, r"(\d{1,3}\.){3}\d{1,3}", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "192.168.1.1");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:192.168.1.1\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--no-filename");
