@@ -308,7 +308,7 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     #[cfg(not(unix))]
-    fn write_path<P: AsRef<Path>>(&mut self, p: P) {
+    fn write_path<P: AsRef<Path>>(&mut self, path: P) {
         self.write(path.as_ref().to_string_lossy().as_bytes());
     }
 
