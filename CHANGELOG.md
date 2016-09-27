@@ -1,3 +1,26 @@
+0.2.1
+=====
+Feature enhancements:
+
+* Added or improved file type filtering for Clojure and SystemVerilog.
+* [FEATURE #89](https://github.com/BurntSushi/ripgrep/issues/89):
+  Add a --null flag that outputs a NUL byte after every file path.
+
+Bug fixes:
+
+* [BUG #98](https://github.com/BurntSushi/ripgrep/issues/98):
+  Fix a bug in single threaded mode when if opening a file failed, ripgrep
+  quit instead of continuing the search.
+* [BUG #99](https://github.com/BurntSushi/ripgrep/issues/99):
+  Fix another bug in single threaded mode where empty lines were being printed
+  by mistake.
+* [BUG #105](https://github.com/BurntSushi/ripgrep/issues/105):
+  Fix an off-by-one error with --column.
+* [BUG #106](https://github.com/BurntSushi/ripgrep/issues/106):
+  Fix a bug where a whitespace only line in a gitignore file caused ripgrep
+  to panic (i.e., crash).
+
+
 0.2.0
 =====
 Feature enhancements:
