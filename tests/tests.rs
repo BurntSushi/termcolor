@@ -831,6 +831,21 @@ sherlock\x00can extract a clew from a wisp of straw or a flake of cigar ash;
     assert_eq!(lines, expected);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/109
+clean!(max_depth, "far", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("one");
+    wd.create("one/pass", "far");
+    wd.create_dir("one/too");
+    wd.create("one/too/many", "far");
+
+    cmd.arg("--maxdepth").arg("2");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = path("one/pass:far\n");
+
+    assert_eq!(lines, expected);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");
