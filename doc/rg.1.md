@@ -136,6 +136,10 @@ the raw speed of grep.
 -L, --follow
 : Follow symlinks.
 
+--maxdepth *NUM*
+: Descend at most NUM directories below the command line arguments.
+  A value of zero searches only the starting-points themselves.
+
 --mmap
 : Search using memory maps when possible. This is enabled by default
   when ripgrep thinks it will be faster. (Note that mmap searching

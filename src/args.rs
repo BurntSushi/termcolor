@@ -136,6 +136,10 @@ Less common options:
     -L, --follow
         Follow symlinks.
 
+    --maxdepth NUM
+        Descend at most NUM directories below the command line arguments.
+        A value of zero only searches the starting-points themselves.
+
     --mmap
         Search using memory maps when possible. This is enabled by default
         when ripgrep thinks it will be faster. (Note that mmap searching
@@ -222,6 +226,7 @@ pub struct RawArgs {
     flag_invert_match: bool,
     flag_line_number: bool,
     flag_fixed_strings: bool,
+    flag_maxdepth: Option<usize>,
     flag_mmap: bool,
     flag_no_heading: bool,
     flag_no_ignore: bool,
@@ -272,6 +277,7 @@ pub struct Args {
     invert_match: bool,
     line_number: bool,
     line_per_match: bool,
+    maxdepth: Option<usize>,
     mmap: bool,
     no_ignore: bool,
     no_ignore_parent: bool,
@@ -399,6 +405,7 @@ impl RawArgs {
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
             line_per_match: self.flag_vimgrep,
+            maxdepth: self.flag_maxdepth,
             mmap: mmap,
             no_ignore: no_ignore,
             no_ignore_parent:
@@ -681,7 +688,10 @@ impl Args {
 
     /// Create a new recursive directory iterator at the path given.
     pub fn walker(&self, path: &Path) -> Result<walk::Iter> {
-        let wd = WalkDir::new(path).follow_links(self.follow);
+        let mut wd = WalkDir::new(path).follow_links(self.follow);
+        if let Some(maxdepth) = self.maxdepth {
+            wd = wd.max_depth(maxdepth);
+        }
         let mut ig = Ignore::new();
         // Only register ignore rules if this is a directory. If it's a file,
         // then it was explicitly given by the end user, so we always search
