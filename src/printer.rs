@@ -42,6 +42,36 @@ pub struct Printer<W> {
     replace: Option<Vec<u8>>,
     /// Whether to prefix each match with the corresponding file name.
     with_filename: bool,
+
+    /// The choice of Colours
+    color_choice: ColorChoice
+}
+
+struct ColorChoice {
+    matched_line: color::Color,
+    heading: color::Color,
+    line_number: color::Color
+}
+
+impl ColorChoice {
+
+    #[cfg(unix)]
+    pub fn new() -> ColorChoice {
+        ColorChoice {
+            matched_line: color::RED,
+            heading: color::GREEN,
+            line_number: color::BLUE
+        }
+    }
+
+    #[cfg(not(unix))]
+    pub fn new() -> ColorChoice {
+        ColorChoice {
+            matched_line: color::BRIGHT_RED,
+            heading: color::BRIGHT_GREEN,
+            line_number: color::BRIGHT_BLUE
+        }
+    }
 }
 
 impl<W: Terminal + Send> Printer<W> {
@@ -60,6 +90,7 @@ impl<W: Terminal + Send> Printer<W> {
             null: false,
             replace: None,
             with_filename: false,
+            color_choice: ColorChoice::new()
         }
     }
 
@@ -277,7 +308,7 @@ impl<W: Terminal + Send> Printer<W> {
         let mut last_written = 0;
         for (s, e) in re.find_iter(buf) {
             self.write(&buf[last_written..s]);
-            let _ = self.wtr.fg(color::BRIGHT_RED);
+            let _ = self.wtr.fg(self.color_choice.matched_line);
             let _ = self.wtr.attr(Attr::Bold);
             self.write(&buf[s..e]);
             let _ = self.wtr.reset();
@@ -316,7 +347,7 @@ impl<W: Terminal + Send> Printer<W> {
 
     fn write_heading<P: AsRef<Path>>(&mut self, path: P) {
         if self.wtr.supports_color() {
-            let _ = self.wtr.fg(color::BRIGHT_GREEN);
+            let _ = self.wtr.fg(self.color_choice.heading);
             let _ = self.wtr.attr(Attr::Bold);
         }
         self.write_path(path.as_ref());
@@ -332,7 +363,7 @@ impl<W: Terminal + Send> Printer<W> {
 
     fn line_number(&mut self, n: u64, sep: u8) {
         if self.wtr.supports_color() {
-            let _ = self.wtr.fg(color::BRIGHT_BLUE);
+            let _ = self.wtr.fg(self.color_choice.line_number);
             let _ = self.wtr.attr(Attr::Bold);
         }
         self.write(n.to_string().as_bytes());
