@@ -355,12 +355,14 @@ impl RawArgs {
                 self.flag_threads
             };
         let color =
-            if self.flag_vimgrep {
+            if self.flag_color == "always" {
+                true
+            } else if self.flag_vimgrep {
                 false
             } else if self.flag_color == "auto" {
                 atty::on_stdout() || self.flag_pretty
             } else {
-                self.flag_color == "always"
+                false
             };
         let eol = b'\n';
 
