@@ -49,7 +49,7 @@ the raw speed of grep.
 : Show this usage message.
 
 -i, --ignore-case
-: Case insensitive search.
+: Case insensitive search. Overridden by --case-sensitive.
 
 -n, --line-number
 : Show line numbers (1-based). This is enabled by default at a tty.
@@ -168,9 +168,13 @@ the raw speed of grep.
 -p, --pretty
 : Alias for --color=always --heading -n.
 
+-s, --case-sensitive
+: Search case sensitively. This overrides --ignore-case and --smart-case.
+
 -S, --smart-case
 : Search case insensitively if the pattern is all lowercase.
-  Search case sensitively otherwise.
+  Search case sensitively otherwise. This is overridden by either
+  --case-sensitive or --ignore-case.
 
 -j, --threads *ARG*
 : The number of threads to use. Defaults to the number of logical CPUs

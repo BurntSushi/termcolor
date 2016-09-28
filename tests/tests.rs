@@ -754,7 +754,8 @@ clean!(regression_105_part2, "test", ".", |wd: WorkDir, mut cmd: Command| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/20
-sherlock!(feature_20, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+sherlock!(feature_20_no_filename, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
     cmd.arg("--no-filename");
 
     let lines: String = wd.stdout(&mut cmd);
@@ -766,7 +767,7 @@ be, to a very large extent, the result of luck. Sherlock Holmes
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/68
-clean!(feature_68, "test", ".", |wd: WorkDir, mut cmd: Command| {
+clean!(feature_68_no_ignore_vcs, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "foo");
     wd.create(".ignore", "bar");
     wd.create("foo", "test");
@@ -778,7 +779,8 @@ clean!(feature_68, "test", ".", |wd: WorkDir, mut cmd: Command| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/70
-sherlock!(feature_70, "sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+sherlock!(feature_70_smart_case, "sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
     cmd.arg("--smart-case");
 
     let lines: String = wd.stdout(&mut cmd);
@@ -832,7 +834,7 @@ sherlock\x00can extract a clew from a wisp of straw or a flake of cigar ash;
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/109
-clean!(max_depth, "far", ".", |wd: WorkDir, mut cmd: Command| {
+clean!(feature_109_max_depth, "far", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create_dir("one");
     wd.create("one/pass", "far");
     wd.create_dir("one/too");
@@ -842,8 +844,23 @@ clean!(max_depth, "far", ".", |wd: WorkDir, mut cmd: Command| {
 
     let lines: String = wd.stdout(&mut cmd);
     let expected = path("one/pass:far\n");
-
     assert_eq!(lines, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/124
+clean!(feature_109_case_sensitive_part1, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "tEsT");
+    cmd.arg("--smart-case").arg("--case-sensitive");
+    wd.assert_err(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/124
+clean!(feature_109_case_sensitive_part2, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "tEsT");
+    cmd.arg("--ignore-case").arg("--case-sensitive");
+    wd.assert_err(&mut cmd);
 });
 
 #[test]

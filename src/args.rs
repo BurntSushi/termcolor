@@ -62,6 +62,7 @@ Common options:
                                Precede a glob with a '!' to exclude it.
     -h, --help                 Show this usage message.
     -i, --ignore-case          Case insensitive search.
+                               Overridden by --case-sensitive.
     -n, --line-number          Show line numbers (1-based). This is enabled
                                by default at a tty.
     -N, --no-line-number       Suppress line numbers.
@@ -168,9 +169,13 @@ Less common options:
     -p, --pretty
         Alias for --color=always --heading -n.
 
+    -s, --case-sensitive
+        Search case sensitively. This overrides --ignore-case and --smart-case.
+
     -S, --smart-case
         Search case insensitively if the pattern is all lowercase.
-        Search case sensitively otherwise.
+        Search case sensitively otherwise. This is overridden by
+        either --case-sensitive or --ignore-case.
 
     -j, --threads ARG
         The number of threads to use. Defaults to the number of logical CPUs
@@ -210,6 +215,7 @@ pub struct RawArgs {
     arg_path: Vec<String>,
     flag_after_context: usize,
     flag_before_context: usize,
+    flag_case_sensitive: bool,
     flag_color: String,
     flag_column: bool,
     flag_context: usize,
@@ -257,7 +263,6 @@ pub struct RawArgs {
 /// Args are transformed/normalized from RawArgs.
 #[derive(Debug)]
 pub struct Args {
-    pattern: String,
     paths: Vec<PathBuf>,
     after_context: usize,
     before_context: usize,
@@ -287,7 +292,6 @@ pub struct Args {
     replace: Option<Vec<u8>>,
     text: bool,
     threads: usize,
-    type_defs: Vec<FileTypeDef>,
     type_list: bool,
     types: Types,
     with_filename: bool,
@@ -296,7 +300,6 @@ pub struct Args {
 impl RawArgs {
     /// Convert arguments parsed into a configuration used by ripgrep.
     fn to_args(&self) -> Result<Args> {
-        let pattern = self.pattern();
         let paths =
             if self.arg_path.is_empty() {
                 if atty::on_stdin()
@@ -362,7 +365,6 @@ impl RawArgs {
             } else {
                 self.flag_color == "always"
             };
-        let eol = b'\n';
 
         let mut with_filename = self.flag_with_filename;
         if !with_filename {
@@ -370,22 +372,10 @@ impl RawArgs {
         }
         with_filename = with_filename && !self.flag_no_filename;
 
-        let mut btypes = TypesBuilder::new();
-        btypes.add_defaults();
-        try!(self.add_types(&mut btypes));
-        let types = try!(btypes.build());
-        let grep = try!(
-            GrepBuilder::new(&pattern)
-                .case_smart(self.flag_smart_case)
-                .case_insensitive(self.flag_ignore_case)
-                .line_terminator(eol)
-                .build()
-        );
         let no_ignore = self.flag_no_ignore || self.flag_unrestricted >= 1;
         let hidden = self.flag_hidden || self.flag_unrestricted >= 2;
         let text = self.flag_text || self.flag_unrestricted >= 3;
         let mut args = Args {
-            pattern: pattern,
             paths: paths,
             after_context: after_context,
             before_context: before_context,
@@ -394,11 +384,11 @@ impl RawArgs {
             context_separator: unescape(&self.flag_context_separator),
             count: self.flag_count,
             files_with_matches: self.flag_files_with_matches,
-            eol: eol,
+            eol: self.eol(),
             files: self.flag_files,
             follow: self.flag_follow,
             glob_overrides: glob_overrides,
-            grep: grep,
+            grep: try!(self.grep()),
             heading: !self.flag_no_heading && self.flag_heading,
             hidden: hidden,
             ignore_case: self.flag_ignore_case,
@@ -419,9 +409,8 @@ impl RawArgs {
             replace: self.flag_replace.clone().map(|s| s.into_bytes()),
             text: text,
             threads: threads,
-            type_defs: btypes.definitions(),
             type_list: self.flag_type_list,
-            types: types,
+            types: try!(self.types()),
             with_filename: with_filename,
         };
         // If stdout is a tty, then apply some special default options.
@@ -440,20 +429,22 @@ impl RawArgs {
         Ok(args)
     }
 
-    fn add_types(&self, types: &mut TypesBuilder) -> Result<()> {
+    fn types(&self) -> Result<Types> {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_defaults();
         for ty in &self.flag_type_clear {
-            types.clear(ty);
+            btypes.clear(ty);
         }
         for def in &self.flag_type_add {
-            try!(types.add_def(def));
+            try!(btypes.add_def(def));
         }
         for ty in &self.flag_type {
-            types.select(ty);
+            btypes.select(ty);
         }
         for ty in &self.flag_type_not {
-            types.negate(ty);
+            btypes.negate(ty);
         }
-        Ok(())
+        btypes.build().map_err(From::from)
     }
 
     fn pattern(&self) -> String {
@@ -482,6 +473,27 @@ impl RawArgs {
         } else {
             s
         }
+    }
+
+    fn eol(&self) -> u8 {
+        // We might want to make this configurable.
+        b'\n'
+    }
+
+    fn grep(&self) -> Result<Grep> {
+        let smart =
+            self.flag_smart_case
+            && !self.flag_ignore_case
+            && !self.flag_case_sensitive;
+        let casei =
+            self.flag_ignore_case
+            && !self.flag_case_sensitive;
+        GrepBuilder::new(&self.pattern())
+            .case_smart(smart)
+            .case_insensitive(casei)
+            .line_terminator(self.eol())
+            .build()
+            .map_err(From::from)
     }
 }
 
@@ -677,7 +689,7 @@ impl Args {
 
     /// Returns a list of type definitions currently loaded.
     pub fn type_defs(&self) -> &[FileTypeDef] {
-        &self.type_defs
+        self.types.definitions()
     }
 
     /// Returns true if ripgrep should print the type definitions currently

@@ -70,6 +70,7 @@ Show this usage message.
 .TP
 .B \-i, \-\-ignore\-case
 Case insensitive search.
+Overridden by \-\-case\-sensitive.
 .RS
 .RE
 .TP
@@ -209,6 +210,12 @@ Follow symlinks.
 .RS
 .RE
 .TP
+.B \-\-maxdepth \f[I]NUM\f[]
+Descend at most NUM directories below the command line arguments.
+A value of zero searches only the starting\-points themselves.
+.RS
+.RE
+.TP
 .B \-\-mmap
 Search using memory maps when possible.
 This is enabled by default when ripgrep thinks it will be faster.
@@ -252,9 +259,16 @@ Alias for \-\-color=always \-\-heading \-n.
 .RS
 .RE
 .TP
+.B \-s, \-\-case\-sensitive
+Search case sensitively.
+This overrides \-\-ignore\-case and \-\-smart\-case.
+.RS
+.RE
+.TP
 .B \-S, \-\-smart\-case
 Search case insensitively if the pattern is all lowercase.
 Search case sensitively otherwise.
+This is overridden by either \-\-case\-sensitive or \-\-ignore\-case.
 .RS
 .RE
 .TP

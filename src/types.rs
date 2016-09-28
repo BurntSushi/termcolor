@@ -159,6 +159,7 @@ impl FileTypeDef {
 /// Types is a file type matcher.
 #[derive(Clone, Debug)]
 pub struct Types {
+    defs: Vec<FileTypeDef>,
     selected: Option<glob::SetYesNo>,
     negated: Option<glob::SetYesNo>,
     has_selected: bool,
@@ -176,8 +177,10 @@ impl Types {
         selected: Option<glob::SetYesNo>,
         negated: Option<glob::SetYesNo>,
         has_selected: bool,
+        defs: Vec<FileTypeDef>,
     ) -> Types {
         Types {
+            defs: defs,
             selected: selected,
             negated: negated,
             has_selected: has_selected,
@@ -193,7 +196,7 @@ impl Types {
 
     /// Creates a new file type matcher that never matches.
     pub fn empty() -> Types {
-        Types::new(None, None, false)
+        Types::new(None, None, false, vec![])
     }
 
     /// Returns a match for the given path against this file type matcher.
@@ -232,6 +235,11 @@ impl Types {
         } else {
             Match::None
         }
+    }
+
+    /// Return the set of current file type definitions.
+    pub fn definitions(&self) -> &[FileTypeDef] {
+        &self.defs
     }
 }
 
@@ -298,7 +306,11 @@ impl TypesBuilder {
                 Some(try!(bset.build_yesno()))
             };
         Ok(Types::new(
-            selected_globs, negated_globs, !self.selected.is_empty()))
+            selected_globs,
+            negated_globs,
+            !self.selected.is_empty(),
+            self.definitions(),
+        ))
     }
 
     /// Return the set of current file type definitions.
