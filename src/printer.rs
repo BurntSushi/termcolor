@@ -274,12 +274,7 @@ impl<W: Terminal + Send> Printer<W> {
             self.write_file_sep();
             self.write_heading(path.as_ref());
         } else if !self.heading && self.with_filename {
-            self.write_path(path.as_ref());
-            if self.null {
-                self.write(b"\x00");
-            } else {
-                self.write(b":");
-            }
+            self.write_non_heading_path(path.as_ref());
         }
         if let Some(line_number) = line_number {
             self.line_number(line_number, b':');
@@ -358,6 +353,22 @@ impl<W: Terminal + Send> Printer<W> {
         }
         if self.wtr.supports_color() {
             let _ = self.wtr.reset();
+        }
+    }
+
+    fn write_non_heading_path<P: AsRef<Path>>(&mut self, path: P) {
+        if self.wtr.supports_color() {
+            let _ = self.wtr.fg(self.color_choice.heading);
+            let _ = self.wtr.attr(Attr::Bold);
+        }
+        self.write_path(path.as_ref());
+        if self.wtr.supports_color() {
+            let _ = self.wtr.reset();
+        }
+        if self.null {
+            self.write(b"\x00");
+        } else {
+            self.write(b":");
         }
     }
 
