@@ -27,6 +27,7 @@ use std::path::Path;
 use std::process;
 use std::result;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::cmp;
 
@@ -102,6 +103,7 @@ fn run(args: Args) -> Result<u64> {
     }
 
     let out = Arc::new(Mutex::new(args.out()));
+    let quiet_matched = QuietMatched::new(args.quiet());
     let mut workers = vec![];
 
     let workq = {
@@ -109,6 +111,7 @@ fn run(args: Args) -> Result<u64> {
         for _ in 0..threads {
             let worker = MultiWorker {
                 chan_work: stealer.clone(),
+                quiet_matched: quiet_matched.clone(),
                 out: out.clone(),
                 outbuf: Some(args.outbuf()),
                 worker: Worker {
@@ -124,11 +127,17 @@ fn run(args: Args) -> Result<u64> {
     };
     let mut paths_searched: u64 = 0;
     for p in paths {
+        if quiet_matched.has_match() {
+            break;
+        }
         if p == Path::new("-") {
             paths_searched += 1;
             workq.push(Work::Stdin);
         } else {
             for ent in try!(args.walker(p)) {
+                if quiet_matched.has_match() {
+                    break;
+                }
                 paths_searched += 1;
                 workq.push(Work::File(ent));
             }
@@ -161,6 +170,9 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
 
     let mut paths_searched: u64 = 0;
     for p in paths {
+        if args.quiet() && worker.match_count > 0 {
+            break;
+        }
         if p == Path::new("-") {
             paths_searched += 1;
             let mut printer = args.printer(&mut term);
@@ -175,6 +187,9 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
                 paths_searched += 1;
                 let mut printer = args.printer(&mut term);
                 if worker.match_count > 0 {
+                    if args.quiet() {
+                        break;
+                    }
                     if let Some(sep) = args.file_separator() {
                         printer = printer.file_separator(sep);
                     }
@@ -240,6 +255,7 @@ enum WorkReady {
 
 struct MultiWorker {
     chan_work: Stealer<Work>,
+    quiet_matched: QuietMatched,
     out: Arc<Mutex<Out>>,
     #[cfg(not(windows))]
     outbuf: Option<ColoredTerminal<term::TerminfoTerminal<Vec<u8>>>>,
@@ -258,6 +274,9 @@ struct Worker {
 impl MultiWorker {
     fn run(mut self) -> u64 {
         loop {
+            if self.quiet_matched.has_match() {
+                break;
+            }
             let work = match self.chan_work.steal() {
                 Stolen::Empty | Stolen::Abort => continue,
                 Stolen::Data(Work::Quit) => break,
@@ -276,6 +295,9 @@ impl MultiWorker {
             outbuf.clear();
             let mut printer = self.worker.args.printer(outbuf);
             self.worker.do_work(&mut printer, work);
+            if self.quiet_matched.set_match(self.worker.match_count > 0) {
+                break;
+            }
             let outbuf = printer.into_inner();
             if !outbuf.get_ref().is_empty() {
                 let mut out = self.out.lock().unwrap();
@@ -357,5 +379,30 @@ impl Worker {
             path,
             unsafe { mmap.as_slice() },
         ).run())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct QuietMatched(Arc<Option<AtomicBool>>);
+
+impl QuietMatched {
+    fn new(quiet: bool) -> QuietMatched {
+        let atomic = if quiet { Some(AtomicBool::new(false)) } else { None };
+        QuietMatched(Arc::new(atomic))
+    }
+
+    fn has_match(&self) -> bool {
+        match *self.0 {
+            None => false,
+            Some(ref matched) => matched.load(Ordering::SeqCst),
+        }
+    }
+
+    fn set_match(&self, yes: bool) -> bool {
+        match *self.0 {
+            None => false,
+            Some(_) if !yes => false,
+            Some(ref m) => { m.store(true, Ordering::SeqCst); true }
+        }
     }
 }

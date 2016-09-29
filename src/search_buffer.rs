@@ -81,6 +81,13 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
         self
     }
 
+    /// If enabled, don't show any output and quit searching after the first
+    /// match is found.
+    pub fn quiet(mut self, yes: bool) -> Self {
+        self.opts.quiet = yes;
+        self
+    }
+
     /// If enabled, search binary files as if they were text.
     pub fn text(mut self, yes: bool) -> Self {
         self.opts.text = yes;
@@ -104,7 +111,7 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
                 self.print_match(m.start(), m.end());
             }
             last_end = m.end();
-            if self.printer.is_quiet() || self.opts.files_with_matches {
+            if self.opts.stop_after_first_match() {
                 break;
             }
         }

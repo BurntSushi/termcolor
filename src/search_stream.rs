@@ -84,6 +84,7 @@ pub struct Options {
     pub eol: u8,
     pub invert_match: bool,
     pub line_number: bool,
+    pub quiet: bool,
     pub text: bool,
 }
 
@@ -97,6 +98,7 @@ impl Default for Options {
             eol: b'\n',
             invert_match: false,
             line_number: false,
+            quiet: false,
             text: false,
         }
     }
@@ -104,10 +106,16 @@ impl Default for Options {
 }
 
 impl Options {
-    /// Both --count and --files-with-matches options imply that we should not
-    /// display matches at all.
+    /// Several options (--quiet, --count, --files-with-matches) imply that
+    /// we shouldn't ever display matches.
     pub fn skip_matches(&self) -> bool {
-        return self.count || self.files_with_matches;
+        self.count || self.files_with_matches || self.quiet
+    }
+
+    /// Some options (--quiet, --files-with-matches) imply that we can stop
+    /// searching after the first match.
+    pub fn stop_after_first_match(&self) -> bool {
+        self.files_with_matches || self.quiet
     }
 }
 
@@ -197,6 +205,13 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
         self
     }
 
+    /// If enabled, don't show any output and quit searching after the first
+    /// match is found.
+    pub fn quiet(mut self, yes: bool) -> Self {
+        self.opts.quiet = yes;
+        self
+    }
+
     /// If enabled, search binary files as if they were text.
     pub fn text(mut self, yes: bool) -> Self {
         self.opts.text = yes;
@@ -265,8 +280,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn terminate(&self) -> bool {
-        self.match_count > 0
-        && (self.printer.is_quiet() || self.opts.files_with_matches)
+        self.match_count > 0 && self.opts.stop_after_first_match()
     }
 
     #[inline(always)]

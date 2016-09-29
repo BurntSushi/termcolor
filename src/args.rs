@@ -571,6 +571,11 @@ impl Args {
         self.mmap
     }
 
+    /// Whether ripgrep should be quiet or not.
+    pub fn quiet(&self) -> bool {
+        self.quiet
+    }
+
     /// Create a new printer of individual search results that writes to the
     /// writer given.
     pub fn printer<W: Terminal + Send>(&self, wtr: W) -> Printer<W> {
@@ -580,7 +585,6 @@ impl Args {
             .eol(self.eol)
             .heading(self.heading)
             .line_per_match(self.line_per_match)
-            .quiet(self.quiet)
             .null(self.null)
             .with_filename(self.with_filename);
         if let Some(ref rep) = self.replace {
@@ -660,6 +664,7 @@ impl Args {
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
+            .quiet(self.quiet)
             .text(self.text)
     }
 
@@ -679,6 +684,7 @@ impl Args {
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
+            .quiet(self.quiet)
             .text(self.text)
     }
 

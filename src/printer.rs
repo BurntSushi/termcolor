@@ -33,8 +33,6 @@ pub struct Printer<W> {
     heading: bool,
     /// Whether to show every match on its own line.
     line_per_match: bool,
-    /// Whether to suppress all output.
-    quiet: bool,
     /// Whether to print NUL bytes after a file path instead of new lines
     /// or `:`.
     null: bool,
@@ -42,8 +40,7 @@ pub struct Printer<W> {
     replace: Option<Vec<u8>>,
     /// Whether to prefix each match with the corresponding file name.
     with_filename: bool,
-
-    /// The choice of Colours
+    /// The choice of colors.
     color_choice: ColorChoice
 }
 
@@ -54,7 +51,6 @@ struct ColorChoice {
 }
 
 impl ColorChoice {
-
     #[cfg(unix)]
     pub fn new() -> ColorChoice {
         ColorChoice {
@@ -86,7 +82,6 @@ impl<W: Terminal + Send> Printer<W> {
             file_separator: None,
             heading: false,
             line_per_match: false,
-            quiet: false,
             null: false,
             replace: None,
             with_filename: false,
@@ -141,12 +136,6 @@ impl<W: Terminal + Send> Printer<W> {
         self
     }
 
-    /// When set, all output is suppressed.
-    pub fn quiet(mut self, yes: bool) -> Printer<W> {
-        self.quiet = yes;
-        self
-    }
-
     /// Replace every match in each matching line with the replacement string
     /// given.
     ///
@@ -166,11 +155,6 @@ impl<W: Terminal + Send> Printer<W> {
     /// Returns true if and only if something has been printed.
     pub fn has_printed(&self) -> bool {
         self.has_printed
-    }
-
-    /// Returns true if the printer has been configured to be quiet.
-    pub fn is_quiet(&self) -> bool {
-        self.quiet
     }
 
     /// Flushes the underlying writer and returns it.
@@ -222,9 +206,6 @@ impl<W: Terminal + Send> Printer<W> {
     /// Prints the context separator.
     pub fn context_separate(&mut self) {
         // N.B. We can't use `write` here because of borrowing restrictions.
-        if self.quiet {
-            return;
-        }
         if self.context_separator.is_empty() {
             return;
         }
@@ -398,9 +379,6 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     fn write(&mut self, buf: &[u8]) {
-        if self.quiet {
-            return;
-        }
         self.has_printed = true;
         let _ = self.wtr.write_all(buf);
     }
@@ -411,9 +389,6 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     fn write_file_sep(&mut self) {
-        if self.quiet {
-            return;
-        }
         if let Some(ref sep) = self.file_separator {
             self.has_printed = true;
             let _ = self.wtr.write_all(sep);
