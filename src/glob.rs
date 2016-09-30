@@ -39,7 +39,6 @@ use std::str;
 use fnv;
 use regex;
 use regex::bytes::Regex;
-use regex::bytes::RegexSet;
 
 use pathutil::file_name;
 
@@ -138,7 +137,6 @@ type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;
 /// pass.
 #[derive(Clone, Debug)]
 pub struct Set {
-    yesno: SetYesNo,
     exts: HashMap<OsString, Vec<usize>, Fnv>,
     literals: HashMap<Vec<u8>, Vec<usize>, Fnv>,
     base_literals: HashMap<Vec<u8>, Vec<usize>, Fnv>,
@@ -146,9 +144,9 @@ pub struct Set {
     base_prefixes_map: Vec<usize>,
     base_suffixes: Vec<Vec<u8>>,
     base_suffixes_map: Vec<usize>,
-    base_regexes: RegexSet,
+    base_regexes: Vec<Regex>,
     base_regexes_map: Vec<usize>,
-    regexes: RegexSet,
+    regexes: Vec<Regex>,
     regexes_map: Vec<usize>,
 }
 
@@ -173,9 +171,6 @@ impl Set {
         let path = path.as_ref();
         let path_bytes = &*path_bytes(path);
         let basename = file_name(path).map(|b| os_str_bytes(b));
-        if !self.yesno.is_match(path) {
-            return;
-        }
         if !self.exts.is_empty() {
             if let Some(ext) = path.extension() {
                 if let Some(matches) = self.exts.get(ext) {
@@ -220,12 +215,16 @@ impl Set {
             }
         }
         if let Some(ref basename) = basename {
-            for i in self.base_regexes.matches(&**basename) {
-                into.push(self.base_regexes_map[i]);
+            for (i, re) in self.base_regexes.iter().enumerate() {
+                if re.is_match(&**basename) {
+                    into.push(self.base_regexes_map[i]);
+                }
             }
         }
-        for i in self.regexes.matches(path_bytes) {
-            into.push(self.regexes_map[i]);
+        for (i, re) in self.regexes.iter().enumerate() {
+            if re.is_match(path_bytes) {
+                into.push(self.regexes_map[i]);
+            }
         }
         into.sort();
     }
@@ -254,17 +253,14 @@ impl Set {
                 base_suffixes.push(literal.into_bytes());
                 base_suffixes_map.push(i);
             } else if p.is_only_basename() {
-                let part = format!("(?:{})", p.to_regex_with(o));
-                base_regexes.push(part);
+                base_regexes.push(try!(Regex::new(&p.to_regex_with(o))));
                 base_regexes_map.push(i);
             } else {
-                let part = format!("(?:{})", p.to_regex_with(o));
-                regexes.push(part);
+                regexes.push(try!(Regex::new(&p.to_regex_with(o))));
                 regexes_map.push(i);
             }
         }
         Ok(Set {
-            yesno: try!(SetYesNo::new(pats)),
             exts: exts,
             literals: literals,
             base_literals: base_literals,
@@ -272,9 +268,9 @@ impl Set {
             base_prefixes_map: base_prefixes_map,
             base_suffixes: base_suffixes,
             base_suffixes_map: base_suffixes_map,
-            base_regexes: try!(RegexSet::new(base_regexes)),
+            base_regexes: base_regexes,
             base_regexes_map: base_regexes_map,
-            regexes: try!(RegexSet::new(regexes)),
+            regexes: regexes,
             regexes_map: regexes_map,
         })
     }
@@ -329,9 +325,11 @@ impl SetBuilder {
         // } else if let Some(lit) = parsed.base_literal() {
             // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
         // } else if let Some(lit) = parsed.base_literal_prefix() {
-            // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
+            // eprintln!("base_literal_prefix :: {:?} :: {:?}", lit, pat);
         // } else if let Some(lit) = parsed.base_literal_suffix() {
-            // eprintln!("base_literal :: {:?} :: {:?}", lit, pat);
+            // eprintln!("base_literal_suffix :: {:?} :: {:?}", lit, pat);
+        // } else if parsed.is_only_basename() {
+            // eprintln!("basename-regex :: {:?} :: {:?}", pat, parsed);
         // } else {
             // eprintln!("regex :: {:?} :: {:?}", pat, parsed);
         // }
