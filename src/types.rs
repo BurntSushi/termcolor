@@ -11,7 +11,7 @@ use std::path::Path;
 use regex;
 
 use gitignore::{Match, Pattern};
-use glob::{self, MatchOptions};
+use globset::{self, MatchOptions};
 
 const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("asm", &["*.asm", "*.s", "*.S"]),
@@ -93,7 +93,7 @@ pub enum Error {
     /// A user specified file type definition could not be parsed.
     InvalidDefinition,
     /// There was an error building the matcher (probably a bad glob).
-    Glob(glob::Error),
+    Glob(globset::Error),
     /// There was an error compiling a glob as a regex.
     Regex(regex::Error),
 }
@@ -125,8 +125,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl From<glob::Error> for Error {
-    fn from(err: glob::Error) -> Error {
+impl From<globset::Error> for Error {
+    fn from(err: globset::Error) -> Error {
         Error::Glob(err)
     }
 }
@@ -160,8 +160,8 @@ impl FileTypeDef {
 #[derive(Clone, Debug)]
 pub struct Types {
     defs: Vec<FileTypeDef>,
-    selected: Option<glob::SetYesNo>,
-    negated: Option<glob::SetYesNo>,
+    selected: Option<globset::SetYesNo>,
+    negated: Option<globset::SetYesNo>,
     has_selected: bool,
     unmatched_pat: Pattern,
 }
@@ -174,8 +174,8 @@ impl Types {
     /// If has_selected is true, then at least one file type was selected.
     /// Therefore, any non-matches should be ignored.
     fn new(
-        selected: Option<glob::SetYesNo>,
-        negated: Option<glob::SetYesNo>,
+        selected: Option<globset::SetYesNo>,
+        negated: Option<globset::SetYesNo>,
         has_selected: bool,
         defs: Vec<FileTypeDef>,
     ) -> Types {
@@ -271,7 +271,7 @@ impl TypesBuilder {
             if self.selected.is_empty() {
                 None
             } else {
-                let mut bset = glob::SetBuilder::new();
+                let mut bset = globset::SetBuilder::new();
                 for name in &self.selected {
                     let globs = match self.types.get(name) {
                         Some(globs) => globs,
@@ -290,7 +290,7 @@ impl TypesBuilder {
             if self.negated.is_empty() {
                 None
             } else {
-                let mut bset = glob::SetBuilder::new();
+                let mut bset = globset::SetBuilder::new();
                 for name in &self.negated {
                     let globs = match self.types.get(name) {
                         Some(globs) => globs,

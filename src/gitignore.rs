@@ -28,15 +28,15 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 
+use globset;
 use regex;
 
-use glob;
 use pathutil::{is_file_name, strip_prefix};
 
 /// Represents an error that can occur when parsing a gitignore file.
 #[derive(Debug)]
 pub enum Error {
-    Glob(glob::Error),
+    Glob(globset::Error),
     Regex(regex::Error),
     Io(io::Error),
 }
@@ -61,8 +61,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl From<glob::Error> for Error {
-    fn from(err: glob::Error) -> Error {
+impl From<globset::Error> for Error {
+    fn from(err: globset::Error) -> Error {
         Error::Glob(err)
     }
 }
@@ -82,7 +82,7 @@ impl From<io::Error> for Error {
 /// Gitignore is a matcher for the glob patterns in a single gitignore file.
 #[derive(Clone, Debug)]
 pub struct Gitignore {
-    set: glob::Set,
+    set: globset::Set,
     root: PathBuf,
     patterns: Vec<Pattern>,
     num_ignores: u64,
@@ -207,7 +207,7 @@ impl<'a> Match<'a> {
 /// GitignoreBuilder constructs a matcher for a single set of globs from a
 /// .gitignore file.
 pub struct GitignoreBuilder {
-    builder: glob::SetBuilder,
+    builder: globset::SetBuilder,
     root: PathBuf,
     patterns: Vec<Pattern>,
 }
@@ -237,7 +237,7 @@ impl GitignoreBuilder {
     pub fn new<P: AsRef<Path>>(root: P) -> GitignoreBuilder {
         let root = strip_prefix("./", root.as_ref()).unwrap_or(root.as_ref());
         GitignoreBuilder {
-            builder: glob::SetBuilder::new(),
+            builder: globset::SetBuilder::new(),
             root: root.to_path_buf(),
             patterns: vec![],
         }
@@ -299,7 +299,7 @@ impl GitignoreBuilder {
             whitelist: false,
             only_dir: false,
         };
-        let mut opts = glob::MatchOptions::default();
+        let mut opts = globset::MatchOptions::default();
         let has_slash = line.chars().any(|c| c == '/');
         let is_absolute = line.chars().nth(0).unwrap() == '/';
         if line.starts_with("\\!") || line.starts_with("\\#") {

@@ -1,7 +1,7 @@
 extern crate deque;
 extern crate docopt;
 extern crate env_logger;
-extern crate fnv;
+extern crate globset;
 extern crate grep;
 #[cfg(windows)]
 extern crate kernel32;
@@ -61,7 +61,6 @@ macro_rules! eprintln {
 mod args;
 mod atty;
 mod gitignore;
-mod glob;
 mod ignore;
 mod out;
 mod pathutil;

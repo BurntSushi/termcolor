@@ -1,0 +1,10 @@
+[package]
+name = "globset"
+version = "0.1.0"
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[dependencies]
+fnv = "1.0"
+lazy_static = "0.2"
+memchr = "0.1"
+regex = "0.1.77"

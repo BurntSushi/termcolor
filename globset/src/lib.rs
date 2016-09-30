@@ -26,6 +26,12 @@ to make its way into `glob` proper.
 // at the .gitignore for the chromium repo---just about every pattern satisfies
 // that assumption.)
 
+extern crate fnv;
+#[macro_use]
+extern crate lazy_static;
+extern crate memchr;
+extern crate regex;
+
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error as StdError;
@@ -36,11 +42,11 @@ use std::iter;
 use std::path::Path;
 use std::str;
 
-use fnv;
-use regex;
 use regex::bytes::Regex;
 
 use pathutil::file_name;
+
+mod pathutil;
 
 lazy_static! {
     static ref FILE_SEPARATORS: String = regex::quote(r"/\");
