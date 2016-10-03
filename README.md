@@ -97,12 +97,11 @@ but you'll need to have the
 [Microsoft VC++ 2015 redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 installed.
 
-If you're a **Homebrew** user, then you can install it with a custom formula
-(N.B. `ripgrep` isn't actually in Homebrew yet. This just installs the binary
-directly):
+If you're a **Homebrew** user, then you can install it with a custom tap:
 
 ```
-$ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
+$ brew tap burntsushi/ripgrep https://github.com/BurntSushi/ripgrep.git
+$ brew install burntsushi/ripgrep/ripgrep
 ```
 
 If you're an **Arch Linux** user, then you can install `ripgrep` from the official repos:
