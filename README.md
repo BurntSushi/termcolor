@@ -101,7 +101,7 @@ If you're a **Homebrew** user, then you can install it with a custom tap:
 
 ```
 $ brew tap burntsushi/ripgrep https://github.com/BurntSushi/ripgrep.git
-$ brew install burntsushi/ripgrep/ripgrep
+$ brew install burntsushi/ripgrep/ripgrep-bin
 ```
 
 If you're an **Arch Linux** user, then you can install `ripgrep` from the official repos:
