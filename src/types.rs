@@ -42,6 +42,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("haskell", &["*.hs", "*.lhs"]),
     ("html", &["*.htm", "*.html"]),
     ("java", &["*.java"]),
+    ("jinja", &["*.jinja", "*.jinja2"]),
     ("js", &[
         "*.js", "*.jsx", "*.vue",
     ]),
