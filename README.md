@@ -107,7 +107,7 @@ $ brew install burntsushi/ripgrep/ripgrep-bin
 If you're an **Arch Linux** user, then you can install `ripgrep` from the official repos:
 
 ```
-$ pacman -Syu ripgrep
+$ pacman -S ripgrep
 ```
 
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
