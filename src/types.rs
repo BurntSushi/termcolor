@@ -11,7 +11,7 @@ use std::path::Path;
 use regex;
 
 use gitignore::{Match, Pattern};
-use globset::{self, MatchOptions};
+use globset::{self, PatternBuilder, Set, SetBuilder};
 
 const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("asm", &["*.asm", "*.s", "*.S"]),
@@ -161,8 +161,8 @@ impl FileTypeDef {
 #[derive(Clone, Debug)]
 pub struct Types {
     defs: Vec<FileTypeDef>,
-    selected: Option<globset::SetYesNo>,
-    negated: Option<globset::SetYesNo>,
+    selected: Option<Set>,
+    negated: Option<Set>,
     has_selected: bool,
     unmatched_pat: Pattern,
 }
@@ -175,8 +175,8 @@ impl Types {
     /// If has_selected is true, then at least one file type was selected.
     /// Therefore, any non-matches should be ignored.
     fn new(
-        selected: Option<globset::SetYesNo>,
-        negated: Option<globset::SetYesNo>,
+        selected: Option<Set>,
+        negated: Option<Set>,
         has_selected: bool,
         defs: Vec<FileTypeDef>,
     ) -> Types {
@@ -265,14 +265,11 @@ impl TypesBuilder {
     /// Build the current set of file type definitions *and* selections into
     /// a file type matcher.
     pub fn build(&self) -> Result<Types, Error> {
-        let opts = MatchOptions {
-            require_literal_separator: true, ..MatchOptions::default()
-        };
         let selected_globs =
             if self.selected.is_empty() {
                 None
             } else {
-                let mut bset = globset::SetBuilder::new();
+                let mut bset = SetBuilder::new();
                 for name in &self.selected {
                     let globs = match self.types.get(name) {
                         Some(globs) => globs,
@@ -282,16 +279,19 @@ impl TypesBuilder {
                         }
                     };
                     for glob in globs {
-                        try!(bset.add_with(glob, &opts));
+                        let pat = try!(
+                            PatternBuilder::new(glob)
+                                .literal_separator(true).build());
+                        bset.add(pat);
                     }
                 }
-                Some(try!(bset.build_yesno()))
+                Some(try!(bset.build()))
             };
         let negated_globs =
             if self.negated.is_empty() {
                 None
             } else {
-                let mut bset = globset::SetBuilder::new();
+                let mut bset = SetBuilder::new();
                 for name in &self.negated {
                     let globs = match self.types.get(name) {
                         Some(globs) => globs,
@@ -301,10 +301,13 @@ impl TypesBuilder {
                         }
                     };
                     for glob in globs {
-                        try!(bset.add_with(glob, &opts));
+                        let pat = try!(
+                            PatternBuilder::new(glob)
+                                .literal_separator(true).build());
+                        bset.add(pat);
                     }
                 }
-                Some(try!(bset.build_yesno()))
+                Some(try!(bset.build()))
             };
         Ok(Types::new(
             selected_globs,

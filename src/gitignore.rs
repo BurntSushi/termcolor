@@ -28,7 +28,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 
-use globset;
+use globset::{self, PatternBuilder, Set, SetBuilder};
 use regex;
 
 use pathutil::{is_file_name, strip_prefix};
@@ -82,7 +82,7 @@ impl From<io::Error> for Error {
 /// Gitignore is a matcher for the glob patterns in a single gitignore file.
 #[derive(Clone, Debug)]
 pub struct Gitignore {
-    set: globset::Set,
+    set: Set,
     root: PathBuf,
     patterns: Vec<Pattern>,
     num_ignores: u64,
@@ -207,7 +207,7 @@ impl<'a> Match<'a> {
 /// GitignoreBuilder constructs a matcher for a single set of globs from a
 /// .gitignore file.
 pub struct GitignoreBuilder {
-    builder: globset::SetBuilder,
+    builder: SetBuilder,
     root: PathBuf,
     patterns: Vec<Pattern>,
 }
@@ -237,7 +237,7 @@ impl GitignoreBuilder {
     pub fn new<P: AsRef<Path>>(root: P) -> GitignoreBuilder {
         let root = strip_prefix("./", root.as_ref()).unwrap_or(root.as_ref());
         GitignoreBuilder {
-            builder: globset::SetBuilder::new(),
+            builder: SetBuilder::new(),
             root: root.to_path_buf(),
             patterns: vec![],
         }
@@ -261,6 +261,7 @@ impl GitignoreBuilder {
     /// Add each pattern line from the file path given.
     pub fn add_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         let rdr = io::BufReader::new(try!(File::open(&path)));
+        debug!("gitignore: {}", path.as_ref().display());
         for line in rdr.lines() {
             try!(self.add(&path, &try!(line)));
         }
@@ -299,7 +300,7 @@ impl GitignoreBuilder {
             whitelist: false,
             only_dir: false,
         };
-        let mut opts = globset::MatchOptions::default();
+        let mut literal_separator = false;
         let has_slash = line.chars().any(|c| c == '/');
         let is_absolute = line.chars().nth(0).unwrap() == '/';
         if line.starts_with("\\!") || line.starts_with("\\#") {
@@ -314,7 +315,7 @@ impl GitignoreBuilder {
                 // then the glob can only match the beginning of a path
                 // (relative to the location of gitignore). We achieve this by
                 // simply banning wildcards from matching /.
-                opts.require_literal_separator = true;
+                literal_separator = true;
                 line = &line[1..];
             }
         }
@@ -330,7 +331,7 @@ impl GitignoreBuilder {
         // doesn't let wildcards match slashes.
         pat.pat = line.to_string();
         if has_slash {
-            opts.require_literal_separator = true;
+            literal_separator = true;
         }
         // If there was a leading slash, then this is a pattern that must
         // match the entire path name. Otherwise, we should let it match
@@ -347,7 +348,11 @@ impl GitignoreBuilder {
         if pat.pat.ends_with("/**") {
             pat.pat = format!("{}/*", pat.pat);
         }
-        try!(self.builder.add_with(&pat.pat, &opts));
+        let parsed = try!(
+            PatternBuilder::new(&pat.pat)
+                .literal_separator(literal_separator)
+                .build());
+        self.builder.add(parsed);
         self.patterns.push(pat);
         Ok(())
     }
@@ -429,6 +434,9 @@ mod tests {
     not_ignored!(ignot11, ROOT, "#foo", "#foo");
     not_ignored!(ignot12, ROOT, "\n\n\n", "foo");
     not_ignored!(ignot13, ROOT, "foo/**", "foo", true);
+    not_ignored!(
+        ignot14, "./third_party/protobuf", "m4/ltoptions.m4",
+        "./third_party/protobuf/csharp/src/packages/repositories.config");
 
     // See: https://github.com/BurntSushi/ripgrep/issues/106
     #[test]

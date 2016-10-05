@@ -659,7 +659,6 @@ clean!(regression_30, "test", ".", |wd: WorkDir, mut cmd: Command| {
     }
     wd.create_dir("vendor");
     wd.create("vendor/manifest", "test");
-    cmd.arg("--debug");
 
     let lines: String = wd.stdout(&mut cmd);
     let expected = path("vendor/manifest:test\n");
