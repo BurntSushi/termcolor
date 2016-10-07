@@ -70,6 +70,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("rust", &["*.rs"]),
     ("scala", &["*.scala"]),
     ("sh", &["*.bash", "*.csh", "*.ksh", "*.sh", "*.tcsh"]),
+    ("spark", &["*.spark"]),
     ("sql", &["*.sql"]),
     ("sv", &["*.v", "*.vg", "*.sv", "*.svh", "*.h"]),
     ("swift", &["*.swift"]),
