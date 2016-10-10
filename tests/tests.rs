@@ -542,7 +542,7 @@ sherlock!(symlink_nofollow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.remove("sherlock");
     wd.create_dir("foo");
     wd.create_dir("foo/bar");
-    wd.link("foo/baz", "foo/bar/baz");
+    wd.link_dir("foo/baz", "foo/bar/baz");
     wd.create_dir("foo/baz");
     wd.create("foo/baz/sherlock", hay::SHERLOCK);
     cmd.current_dir(wd.path().join("foo/bar"));
@@ -555,7 +555,7 @@ sherlock!(symlink_follow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create_dir("foo/bar");
     wd.create_dir("foo/baz");
     wd.create("foo/baz/sherlock", hay::SHERLOCK);
-    wd.link("foo/baz", "foo/bar/baz");
+    wd.link_dir("foo/baz", "foo/bar/baz");
     cmd.arg("-L");
     cmd.current_dir(wd.path().join("foo/bar"));
 
@@ -783,9 +783,13 @@ clean!(regression_131, "test", ".", |wd: WorkDir, mut cmd: Command| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/137
+//
+// TODO(burntsushi): Figure out why Windows gives "access denied" errors
+// when trying to create a file symlink. For now, disable test on Windows.
+#[cfg(not(windows))]
 sherlock!(regression_137, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
-    wd.link("sherlock", "sym1");
-    wd.link("sherlock", "sym2");
+    wd.link_file("sherlock", "sym1");
+    wd.link_file("sherlock", "sym2");
     cmd.arg("sym1");
     cmd.arg("sym2");
     cmd.arg("-j1");

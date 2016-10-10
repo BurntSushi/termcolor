@@ -83,7 +83,7 @@ impl WorkDir {
     /// Creates a directory symlink to the src with the given target name
     /// in this directory.
     #[cfg(not(windows))]
-    pub fn link<S: AsRef<Path>, T: AsRef<Path>>(&self, src: S, target: T) {
+    pub fn link_dir<S: AsRef<Path>, T: AsRef<Path>>(&self, src: S, target: T) {
         use std::os::unix::fs::symlink;
         let src = self.dir.join(src);
         let target = self.dir.join(target);
@@ -91,13 +91,41 @@ impl WorkDir {
         nice_err(&target, symlink(&src, &target));
     }
 
+    /// Creates a directory symlink to the src with the given target name
+    /// in this directory.
     #[cfg(windows)]
-    pub fn link<S: AsRef<Path>, T: AsRef<Path>>(&self, src: S, target: T) {
+    pub fn link_dir<S: AsRef<Path>, T: AsRef<Path>>(&self, src: S, target: T) {
         use std::os::windows::fs::symlink_dir;
         let src = self.dir.join(src);
         let target = self.dir.join(target);
         let _ = fs::remove_dir(&target);
         nice_err(&target, symlink_dir(&src, &target));
+    }
+
+    /// Creates a file symlink to the src with the given target name
+    /// in this directory.
+    #[cfg(not(windows))]
+    pub fn link_file<S: AsRef<Path>, T: AsRef<Path>>(
+        &self,
+        src: S,
+        target: T,
+    ) {
+        self.link_dir(src, target);
+    }
+
+    /// Creates a file symlink to the src with the given target name
+    /// in this directory.
+    #[cfg(windows)]
+    pub fn link_file<S: AsRef<Path>, T: AsRef<Path>>(
+        &self,
+        src: S,
+        target: T,
+    ) {
+        use std::os::windows::fs::symlink_file;
+        let src = self.dir.join(src);
+        let target = self.dir.join(target);
+        let _ = fs::remove_file(&target);
+        nice_err(&target, symlink_file(&src, &target));
     }
 
     /// Runs and captures the stdout of the given command.
