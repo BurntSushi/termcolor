@@ -611,17 +611,6 @@ sherlock!(unrestricted2, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
-#[cfg(not(windows))]
-sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
-    wd.create("file", "foo\x00bar\nfoo\x00baz\n");
-    cmd.arg("-uuu");
-
-    let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "file:foo\x00bar\nfile:foo\x00baz\n");
-});
-
-// On Windows, this test uses memory maps, so the NUL bytes don't get replaced.
-#[cfg(windows)]
 sherlock!(unrestricted3, "foo", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create("file", "foo\x00bar\nfoo\x00baz\n");
     cmd.arg("-uuu");
@@ -723,6 +712,13 @@ clean!(regression_67, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, path("dir/bar:test\n"));
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/87
+clean!(regression_87, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "foo\n**no-vcs**");
+    wd.create("foo", "test");
+    wd.assert_err(&mut cmd);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/90
 clean!(regression_90, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "!.foo");
@@ -769,6 +765,40 @@ clean!(regression_105_part2, "test", ".", |wd: WorkDir, mut cmd: Command| {
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "foo:3:zztest\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/127
+clean!(regression_127, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    // Set up a directory hierarchy like this:
+    //
+    // .gitignore
+    // foo/
+    //   sherlock
+    //   watson
+    //
+    // Where `.gitignore` contains `foo/sherlock`.
+    //
+    // ripgrep should ignore 'foo/sherlock' giving us results only from
+    // 'foo/watson' but on Windows ripgrep will include both 'foo/sherlock' and
+    // 'foo/watson' in the search results.
+    wd.create(".gitignore", "foo/sherlock\n");
+    wd.create_dir("foo");
+    wd.create("foo/sherlock", hay::SHERLOCK);
+    wd.create("foo/watson", hay::SHERLOCK);
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = format!("\
+{path}:For the Doctor Watsons of this world, as opposed to the Sherlock
+{path}:be, to a very large extent, the result of luck. Sherlock Holmes
+", path=path("foo/watson"));
+    assert_eq!(lines, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/131
+clean!(regression_131, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", "TopÑapa");
+    wd.create("TopÑapa", "test");
+    wd.assert_err(&mut cmd);
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/20

@@ -1,16 +1,101 @@
 /*!
-The glob module provides standard shell globbing, but is specifically
-implemented by converting glob syntax to regular expressions. The reasoning is
-two fold:
+The globset crate provides cross platform single glob and glob set matching.
 
-1. The regex library is *really* fast. Regaining performance in a distinct
-   implementation of globbing is non-trivial.
-2. Most crucially, a `RegexSet` can be used to match many globs simultaneously.
+Glob set matching is the process of matching one or more glob patterns against
+a single candidate path simultaneously, and returning all of the globs that
+matched. For example, given this set of globs:
 
-This module is written with some amount of intention of eventually splitting it
-out into its own separate crate, but I didn't quite have the energy for all
-that rigamorole when I wrote this. In particular, it could be fast/good enough
-to make its way into `glob` proper.
+```ignore
+*.rs
+src/lib.rs
+src/**/foo.rs
+```
+
+and a path `src/bar/baz/foo.rs`, then the set would report the first and third
+globs as matching.
+
+Single glob matching is also provided and is done by converting globs to
+
+# Example: one glob
+
+This example shows how to match a single glob against a single file path.
+
+```
+# fn example() -> Result<(), globset::Error> {
+use globset::Glob;
+
+let glob = try!(Glob::new("*.rs")).compile_matcher();
+
+assert!(glob.is_match("foo.rs"));
+assert!(glob.is_match("foo/bar.rs"));
+assert!(!glob.is_match("Cargo.toml"));
+# Ok(()) } example().unwrap();
+```
+
+# Example: configuring a glob matcher
+
+This example shows how to use a `GlobBuilder` to configure aspects of match
+semantics. In this example, we prevent wildcards from matching path separators.
+
+```
+# fn example() -> Result<(), globset::Error> {
+use globset::GlobBuilder;
+
+let glob = try!(GlobBuilder::new("*.rs")
+    .literal_separator(true).build()).compile_matcher();
+
+assert!(glob.is_match("foo.rs"));
+assert!(!glob.is_match("foo/bar.rs")); // no longer matches
+assert!(!glob.is_match("Cargo.toml"));
+# Ok(()) } example().unwrap();
+```
+
+# Example: match multiple globs at once
+
+This example shows how to match multiple glob patterns at once.
+
+```
+# fn example() -> Result<(), globset::Error> {
+use globset::{Glob, GlobSetBuilder};
+
+let mut builder = GlobSetBuilder::new();
+// A GlobBuilder can be used to configure each glob's match semantics
+// independently.
+builder.add(try!(Glob::new("*.rs")));
+builder.add(try!(Glob::new("src/lib.rs")));
+builder.add(try!(Glob::new("src/**/foo.rs")));
+let set = try!(builder.build());
+
+assert_eq!(set.matches("src/bar/baz/foo.rs"), vec![0, 2]);
+# Ok(()) } example().unwrap();
+```
+
+# Syntax
+
+Standard Unix-style glob syntax is supported:
+
+* `?` matches any single character. (If the `literal_separator` option is
+  enabled, then `?` can never match a path separator.)
+* `*` matches zero or more characters. (If the `literal_separator` option is
+  enabled, then `*` can never match a path separator.)
+* `**` recursively matches directories but are only legal in three situations.
+  First, if the glob starts with <code>\*\*&#x2F;</code>, then it matches
+  all directories. For example, <code>\*\*&#x2F;foo</code> matches `foo`
+  and `bar/foo` but not `foo/bar`. Secondly, if the glob ends with
+  <code>&#x2F;\*\*</code>, then it matches all sub-entries. For example,
+  <code>foo&#x2F;\*\*</code> matches `foo/a` and `foo/a/b`, but not `foo`.
+  Thirdly, if the glob contains <code>&#x2F;\*\*&#x2F;</code> anywhere within
+  the pattern, then it matches zero or more directories. Using `**` anywhere
+  else is illegal (N.B. the glob `**` is allowed and means "match everything").
+* `{a,b}` matches `a` or `b` where `a` and `b` are arbitrary glob patterns.
+  (N.B. Nesting `{...}` is not currently allowed.)
+* `[ab]` matches `a` or `b` where `a` and `b` are characters. Use
+  `[!ab]` to match any character except for `a` and `b`.
+* Metacharacters such as `*` and `?` can be escaped with character class
+  notation. e.g., `[*]` matches `*`.
+
+A `GlobBuilder` can be used to prevent wildcards from matching path separators,
+or to enable case insensitive matching.
 */
 
 #![deny(missing_docs)]
@@ -36,22 +121,20 @@ use std::str;
 use aho_corasick::{Automaton, AcAutomaton, FullAcAutomaton};
 use regex::bytes::{Regex, RegexBuilder, RegexSet};
 
-use pathutil::{file_name, file_name_ext, os_str_bytes, path_bytes};
-use pattern::MatchStrategy;
-pub use pattern::{Pattern, PatternBuilder, PatternMatcher};
+use pathutil::{
+    file_name, file_name_ext, normalize_path, os_str_bytes, path_bytes,
+};
+use glob::MatchStrategy;
+pub use glob::{Glob, GlobBuilder, GlobMatcher};
 
+mod glob;
 mod pathutil;
-mod pattern;
 
 macro_rules! eprintln {
     ($($tt:tt)*) => {{
         use std::io::Write;
         let _ = writeln!(&mut ::std::io::stderr(), $($tt)*);
     }}
-}
-
-lazy_static! {
-    static ref FILE_SEPARATORS: String = regex::quote(r"/\");
 }
 
 /// Represents an error that can occur when parsing a glob pattern.
@@ -139,19 +222,26 @@ fn new_regex_set<I, S>(pats: I) -> Result<RegexSet, Error>
 
 type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;
 
-/// Set represents a group of globs that can be matched together in a single
-/// pass.
+/// GlobSet represents a group of globs that can be matched together in a
+/// single pass.
 #[derive(Clone, Debug)]
-pub struct Set {
-    strats: Vec<SetMatchStrategy>,
+pub struct GlobSet {
+    strats: Vec<GlobSetMatchStrategy>,
 }
 
-impl Set {
+impl GlobSet {
     /// Returns true if any glob in this set matches the path given.
-    pub fn is_match<T: AsRef<Path>>(&self, path: T) -> bool {
-        let candidate = Candidate::new(path.as_ref());
+    pub fn is_match<P: AsRef<Path>>(&self, path: P) -> bool {
+        self.is_match_candidate(&Candidate::new(path.as_ref()))
+    }
+
+    /// Returns true if any glob in this set matches the path given.
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the
+    /// cost of preparing a path for matching.
+    pub fn is_match_candidate(&self, path: &Candidate) -> bool {
         for strat in &self.strats {
-            if strat.is_match(&candidate) {
+            if strat.is_match(path) {
                 return true;
             }
         }
@@ -160,30 +250,44 @@ impl Set {
 
     /// Returns the sequence number of every glob pattern that matches the
     /// given path.
-    #[allow(dead_code)]
-    pub fn matches<T: AsRef<Path>>(&self, path: T) -> Vec<usize> {
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the
+    /// cost of preparing a path for matching.
+    pub fn matches<P: AsRef<Path>>(&self, path: P) -> Vec<usize> {
+        self.matches_candidate(&Candidate::new(path.as_ref()))
+    }
+
+    /// Returns the sequence number of every glob pattern that matches the
+    /// given path.
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the
+    /// cost of preparing a path for matching.
+    pub fn matches_candidate(&self, path: &Candidate) -> Vec<usize> {
         let mut into = vec![];
-        self.matches_into(path, &mut into);
+        self.matches_candidate_into(path, &mut into);
         into
     }
 
     /// Adds the sequence number of every glob pattern that matches the given
     /// path to the vec given.
-    pub fn matches_into<T: AsRef<Path>>(
+    ///
+    /// `into` is is cleared before matching begins, and contains the set of
+    /// sequence numbers (in ascending order) after matching ends. If no globs
+    /// were matched, then `into` will be empty.
+    pub fn matches_candidate_into(
         &self,
-        path: T,
+        path: &Candidate,
         into: &mut Vec<usize>,
     ) {
         into.clear();
-        let candidate = Candidate::new(path.as_ref());
         for strat in &self.strats {
-            strat.matches_into(&candidate, into);
+            strat.matches_into(path, into);
         }
         into.sort();
         into.dedup();
     }
 
-    fn new(pats: &[Pattern]) -> Result<Set, Error> {
+    fn new(pats: &[Glob]) -> Result<GlobSet, Error> {
         let mut lits = LiteralStrategy::new();
         let mut base_lits = BasenameLiteralStrategy::new();
         let mut exts = ExtensionStrategy::new();
@@ -225,63 +329,70 @@ impl Set {
                 lits.0.len(), base_lits.0.len(), exts.0.len(),
                 prefixes.literals.len(), suffixes.literals.len(),
                 required_exts.0.len(), regexes.literals.len());
-        Ok(Set {
+        Ok(GlobSet {
             strats: vec![
-                SetMatchStrategy::Extension(exts),
-                SetMatchStrategy::BasenameLiteral(base_lits),
-                SetMatchStrategy::Literal(lits),
-                SetMatchStrategy::Suffix(suffixes.suffix()),
-                SetMatchStrategy::Prefix(prefixes.prefix()),
-                SetMatchStrategy::RequiredExtension(
+                GlobSetMatchStrategy::Extension(exts),
+                GlobSetMatchStrategy::BasenameLiteral(base_lits),
+                GlobSetMatchStrategy::Literal(lits),
+                GlobSetMatchStrategy::Suffix(suffixes.suffix()),
+                GlobSetMatchStrategy::Prefix(prefixes.prefix()),
+                GlobSetMatchStrategy::RequiredExtension(
                     try!(required_exts.build())),
-                SetMatchStrategy::Regex(try!(regexes.regex_set())),
+                GlobSetMatchStrategy::Regex(try!(regexes.regex_set())),
             ],
         })
     }
 }
 
-/// SetBuilder builds a group of patterns that can be used to simultaneously
-/// match a file path.
-pub struct SetBuilder {
-    pats: Vec<Pattern>,
+/// GlobSetBuilder builds a group of patterns that can be used to
+/// simultaneously match a file path.
+pub struct GlobSetBuilder {
+    pats: Vec<Glob>,
 }
 
-impl SetBuilder {
-    /// Create a new SetBuilder. A SetBuilder can be used to add new patterns.
-    /// Once all patterns have been added, `build` should be called to produce
-    /// a `Set`, which can then be used for matching.
-    pub fn new() -> SetBuilder {
-        SetBuilder { pats: vec![] }
+impl GlobSetBuilder {
+    /// Create a new GlobSetBuilder. A GlobSetBuilder can be used to add new
+    /// patterns. Once all patterns have been added, `build` should be called
+    /// to produce a `GlobSet`, which can then be used for matching.
+    pub fn new() -> GlobSetBuilder {
+        GlobSetBuilder { pats: vec![] }
     }
 
     /// Builds a new matcher from all of the glob patterns added so far.
     ///
     /// Once a matcher is built, no new patterns can be added to it.
-    pub fn build(&self) -> Result<Set, Error> {
-        Set::new(&self.pats)
+    pub fn build(&self) -> Result<GlobSet, Error> {
+        GlobSet::new(&self.pats)
     }
 
     /// Add a new pattern to this set.
     #[allow(dead_code)]
-    pub fn add(&mut self, pat: Pattern) -> &mut SetBuilder {
+    pub fn add(&mut self, pat: Glob) -> &mut GlobSetBuilder {
         self.pats.push(pat);
         self
     }
 }
 
+/// A candidate path for matching.
+///
+/// All glob matching in this crate operates on `Candidate` values.
+/// Constructing candidates has a very small cost associated with it, so
+/// callers may find it beneficial to amortize that cost when matching a single
+/// path against multiple globs or sets of globs.
 #[derive(Clone, Debug)]
-struct Candidate<'a> {
+pub struct Candidate<'a> {
     path: Cow<'a, [u8]>,
     basename: Cow<'a, [u8]>,
     ext: &'a OsStr,
 }
 
 impl<'a> Candidate<'a> {
-    fn new<P: AsRef<Path> + ?Sized>(path: &'a P) -> Candidate<'a> {
+    /// Create a new candidate for matching from the given path.
+    pub fn new<P: AsRef<Path> + ?Sized>(path: &'a P) -> Candidate<'a> {
         let path = path.as_ref();
         let basename = file_name(path).unwrap_or(OsStr::new(""));
         Candidate {
-            path: path_bytes(path),
+            path: normalize_path(path_bytes(path)),
             basename: os_str_bytes(basename),
             ext: file_name_ext(basename).unwrap_or(OsStr::new("")),
         }
@@ -305,7 +416,7 @@ impl<'a> Candidate<'a> {
 }
 
 #[derive(Clone, Debug)]
-enum SetMatchStrategy {
+enum GlobSetMatchStrategy {
     Literal(LiteralStrategy),
     BasenameLiteral(BasenameLiteralStrategy),
     Extension(ExtensionStrategy),
@@ -315,9 +426,9 @@ enum SetMatchStrategy {
     Regex(RegexSetStrategy),
 }
 
-impl SetMatchStrategy {
+impl GlobSetMatchStrategy {
     fn is_match(&self, candidate: &Candidate) -> bool {
-        use self::SetMatchStrategy::*;
+        use self::GlobSetMatchStrategy::*;
         match *self {
             Literal(ref s) => s.is_match(candidate),
             BasenameLiteral(ref s) => s.is_match(candidate),
@@ -330,7 +441,7 @@ impl SetMatchStrategy {
     }
 
     fn matches_into(&self, candidate: &Candidate, matches: &mut Vec<usize>) {
-        use self::SetMatchStrategy::*;
+        use self::GlobSetMatchStrategy::*;
         match *self {
             Literal(ref s) => s.matches_into(candidate, matches),
             BasenameLiteral(ref s) => s.matches_into(candidate, matches),
@@ -616,29 +727,23 @@ impl RequiredExtensionStrategyBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{Set, SetBuilder};
-    use pattern::Pattern;
+    use super::GlobSetBuilder;
+    use glob::Glob;
 
     #[test]
     fn set_works() {
-        let mut builder = SetBuilder::new();
-        builder.add(Pattern::new("src/**/*.rs").unwrap());
-        builder.add(Pattern::new("*.c").unwrap());
-        builder.add(Pattern::new("src/lib.rs").unwrap());
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("src/**/*.rs").unwrap());
+        builder.add(Glob::new("*.c").unwrap());
+        builder.add(Glob::new("src/lib.rs").unwrap());
         let set = builder.build().unwrap();
 
-        fn is_match(set: &Set, s: &str) -> bool {
-            let mut matches = vec![];
-            set.matches_into(s, &mut matches);
-            !matches.is_empty()
-        }
-
-        assert!(is_match(&set, "foo.c"));
-        assert!(is_match(&set, "src/foo.c"));
-        assert!(!is_match(&set, "foo.rs"));
-        assert!(!is_match(&set, "tests/foo.rs"));
-        assert!(is_match(&set, "src/foo.rs"));
-        assert!(is_match(&set, "src/grep/src/main.rs"));
+        assert!(set.is_match("foo.c"));
+        assert!(set.is_match("src/foo.c"));
+        assert!(!set.is_match("foo.rs"));
+        assert!(!set.is_match("tests/foo.rs"));
+        assert!(set.is_match("src/foo.rs"));
+        assert!(set.is_match("src/grep/src/main.rs"));
 
         let matches = set.matches("src/lib.rs");
         assert_eq!(2, matches.len());

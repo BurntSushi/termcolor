@@ -28,7 +28,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 
-use globset::{self, PatternBuilder, Set, SetBuilder};
+use globset::{self, Candidate, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex;
 
 use pathutil::{is_file_name, strip_prefix};
@@ -82,7 +82,7 @@ impl From<io::Error> for Error {
 /// Gitignore is a matcher for the glob patterns in a single gitignore file.
 #[derive(Clone, Debug)]
 pub struct Gitignore {
-    set: Set,
+    set: GlobSet,
     root: PathBuf,
     patterns: Vec<Pattern>,
     num_ignores: u64,
@@ -140,7 +140,8 @@ impl Gitignore {
         };
         MATCHES.with(|matches| {
             let mut matches = matches.borrow_mut();
-            self.set.matches_into(path, &mut *matches);
+            let candidate = Candidate::new(path);
+            self.set.matches_candidate_into(&candidate, &mut *matches);
             for &i in matches.iter().rev() {
                 let pat = &self.patterns[i];
                 if !pat.only_dir || is_dir {
@@ -207,7 +208,7 @@ impl<'a> Match<'a> {
 /// GitignoreBuilder constructs a matcher for a single set of globs from a
 /// .gitignore file.
 pub struct GitignoreBuilder {
-    builder: SetBuilder,
+    builder: GlobSetBuilder,
     root: PathBuf,
     patterns: Vec<Pattern>,
 }
@@ -237,7 +238,7 @@ impl GitignoreBuilder {
     pub fn new<P: AsRef<Path>>(root: P) -> GitignoreBuilder {
         let root = strip_prefix("./", root.as_ref()).unwrap_or(root.as_ref());
         GitignoreBuilder {
-            builder: SetBuilder::new(),
+            builder: GlobSetBuilder::new(),
             root: root.to_path_buf(),
             patterns: vec![],
         }
@@ -262,8 +263,18 @@ impl GitignoreBuilder {
     pub fn add_path<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         let rdr = io::BufReader::new(try!(File::open(&path)));
         debug!("gitignore: {}", path.as_ref().display());
-        for line in rdr.lines() {
-            try!(self.add(&path, &try!(line)));
+        for (i, line) in rdr.lines().enumerate() {
+            let line = match line {
+                Ok(line) => line,
+                Err(err) => {
+                    debug!("error reading line {} in {}: {}",
+                           i, path.as_ref().display(), err);
+                    continue;
+                }
+            };
+            if let Err(err) = self.add(&path, &line) {
+                debug!("error adding gitignore pattern: '{}': {}", line, err);
+            }
         }
         Ok(())
     }
@@ -349,7 +360,7 @@ impl GitignoreBuilder {
             pat.pat = format!("{}/*", pat.pat);
         }
         let parsed = try!(
-            PatternBuilder::new(&pat.pat)
+            GlobBuilder::new(&pat.pat)
                 .literal_separator(literal_separator)
                 .build());
         self.builder.add(parsed);

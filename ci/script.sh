@@ -19,6 +19,10 @@ run_test_suite() {
     cargo clean --target $TARGET --verbose
     cargo build --target $TARGET --verbose
     cargo test --target $TARGET --verbose
+    cargo build --target $TARGET --verbose --manifest-path grep/Cargo.toml
+    cargo test --target $TARGET --verbose --manifest-path grep/Cargo.toml
+    cargo build --target $TARGET --verbose --manifest-path globset/Cargo.toml
+    cargo test --target $TARGET --verbose --manifest-path globset/Cargo.toml
 
     # sanity check the file type
     file target/$TARGET/debug/rg

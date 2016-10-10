@@ -101,20 +101,45 @@ pub fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
 /// necessary.
 #[cfg(not(unix))]
 pub fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
-    // TODO(burntsushi): On Windows, OS strings are probably UTF-16, so even
-    // if we could get at the raw bytes, they wouldn't be useful. We *must*
-    // convert to UTF-8 before doing path matching. Unfortunate, but necessary.
+    // TODO(burntsushi): On Windows, OS strings are WTF-8, which is a superset
+    // of UTF-8, so even if we could get at the raw bytes, they wouldn't
+    // be useful. We *must* convert to UTF-8 before doing path matching.
+    // Unfortunate, but necessary.
     match s.to_string_lossy() {
         Cow::Owned(s) => Cow::Owned(s.into_bytes()),
         Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
     }
 }
 
+/// Normalizes a path to use `/` as a separator everywhere, even on platforms
+/// that recognize other characters as separators.
+#[cfg(unix)]
+pub fn normalize_path(path: Cow<[u8]>) -> Cow<[u8]> {
+    // UNIX only uses /, so we're good.
+    path
+}
+
+/// Normalizes a path to use `/` as a separator everywhere, even on platforms
+/// that recognize other characters as separators.
+#[cfg(not(unix))]
+pub fn normalize_path(mut path: Cow<[u8]>) -> Cow<[u8]> {
+    use std::path::is_separator;
+
+    for i in 0..path.len() {
+        if path[i] == b'/' || !is_separator(path[i] as char) {
+            continue;
+        }
+        path.to_mut()[i] = b'/';
+    }
+    path
+}
+
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
     use std::ffi::OsStr;
 
-    use super::file_name_ext;
+    use super::{file_name_ext, normalize_path};
 
     macro_rules! ext {
         ($name:ident, $file_name:expr, $ext:expr) => {
@@ -131,4 +156,25 @@ mod tests {
     ext!(ext3, "..rs", Some(".rs"));
     ext!(ext4, "", None::<&str>);
     ext!(ext5, "foo", None::<&str>);
+
+    macro_rules! normalize {
+        ($name:ident, $path:expr, $expected:expr) => {
+            #[test]
+            fn $name() {
+                let got = normalize_path(Cow::Owned($path.to_vec()));
+                assert_eq!($expected.to_vec(), got.into_owned());
+            }
+        };
+    }
+
+    normalize!(normal1, b"foo", b"foo");
+    normalize!(normal2, b"foo/bar", b"foo/bar");
+    #[cfg(unix)]
+    normalize!(normal3, b"foo\\bar", b"foo\\bar");
+    #[cfg(not(unix))]
+    normalize!(normal3, b"foo\\bar", b"foo/bar");
+    #[cfg(unix)]
+    normalize!(normal4, b"foo\\bar/baz", b"foo\\bar/baz");
+    #[cfg(not(unix))]
+    normalize!(normal4, b"foo\\bar/baz", b"foo/bar/baz");
 }

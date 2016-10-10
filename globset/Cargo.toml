@@ -3,6 +3,10 @@ name = "globset"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
+[lib]
+name = "globset"
+bench = false
+
 [dependencies]
 aho-corasick = "0.5.3"
 fnv = "1.0"
@@ -10,3 +14,6 @@ lazy_static = "0.2"
 log = "0.3"
 memchr = "0.1"
 regex = "0.1.77"
+
+[dev-dependencies]
+glob = "0.2"
