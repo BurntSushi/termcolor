@@ -97,7 +97,15 @@ but you'll need to have the
 [Microsoft VC++ 2015 redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 installed.
 
-If you're a **Homebrew** user, then you can install it with a custom tap:
+If you're a **Mac OS X Homebrew** user, then you can install ripgrep either
+from homebrew-core, (compiled with rust stable, no SIMD):
+
+```
+$ brew install ripgrep
+```
+
+or you can install a binary compiled with rust nightly (including SIMD and all
+optimizations) by utilizing a custom tap:
 
 ```
 $ brew tap burntsushi/ripgrep https://github.com/BurntSushi/ripgrep.git
