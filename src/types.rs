@@ -54,6 +54,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("m4", &["*.ac", "*.m4"]),
     ("make", &["gnumakefile", "Gnumakefile", "makefile", "Makefile", "*.mk"]),
     ("markdown", &["*.md"]),
+    ("md", &["*.md"]),
     ("matlab", &["*.m"]),
     ("mk", &["mkfile"]),
     ("ml", &["*.ml"]),
