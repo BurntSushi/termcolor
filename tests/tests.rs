@@ -567,6 +567,25 @@ baz/sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
     assert_eq!(lines, path(expected));
 });
 
+// Follow symlinks on explicit file arguments.
+sherlock!(symlink_explicit_file, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.link("sherlock", "sym1");
+    wd.link("sherlock", "sym2");
+    cmd.arg("sym1");
+    cmd.arg("sym2");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+sym1:For the Doctor Watsons of this world, as opposed to the Sherlock
+sym1:be, to a very large extent, the result of luck. Sherlock Holmes
+sym2:For the Doctor Watsons of this world, as opposed to the Sherlock
+sym2:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, path(expected));
+});
+
 sherlock!(unrestricted1, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "sherlock\n");
     cmd.arg("-u");

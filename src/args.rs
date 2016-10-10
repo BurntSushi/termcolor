@@ -708,7 +708,9 @@ impl Args {
 
     /// Create a new recursive directory iterator at the path given.
     pub fn walker(&self, path: &Path) -> Result<walk::Iter> {
-        let mut wd = WalkDir::new(path).follow_links(self.follow);
+        // Always follow symlinks for explicitly specified files.
+        let mut wd = WalkDir::new(path).follow_links(self.follow
+                                                     || path.is_file());
         if let Some(maxdepth) = self.maxdepth {
             wd = wd.max_depth(maxdepth);
         }
