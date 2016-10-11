@@ -182,7 +182,7 @@ Less common options:
         either --case-sensitive or --ignore-case.
 
     -j, --threads ARG
-        The number of threads to use. Defaults to the number of logical CPUs
+        The number of threads to use. 0 means use the number of logical CPUs
         (capped at 6). [default: 0]
 
     --version
