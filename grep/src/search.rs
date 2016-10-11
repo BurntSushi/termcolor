@@ -184,8 +184,9 @@ impl GrepBuilder {
                  .unicode(true)
                  .case_insensitive(self.opts.case_insensitive)
                  .parse(&self.pattern));
+        let expr = try!(nonl::remove(expr, self.opts.line_terminator));
         debug!("regex ast:\n{:#?}", expr);
-        Ok(try!(nonl::remove(expr, self.opts.line_terminator)))
+        Ok(expr)
     }
 }
 
