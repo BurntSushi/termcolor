@@ -1,3 +1,47 @@
+0.2.2
+=====
+Packaging updates:
+
+* `ripgrep` is now in homebrew-core. `brew install ripgrep` will do the trick
+  on a Mac.
+* `ripgrep` is now in the Archlinux community repository.
+  `pacman -S ripgrep` will do the trick on Archlinux.
+* Support has been discontinued for i686-darwin.
+* Glob matching has been moved out into its own crate:
+  [`globset`](https://crates.io/crates/globset).
+
+Feature enhancements:
+
+* Added or improved file type filtering for CMake, config, Jinja, Markdown,
+  Spark,
+* [FEATURE #109](https://github.com/BurntSushi/ripgrep/issues/109):
+  Add a --max-depth flag for directory traversal.
+* [FEATURE #124](https://github.com/BurntSushi/ripgrep/issues/124):
+  Add -s/--case-sensitive flag. Overrides --smart-case.
+* [FEATURE #139](https://github.com/BurntSushi/ripgrep/pull/139):
+  The `ripgrep` repo is now a Homebrew tap. This is useful for installing
+  SIMD accelerated binaries, which aren't available in homebrew-core.
+
+Bug fixes:
+
+* [BUG #87](https://github.com/BurntSushi/ripgrep/issues/87),
+  [BUG #127](https://github.com/BurntSushi/ripgrep/issues/127),
+  [BUG #131](https://github.com/BurntSushi/ripgrep/issues/131):
+  Various issues related to glob matching.
+* [BUG #116](https://github.com/BurntSushi/ripgrep/issues/116):
+  --quiet should stop search after first match.
+* [BUG #121](https://github.com/BurntSushi/ripgrep/pull/121):
+  --color always should show colors, even when --vimgrep is used.
+* [BUG #122](https://github.com/BurntSushi/ripgrep/pull/122):
+  Colorize file path at beginning of line.
+* [BUG #134](https://github.com/BurntSushi/ripgrep/issues/134):
+  Processing a large ignore file (thousands of globs) was very slow.
+* [BUG #137](https://github.com/BurntSushi/ripgrep/issues/137):
+  Always follow symlinks when given as an explicit argument.
+* [BUG #147](https://github.com/BurntSushi/ripgrep/issues/147):
+  Clarify documentation for --replace.
+
+
 0.2.1
 =====
 Feature enhancements:
