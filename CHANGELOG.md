@@ -1,3 +1,13 @@
+0.2.3
+=====
+Bug fixes:
+
+* [BUG #164](https://github.com/BurntSushi/ripgrep/issues/164):
+  Fixes a segfault on macos builds.
+* [BUG #167](https://github.com/BurntSushi/ripgrep/issues/167):
+  Clarify documentation for --threads.
+
+
 0.2.2
 =====
 Packaging updates:
@@ -13,7 +23,7 @@ Packaging updates:
 Feature enhancements:
 
 * Added or improved file type filtering for CMake, config, Jinja, Markdown,
-  Spark,
+  Spark.
 * [FEATURE #109](https://github.com/BurntSushi/ripgrep/issues/109):
   Add a --max-depth flag for directory traversal.
 * [FEATURE #124](https://github.com/BurntSushi/ripgrep/issues/124):
