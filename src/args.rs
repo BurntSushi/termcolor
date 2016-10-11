@@ -199,12 +199,12 @@ File type management options:
 
     --type-add ARG ...
         Add a new glob for a particular file type. Only one glob can be
-        added at a time. Multiple --type-add flags can be provided. Unless
-        --type-clear is used, globs are added to any existing globs inside of
-        ripgrep. Note that this must be passed to every invocation of rg. Type
-        settings are NOT persisted.
+        added at a time. Multiple --type-add flags can be provided.
+        Unless --type-clear is used, globs are added to any existing globs
+        inside of ripgrep. Note that this must be passed to every invocation of
+        rg. Type settings are NOT persisted.
 
-        Example: `--type-add html:*.html`
+        Example: `rg --type-add 'foo:*.foo' -tfoo PATTERN`
 
     --type-clear TYPE ...
         Clear the file type globs previously defined for TYPE. This only clears
