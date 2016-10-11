@@ -12,6 +12,7 @@ repository = "https://github.com/BurntSushi/ripgrep"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"
+exclude = ["HomebrewFormula"]
 
 [[bin]]
 bench = false
