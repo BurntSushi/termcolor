@@ -5,7 +5,7 @@ use term::{Attr, Terminal};
 use term::color;
 
 use pathutil::strip_prefix;
-use types::FileTypeDef;
+use ignore::types::FileTypeDef;
 
 /// Printer encapsulates all output logic for searching.
 ///
@@ -168,11 +168,11 @@ impl<W: Terminal + Send> Printer<W> {
         self.write(def.name().as_bytes());
         self.write(b": ");
         let mut first = true;
-        for pat in def.patterns() {
+        for glob in def.globs() {
             if !first {
                 self.write(b", ");
             }
-            self.write(pat.as_bytes());
+            self.write(glob.as_bytes());
             first = false;
         }
         self.write_eol();

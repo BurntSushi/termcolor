@@ -89,16 +89,14 @@ pub fn path_bytes(path: &Path) -> Cow<[u8]> {
     os_str_bytes(path.as_os_str())
 }
 
-/// Return the raw bytes of the given OS string, transcoded to UTF-8 if
-/// necessary.
+/// Return the raw bytes of the given OS string, possibly transcoded to UTF-8.
 #[cfg(unix)]
 pub fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
     use std::os::unix::ffi::OsStrExt;
     Cow::Borrowed(s.as_bytes())
 }
 
-/// Return the raw bytes of the given OS string, transcoded to UTF-8 if
-/// necessary.
+/// Return the raw bytes of the given OS string, possibly transcoded to UTF-8.
 #[cfg(not(unix))]
 pub fn os_str_bytes(s: &OsStr) -> Cow<[u8]> {
     // TODO(burntsushi): On Windows, OS strings are WTF-8, which is a superset

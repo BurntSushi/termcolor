@@ -30,6 +30,7 @@ test_script:
   - cargo test --verbose
   - cargo test --verbose --manifest-path grep/Cargo.toml
   - cargo test --verbose --manifest-path globset/Cargo.toml
+  - cargo test --verbose --manifest-path ignore/Cargo.toml
 
 before_deploy:
   # Generate artifacts for release
@@ -59,7 +60,8 @@ deploy:
 
 branches:
   only:
-    - appveyor
-    - /\d+\.\d+\.\d+/
-  except:
     - master
+    # - appveyor
+    # - /\d+\.\d+\.\d+/
+  # except:
+    # - master

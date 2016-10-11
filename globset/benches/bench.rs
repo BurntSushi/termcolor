@@ -11,6 +11,9 @@ extern crate lazy_static;
 extern crate regex;
 extern crate test;
 
+use std::ffi::OsStr;
+use std::path::Path;
+
 use globset::{Candidate, Glob, GlobMatcher, GlobSet, GlobSetBuilder};
 
 const EXT: &'static str = "some/a/bigger/path/to/the/crazy/needle.txt";

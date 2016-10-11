@@ -14,19 +14,17 @@ use term::Terminal;
 use term;
 #[cfg(windows)]
 use term::WinConsole;
-use walkdir::WalkDir;
 
 use atty;
-use gitignore::{Gitignore, GitignoreBuilder};
-use ignore::Ignore;
+use ignore::overrides::{Override, OverrideBuilder};
+use ignore::types::{FileTypeDef, Types, TypesBuilder};
+use ignore;
 use out::{Out, ColoredTerminal};
 use printer::Printer;
 use search_buffer::BufferSearcher;
 use search_stream::{InputBuffer, Searcher};
 #[cfg(windows)]
 use terminal_win::WindowsBuffer;
-use types::{FileTypeDef, Types, TypesBuilder};
-use walk;
 
 use Result;
 
@@ -131,6 +129,13 @@ Less common options:
         Search hidden directories and files. (Hidden directories and files are
         skipped by default.)
 
+    --ignore-file FILE ...
+        Specify additional ignore files for filtering file paths. Ignore files
+        should be in the gitignore format and are matched relative to the
+        current working directory. These ignore files have lower precedence
+        than all other ignore file types. When specifying multiple ignore
+        files, earlier files have lower precedence than later files.
+
     -L, --follow
         Follow symlinks.
 
@@ -234,6 +239,7 @@ pub struct RawArgs {
     flag_heading: bool,
     flag_hidden: bool,
     flag_ignore_case: bool,
+    flag_ignore_file: Vec<String>,
     flag_invert_match: bool,
     flag_line_number: bool,
     flag_fixed_strings: bool,
@@ -279,11 +285,12 @@ pub struct Args {
     eol: u8,
     files: bool,
     follow: bool,
-    glob_overrides: Option<Gitignore>,
+    glob_overrides: Override,
     grep: Grep,
     heading: bool,
     hidden: bool,
     ignore_case: bool,
+    ignore_files: Vec<PathBuf>,
     invert_match: bool,
     line_number: bool,
     line_per_match: bool,
@@ -347,14 +354,13 @@ impl RawArgs {
         }
         let glob_overrides =
             if self.flag_glob.is_empty() {
-                None
+                Override::empty()
             } else {
-                let cwd = try!(env::current_dir());
-                let mut bgi = GitignoreBuilder::new(cwd);
+                let mut ovr = OverrideBuilder::new(try!(env::current_dir()));
                 for pat in &self.flag_glob {
-                    try!(bgi.add("<argv>", pat));
+                    try!(ovr.add(pat));
                 }
-                Some(try!(bgi.build()))
+                try!(ovr.build())
             };
         let threads =
             if self.flag_threads == 0 {
@@ -382,6 +388,9 @@ impl RawArgs {
         let no_ignore = self.flag_no_ignore || self.flag_unrestricted >= 1;
         let hidden = self.flag_hidden || self.flag_unrestricted >= 2;
         let text = self.flag_text || self.flag_unrestricted >= 3;
+        let ignore_files: Vec<_> = self.flag_ignore_file.iter().map(|p| {
+            Path::new(p).to_path_buf()
+        }).collect();
         let mut args = Args {
             paths: paths,
             after_context: after_context,
@@ -399,6 +408,7 @@ impl RawArgs {
             heading: !self.flag_no_heading && self.flag_heading,
             hidden: hidden,
             ignore_case: self.flag_ignore_case,
+            ignore_files: ignore_files,
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
             line_per_match: self.flag_vimgrep,
@@ -711,31 +721,30 @@ impl Args {
         self.type_list
     }
 
-    /// Create a new recursive directory iterator at the path given.
-    pub fn walker(&self, path: &Path) -> Result<walk::Iter> {
-        // Always follow symlinks for explicitly specified files.
-        let mut wd = WalkDir::new(path).follow_links(
-            self.follow || path.is_file());
-        if let Some(maxdepth) = self.maxdepth {
-            wd = wd.max_depth(maxdepth);
+    /// Create a new recursive directory iterator over the paths in argv.
+    pub fn walker(&self) -> Walk {
+        let paths = self.paths();
+        let mut wd = ignore::WalkBuilder::new(&paths[0]);
+        for path in &paths[1..] {
+            wd.add(path);
         }
-        let mut ig = Ignore::new();
-        // Only register ignore rules if this is a directory. If it's a file,
-        // then it was explicitly given by the end user, so we always search
-        // it.
-        if path.is_dir() {
-            ig.ignore_hidden(!self.hidden);
-            ig.no_ignore(self.no_ignore);
-            ig.no_ignore_vcs(self.no_ignore_vcs);
-            ig.add_types(self.types.clone());
-            if !self.no_ignore_parent {
-                try!(ig.push_parents(path));
-            }
-            if let Some(ref overrides) = self.glob_overrides {
-                ig.add_override(overrides.clone());
+        for path in &self.ignore_files {
+            if let Some(err) = wd.add_ignore(path) {
+                eprintln!("{}", err);
             }
         }
-        Ok(walk::Iter::new(ig, wd))
+
+        wd.follow_links(self.follow);
+        wd.hidden(!self.hidden);
+        wd.max_depth(self.maxdepth);
+        wd.overrides(self.glob_overrides.clone());
+        wd.types(self.types.clone());
+        wd.git_global(!self.no_ignore && !self.no_ignore_vcs);
+        wd.git_ignore(!self.no_ignore && !self.no_ignore_vcs);
+        wd.git_exclude(!self.no_ignore && !self.no_ignore_vcs);
+        wd.ignore(!self.no_ignore);
+        wd.parents(!self.no_ignore_parent);
+        Walk(wd.build())
     }
 }
 
@@ -752,6 +761,34 @@ fn version() -> String {
     }
 }
 
+/// A simple wrapper around the ignore::Walk iterator. This will
+/// automatically emit error messages to stderr and will skip directories.
+pub struct Walk(ignore::Walk);
+
+impl Iterator for Walk {
+    type Item = ignore::DirEntry;
+
+    fn next(&mut self) -> Option<ignore::DirEntry> {
+        while let Some(result) = self.0.next() {
+            match result {
+                Ok(dent) => {
+                    if let Some(err) = dent.error() {
+                        eprintln!("{}", err);
+                    }
+                    if dent.file_type().map_or(false, |x| x.is_dir()) {
+                        continue;
+                    }
+                    return Some(dent);
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
+            }
+        }
+        None
+    }
+}
+
 /// A single state in the state machine used by `unescape`.
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum State {
@@ -761,7 +798,7 @@ enum State {
     Literal,
 }
 
-/// Unescapes a string given on the command line. It supports a limit set of
+/// Unescapes a string given on the command line. It supports a limited set of
 /// escape sequences:
 ///
 /// * \t, \r and \n are mapped to their corresponding ASCII bytes.

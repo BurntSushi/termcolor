@@ -1,8 +1,8 @@
 extern crate deque;
 extern crate docopt;
 extern crate env_logger;
-extern crate globset;
 extern crate grep;
+extern crate ignore;
 #[cfg(windows)]
 extern crate kernel32;
 #[macro_use]
@@ -16,8 +16,6 @@ extern crate num_cpus;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate term;
-extern crate thread_local;
-extern crate walkdir;
 #[cfg(windows)]
 extern crate winapi;
 
@@ -36,7 +34,7 @@ use deque::{Stealer, Stolen};
 use grep::Grep;
 use memmap::{Mmap, Protection};
 use term::Terminal;
-use walkdir::DirEntry;
+use ignore::DirEntry;
 
 use args::Args;
 use out::{ColoredTerminal, Out};
@@ -61,8 +59,6 @@ macro_rules! eprintln {
 
 mod args;
 mod atty;
-mod gitignore;
-mod ignore;
 mod out;
 mod pathutil;
 mod printer;
@@ -70,8 +66,6 @@ mod search_buffer;
 mod search_stream;
 #[cfg(windows)]
 mod terminal_win;
-mod types;
-mod walk;
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
@@ -101,7 +95,6 @@ fn run(args: Args) -> Result<u64> {
     if threads == 1 || isone {
         return run_one_thread(args.clone());
     }
-
     let out = Arc::new(Mutex::new(args.out()));
     let quiet_matched = QuietMatched::new(args.quiet());
     let mut workers = vec![];
@@ -126,21 +119,15 @@ fn run(args: Args) -> Result<u64> {
         workq
     };
     let mut paths_searched: u64 = 0;
-    for p in paths {
+    for dent in args.walker() {
         if quiet_matched.has_match() {
             break;
         }
-        if p == Path::new("-") {
-            paths_searched += 1;
+        paths_searched += 1;
+        if dent.is_stdin() {
             workq.push(Work::Stdin);
         } else {
-            for ent in try!(args.walker(p)) {
-                if quiet_matched.has_match() {
-                    break;
-                }
-                paths_searched += 1;
-                workq.push(Work::File(ent));
-            }
+            workq.push(Work::File(dent));
         }
     }
     if !paths.is_empty() && paths_searched == 0 {
@@ -165,47 +152,33 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
         grep: args.grep(),
         match_count: 0,
     };
-    let paths = args.paths();
     let mut term = args.stdout();
-
     let mut paths_searched: u64 = 0;
-    for p in paths {
-        if args.quiet() && worker.match_count > 0 {
-            break;
-        }
-        if p == Path::new("-") {
-            paths_searched += 1;
-            let mut printer = args.printer(&mut term);
-            if worker.match_count > 0 {
-                if let Some(sep) = args.file_separator() {
-                    printer = printer.file_separator(sep);
-                }
+    for dent in args.walker() {
+        let mut printer = args.printer(&mut term);
+        if worker.match_count > 0 {
+            if args.quiet() {
+                break;
             }
+            if let Some(sep) = args.file_separator() {
+                printer = printer.file_separator(sep);
+            }
+        }
+        paths_searched += 1;
+        if dent.is_stdin() {
             worker.do_work(&mut printer, WorkReady::Stdin);
         } else {
-            for ent in try!(args.walker(p)) {
-                paths_searched += 1;
-                let mut printer = args.printer(&mut term);
-                if worker.match_count > 0 {
-                    if args.quiet() {
-                        break;
-                    }
-                    if let Some(sep) = args.file_separator() {
-                        printer = printer.file_separator(sep);
-                    }
+            let file = match File::open(dent.path()) {
+                Ok(file) => file,
+                Err(err) => {
+                    eprintln!("{}: {}", dent.path().display(), err);
+                    continue;
                 }
-                let file = match File::open(ent.path()) {
-                    Ok(file) => file,
-                    Err(err) => {
-                        eprintln!("{}: {}", ent.path().display(), err);
-                        continue;
-                    }
-                };
-                worker.do_work(&mut printer, WorkReady::DirFile(ent, file));
-            }
+            };
+            worker.do_work(&mut printer, WorkReady::DirFile(dent, file));
         }
     }
-    if !paths.is_empty() && paths_searched == 0 {
+    if !args.paths().is_empty() && paths_searched == 0 {
         eprintln!("No files were searched, which means ripgrep probably \
                    applied a filter you didn't expect. \
                    Try running again with --debug.");
@@ -217,16 +190,9 @@ fn run_files(args: Arc<Args>) -> Result<u64> {
     let term = args.stdout();
     let mut printer = args.printer(term);
     let mut file_count = 0;
-    for p in args.paths() {
-        if p == Path::new("-") {
-            printer.path(&Path::new("<stdin>"));
-            file_count += 1;
-        } else {
-            for ent in try!(args.walker(p)) {
-                printer.path(ent.path());
-                file_count += 1;
-            }
-        }
+    for dent in args.walker() {
+        printer.path(dent.path());
+        file_count += 1;
     }
     Ok(file_count)
 }
