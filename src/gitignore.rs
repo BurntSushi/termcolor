@@ -27,9 +27,11 @@ use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use globset::{self, Candidate, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex;
+use thread_local::ThreadLocal;
 
 use pathutil::{is_file_name, strip_prefix};
 
@@ -87,6 +89,7 @@ pub struct Gitignore {
     patterns: Vec<Pattern>,
     num_ignores: u64,
     num_whitelist: u64,
+    matches: Arc<ThreadLocal<RefCell<Vec<usize>>>>,
 }
 
 impl Gitignore {
@@ -133,27 +136,21 @@ impl Gitignore {
 
     /// Like matched, but takes a path that has already been stripped.
     pub fn matched_stripped(&self, path: &Path, is_dir: bool) -> Match {
-        thread_local! {
-            static MATCHES: RefCell<Vec<usize>> = {
-                RefCell::new(vec![])
+        let _matches = self.matches.get_default();
+        let mut matches = _matches.borrow_mut();
+        let candidate = Candidate::new(path);
+        self.set.matches_candidate_into(&candidate, &mut *matches);
+        for &i in matches.iter().rev() {
+            let pat = &self.patterns[i];
+            if !pat.only_dir || is_dir {
+                return if pat.whitelist {
+                    Match::Whitelist(pat)
+                } else {
+                    Match::Ignored(pat)
+                };
             }
-        };
-        MATCHES.with(|matches| {
-            let mut matches = matches.borrow_mut();
-            let candidate = Candidate::new(path);
-            self.set.matches_candidate_into(&candidate, &mut *matches);
-            for &i in matches.iter().rev() {
-                let pat = &self.patterns[i];
-                if !pat.only_dir || is_dir {
-                    return if pat.whitelist {
-                        Match::Whitelist(pat)
-                    } else {
-                        Match::Ignored(pat)
-                    };
-                }
-            }
-            Match::None
-        })
+        }
+        Match::None
     }
 
     /// Returns the total number of ignore patterns.
@@ -256,6 +253,7 @@ impl GitignoreBuilder {
             patterns: self.patterns,
             num_ignores: nignores as u64,
             num_whitelist: nwhitelist as u64,
+            matches: Arc::new(ThreadLocal::default()),
         })
     }
 

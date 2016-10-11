@@ -16,6 +16,7 @@ extern crate num_cpus;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate term;
+extern crate thread_local;
 extern crate walkdir;
 #[cfg(windows)]
 extern crate winapi;

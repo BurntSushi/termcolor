@@ -38,6 +38,7 @@ num_cpus = "1"
 regex = "0.1.77"
 rustc-serialize = "0.3"
 term = "0.4"
+thread_local = "0.2.7"
 walkdir = "0.1"
 
 [target.'cfg(windows)'.dependencies]
