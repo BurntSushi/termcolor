@@ -91,12 +91,6 @@ If a match is found in a file, stop searching that file.
 .RS
 .RE
 .TP
-.B \-r, \-\-replace \f[I]ARG\f[]
-Replace every match with the string given.
-Capture group indices (e.g., $5) and names (e.g., $foo) are supported.
-.RS
-.RE
-.TP
 .B \-t, \-\-type \f[I]TYPE\f[] ...
 Only search files matching TYPE.
 Multiple type flags may be provided.
@@ -259,6 +253,15 @@ Alias for \-\-color=always \-\-heading \-n.
 .RS
 .RE
 .TP
+.B \-r, \-\-replace \f[I]ARG\f[]
+Replace every match with the string given when printing search results.
+Neither this flag nor any other flag will modify your files.
+.RS
+.PP
+Capture group indices (e.g., $5) and names (e.g., $foo) are supported in
+the replacement string.
+.RE
+.TP
 .B \-s, \-\-case\-sensitive
 Search case sensitively.
 This overrides \-\-ignore\-case and \-\-smart\-case.
@@ -305,10 +308,12 @@ Multiple \-\-type\-add flags can be provided.
 Unless \-\-type\-clear is used, globs are added to any existing globs
 inside of ripgrep.
 Note that this must be passed to every invocation of rg.
+Type settings are NOT persisted.
 .RS
-.RE
 .PP
-Example: \f[C]\-\-type\-add\ html:*.html\f[]
+Example:
+\f[C]rg\ \-\-type\-add\ \[aq]foo:*.foo\[aq]\ \-tfoo\ PATTERN\f[]
+.RE
 .TP
 .B \-\-type\-clear \f[I]TYPE\f[] ...
 Clear the file type globs previously defined for TYPE.

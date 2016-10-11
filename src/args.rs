@@ -68,9 +68,6 @@ Common options:
     -N, --no-line-number       Suppress line numbers.
     -q, --quiet                Do not print anything to stdout. If a match is
                                found in a file, stop searching that file.
-    -r, --replace ARG          Replace every match with the string given.
-                               Capture group indices (e.g., $5) and names
-                               (e.g., $foo) are supported.
     -t, --type TYPE ...        Only search files matching TYPE. Multiple type
                                flags may be provided. Use the --type-list flag
                                to list all available types.
@@ -169,6 +166,13 @@ Less common options:
     -p, --pretty
         Alias for --color=always --heading -n.
 
+    -r, --replace ARG
+        Replace every match with the string given when printing search results.
+        Neither this flag nor any other flag will modify your files.
+
+        Capture group indices (e.g., $5) and names (e.g., $foo) are supported
+        in the replacement string.
+
     -s, --case-sensitive
         Search case sensitively. This overrides --ignore-case and --smart-case.
 
@@ -194,10 +198,11 @@ File type management options:
         Show all supported file types and their associated globs.
 
     --type-add ARG ...
-        Add a new glob for a particular file type. Only one glob can be added
-        at a time. Multiple type-add flags can be provided. Unless type-clear
-        is used, globs are added to any existing globs inside of ripgrep. Note
-        that this must be passed to every invocation of rg.
+        Add a new glob for a particular file type. Only one glob can be
+        added at a time. Multiple --type-add flags can be provided. Unless
+        --type-clear is used, globs are added to any existing globs inside of
+        ripgrep. Note that this must be passed to every invocation of rg. Type
+        settings are NOT persisted.
 
         Example: `--type-add html:*.html`
 
