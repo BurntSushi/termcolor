@@ -809,6 +809,34 @@ sym2:be, to a very large extent, the result of luck. Sherlock Holmes
     assert_eq!(lines, path(expected));
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/156
+clean!(
+    regression_156,
+    r#"#(?:parse|include)\s*\(\s*(?:"|')[./A-Za-z_-]+(?:"|')"#,
+    "testcase.txt",
+|wd: WorkDir, mut cmd: Command| {
+    const TESTCASE: &'static str = r#"#parse('widgets/foo_bar_macros.vm')
+#parse ( 'widgets/mobile/foo_bar_macros.vm' )
+#parse ("widgets/foobarhiddenformfields.vm")
+#parse ( "widgets/foo_bar_legal.vm" )
+#include( 'widgets/foo_bar_tips.vm' )
+#include('widgets/mobile/foo_bar_macros.vm')
+#include ("widgets/mobile/foo_bar_resetpw.vm")
+#parse('widgets/foo-bar-macros.vm')
+#parse ( 'widgets/mobile/foo-bar-macros.vm' )
+#parse ("widgets/foo-bar-hiddenformfields.vm")
+#parse ( "widgets/foo-bar-legal.vm" )
+#include( 'widgets/foo-bar-tips.vm' )
+#include('widgets/mobile/foo-bar-macros.vm')
+#include ("widgets/mobile/foo-bar-resetpw.vm")
+"#;
+    wd.create("testcase.txt", TESTCASE);
+    cmd.arg("-N");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, TESTCASE);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20_no_filename, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {
