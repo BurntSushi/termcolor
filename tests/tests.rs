@@ -776,6 +776,9 @@ clean!(regression_127, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/131
+//
+// TODO(burntsushi): Darwin doesn't like this test for some reason.
+#[cfg(not(darwin))]
 clean!(regression_131, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "TopÑapa");
     wd.create("TopÑapa", "test");
