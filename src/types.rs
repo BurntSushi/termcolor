@@ -39,7 +39,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ]),
     ("fsharp", &["*.fs", "*.fsx", "*.fsi"]),
     ("go", &["*.go"]),
-    ("groovy", &["*.groovy"]),
+    ("groovy", &["*.groovy", "*.gradle"]),
     ("haskell", &["*.hs", "*.lhs"]),
     ("html", &["*.htm", "*.html"]),
     ("java", &["*.java"]),
