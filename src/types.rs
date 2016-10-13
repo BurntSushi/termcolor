@@ -77,6 +77,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("sql", &["*.sql"]),
     ("sv", &["*.v", "*.vg", "*.sv", "*.svh", "*.h"]),
     ("swift", &["*.swift"]),
+    ("tcl", &["*.tcl"]),
     ("tex", &["*.tex", "*.cls", "*.sty"]),
     ("ts", &["*.ts", "*.tsx"]),
     ("txt", &["*.txt"]),
