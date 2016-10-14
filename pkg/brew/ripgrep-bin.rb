@@ -1,9 +1,9 @@
 class RipgrepBin < Formula
-  version '0.2.1'
+  version '0.2.3'
   desc "Search tool like grep and The Silver Searcher."
   homepage "https://github.com/BurntSushi/ripgrep"
   url "https://github.com/BurntSushi/ripgrep/releases/download/#{version}/ripgrep-#{version}-x86_64-apple-darwin.tar.gz"
-  sha256 "f8b208239b988708da2e58f848a75bf70ad144e201b3ed99cd323cc5a699625f"
+  sha256 "7407555dfe040a2631a7efdd1eea62cf1d1c50e5a6ecf8ee82e0bef9d5f37298"
 
   conflicts_with "ripgrep"
 
