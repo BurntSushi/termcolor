@@ -118,6 +118,20 @@ If you're an **Arch Linux** user, then you can install `ripgrep` from the offici
 $ pacman -S ripgrep
 ```
 
+If you're a **Fedora 24+** user, you can install `ripgrep` from [copr](https://copr.fedorainfracloud.org/coprs/carlgeorge/ripgrep/):
+
+```
+$ dnf copr enable carlgeorge/ripgrep
+$ dnf install ripgrep
+```
+
+If you're a **RHEL/CentOS 7** user, you can install `ripgrep` from [copr](https://copr.fedorainfracloud.org/coprs/carlgeorge/ripgrep/):
+
+```
+$ yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlgeorge/ripgrep/repo/epel-7/carlgeorge-ripgrep-epel-7.repo
+$ yum install ripgrep
+```
+
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
 
 ```
