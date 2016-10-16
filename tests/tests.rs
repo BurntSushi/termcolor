@@ -837,6 +837,20 @@ clean!(
     assert_eq!(lines, TESTCASE);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/184
+clean!(regression_184, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", ".*");
+    wd.create_dir("foo/bar");
+    wd.create("foo/bar/baz", "test");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, format!("{}:test\n", path("foo/bar/baz")));
+
+    cmd.current_dir(wd.path().join("./foo/bar"));
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "baz:test\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20_no_filename, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {

@@ -20,7 +20,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use gitignore::{self, Gitignore, GitignoreBuilder, Match, Pattern};
-use pathutil::{file_name, is_hidden};
+use pathutil::{file_name, is_hidden, strip_prefix};
 use types::Types;
 
 const IGNORE_NAMES: &'static [&'static str] = &[
@@ -222,7 +222,10 @@ impl Ignore {
 
     /// Returns true if and only if the given file path should be ignored.
     pub fn ignored<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
-        let path = path.as_ref();
+        let mut path = path.as_ref();
+        if let Some(p) = strip_prefix("./", path) {
+            path = p;
+        }
         let mat = self.overrides.matched(path, is_dir);
         if let Some(is_ignored) = self.ignore_match(path, mat) {
             return is_ignored;
