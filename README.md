@@ -5,7 +5,7 @@ Silver Searcher (an `ack` clone) with the raw speed of GNU grep. `ripgrep` has
 first class support on Windows, Mac and Linux, with binary downloads available
 for [every release](https://github.com/BurntSushi/ripgrep/releases).
 
-[![Linux build status](https://api.travis-ci.org/BurntSushi/ripgrep.png)](https://travis-ci.org/BurntSushi/ripgrep)
+[![Linux build status](https://travis-ci.org/BurntSushi/ripgrep.svg?branch=master)](https://travis-ci.org/BurntSushi/ripgrep)
 [![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)
 [![](https://img.shields.io/crates/v/ripgrep.svg)](https://crates.io/crates/ripgrep)
 
