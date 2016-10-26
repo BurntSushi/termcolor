@@ -132,6 +132,14 @@ $ yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlgeor
 $ yum install ripgrep
 ```
 
+If you're a **Nix** user, you can install `ripgrep` from
+[nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
+
+```
+$ nix-env --install ripgrep
+$ # (Or using the attribute name, which is also `ripgrep`.)
+```
+
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
 
 ```
