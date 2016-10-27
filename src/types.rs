@@ -88,6 +88,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("xml", &["*.xml"]),
     ("yacc", &["*.y"]),
     ("yaml", &["*.yaml", "*.yml"]),
+    ("zsh", &["*.zsh", ".zshenv", ".zlogin", ".zprofile", ".zshrc"]),
 ];
 
 /// Describes all the possible failure conditions for building a file type
