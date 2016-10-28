@@ -65,7 +65,7 @@ const TYPE_EXTENSIONS: &'static [(&'static str, &'static [&'static str])] = &[
     ("ocaml", &["*.ml", "*.mli", "*.mll", "*.mly"]),
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm"]),
     ("php", &["*.php", "*.php3", "*.php4", "*.php5", "*.phtml"]),
-    ("py", &["*.py"]),
+    ("py", &["*.py", "*.pyx"]),
     ("readme", &["README*", "*README"]),
     ("r", &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
     ("rst", &["*.rst"]),
