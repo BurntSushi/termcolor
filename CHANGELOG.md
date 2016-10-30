@@ -1,3 +1,29 @@
+0.2.4
+=====
+Feature enhancements:
+
+* Added or improved file type filtering for Groovy, Handlebars, Tcl, zsh and
+  Python.
+* [FEATURE #9](https://github.com/BurntSushi/ripgrep/issues/9):
+  Support global gitignore config and `.git/info/exclude` files.
+* [FEATURE #45](https://github.com/BurntSushi/ripgrep/issues/45):
+  Add --ignore-file flag for specifying additional ignore files.
+* [FEATURE #202](https://github.com/BurntSushi/ripgrep/pull/202):
+  Introduce a new
+  [`ignore`](https://github.com/BurntSushi/ripgrep/tree/master/ignore)
+  crate that encapsulates all of ripgrep's gitignore matching logic.
+
+Bug fixes:
+
+* [BUG #44](https://github.com/BurntSushi/ripgrep/issues/44):
+  ripgrep runs slowly when given lots of positional arguments that are
+  directories.
+* [BUG #119](https://github.com/BurntSushi/ripgrep/issues/119):
+  ripgrep didn't reset terminal colors if it was interrupted by `^C`.
+  Fixed in [PR #187](https://github.com/BurntSushi/ripgrep/pull/187).
+* [BUG #184](https://github.com/BurntSushi/ripgrep/issues/184):
+  Fixed a bug related to interpreting gitignore files in parent directories.
+
 0.2.3
 =====
 Bug fixes:
