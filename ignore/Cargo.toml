@@ -23,7 +23,7 @@ lazy_static = "0.2"
 log = "0.3"
 memchr = "0.1"
 regex = "0.1.77"
-thread_local = "0.2.7"
+thread_local = "0.3.0"
 walkdir = "1"
 
 [dev-dependencies]
