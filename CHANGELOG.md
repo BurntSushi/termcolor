@@ -1,4 +1,4 @@
-0.2.4
+0.2.5
 =====
 Feature enhancements:
 
@@ -23,6 +23,12 @@ Bug fixes:
   Fixed in [PR #187](https://github.com/BurntSushi/ripgrep/pull/187).
 * [BUG #184](https://github.com/BurntSushi/ripgrep/issues/184):
   Fixed a bug related to interpreting gitignore files in parent directories.
+
+
+0.2.4
+=====
+SKIPPED.
+
 
 0.2.3
 =====
