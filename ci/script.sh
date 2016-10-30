@@ -23,6 +23,8 @@ run_test_suite() {
     cargo test --target $TARGET --verbose --manifest-path grep/Cargo.toml
     cargo build --target $TARGET --verbose --manifest-path globset/Cargo.toml
     cargo test --target $TARGET --verbose --manifest-path globset/Cargo.toml
+    cargo build --target $TARGET --verbose --manifest-path ignore/Cargo.toml
+    cargo test --target $TARGET --verbose --manifest-path ignore/Cargo.toml
 
     # sanity check the file type
     file target/$TARGET/debug/rg

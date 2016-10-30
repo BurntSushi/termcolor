@@ -28,3 +28,6 @@ regex = "0.1.77"
 
 [dev-dependencies]
 glob = "0.2"
+
+[features]
+simd-accel = ["regex/simd-accel"]

@@ -54,6 +54,20 @@ fn path(unix: &str) -> String {
     }
 }
 
+fn paths(unix: &[&str]) -> Vec<String> {
+    let mut xs: Vec<_> = unix.iter().map(|s| path(s)).collect();
+    xs.sort();
+    xs
+}
+
+fn paths_from_stdout(stdout: String) -> Vec<String> {
+    let mut paths: Vec<_> = stdout.lines().map(|s| {
+        s.split(":").next().unwrap().to_string()
+    }).collect();
+    paths.sort();
+    paths
+}
+
 fn sort_lines(lines: &str) -> String {
     let mut lines: Vec<String> =
         lines.trim().lines().map(|s| s.to_owned()).collect();
@@ -862,6 +876,74 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
 be, to a very large extent, the result of luck. Sherlock Holmes
 ";
     assert_eq!(lines, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/45
+sherlock!(feature_45_relative_cwd, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create(".not-an-ignore", "foo\n/bar");
+    wd.create_dir("bar");
+    wd.create_dir("baz/bar");
+    wd.create_dir("baz/baz/bar");
+    wd.create("bar/test", "test");
+    wd.create("baz/bar/test", "test");
+    wd.create("baz/baz/bar/test", "test");
+    wd.create("baz/foo", "test");
+    wd.create("baz/test", "test");
+    wd.create("foo", "test");
+    wd.create("test", "test");
+
+    // First, get a baseline without applying ignore rules.
+    let lines = paths_from_stdout(wd.stdout(&mut cmd));
+    assert_eq!(lines, paths(&[
+        "bar/test", "baz/bar/test", "baz/baz/bar/test", "baz/foo",
+        "baz/test", "foo", "test",
+    ]));
+
+    // Now try again with the ignore file activated.
+    cmd.arg("--ignore-file").arg(".not-an-ignore");
+    let lines = paths_from_stdout(wd.stdout(&mut cmd));
+    assert_eq!(lines, paths(&[
+        "baz/bar/test", "baz/baz/bar/test", "baz/test", "test",
+    ]));
+
+    // Now do it again, but inside the baz directory.
+    // Since the ignore file is interpreted relative to the CWD, this will
+    // cause the /bar anchored pattern to filter out baz/bar, which is a
+    // subtle difference between true parent ignore files and manually
+    // specified ignore files.
+    let mut cmd = wd.command();
+    cmd.arg("test").arg(".").arg("--ignore-file").arg("../.not-an-ignore");
+    cmd.current_dir(wd.path().join("baz"));
+    let lines = paths_from_stdout(wd.stdout(&mut cmd));
+    assert_eq!(lines, paths(&["baz/bar/test", "test"]));
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/45
+sherlock!(feature_45_precedence_with_others, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create(".not-an-ignore", "*.log");
+    wd.create(".ignore", "!imp.log");
+    wd.create("imp.log", "test");
+    wd.create("wat.log", "test");
+
+    cmd.arg("--ignore-file").arg(".not-an-ignore");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "imp.log:test\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/45
+sherlock!(feature_45_precedence_internal, "test", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create(".not-an-ignore1", "*.log");
+    wd.create(".not-an-ignore2", "!imp.log");
+    wd.create("imp.log", "test");
+    wd.create("wat.log", "test");
+
+    cmd.arg("--ignore-file").arg(".not-an-ignore1");
+    cmd.arg("--ignore-file").arg(".not-an-ignore2");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "imp.log:test\n");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/68

@@ -226,10 +226,21 @@ type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;
 /// single pass.
 #[derive(Clone, Debug)]
 pub struct GlobSet {
+    len: usize,
     strats: Vec<GlobSetMatchStrategy>,
 }
 
 impl GlobSet {
+    /// Returns true if this set is empty, and therefore matches nothing.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// Returns the number of globs in this set.
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
     /// Returns true if any glob in this set matches the path given.
     pub fn is_match<P: AsRef<Path>>(&self, path: P) -> bool {
         self.is_match_candidate(&Candidate::new(path.as_ref()))
@@ -240,6 +251,9 @@ impl GlobSet {
     /// This takes a Candidate as input, which can be used to amortize the
     /// cost of preparing a path for matching.
     pub fn is_match_candidate(&self, path: &Candidate) -> bool {
+        if self.is_empty() {
+            return false;
+        }
         for strat in &self.strats {
             if strat.is_match(path) {
                 return true;
@@ -250,9 +264,6 @@ impl GlobSet {
 
     /// Returns the sequence number of every glob pattern that matches the
     /// given path.
-    ///
-    /// This takes a Candidate as input, which can be used to amortize the
-    /// cost of preparing a path for matching.
     pub fn matches<P: AsRef<Path>>(&self, path: P) -> Vec<usize> {
         self.matches_candidate(&Candidate::new(path.as_ref()))
     }
@@ -264,6 +275,9 @@ impl GlobSet {
     /// cost of preparing a path for matching.
     pub fn matches_candidate(&self, path: &Candidate) -> Vec<usize> {
         let mut into = vec![];
+        if self.is_empty() {
+            return into;
+        }
         self.matches_candidate_into(path, &mut into);
         into
     }
@@ -274,12 +288,32 @@ impl GlobSet {
     /// `into` is is cleared before matching begins, and contains the set of
     /// sequence numbers (in ascending order) after matching ends. If no globs
     /// were matched, then `into` will be empty.
+    pub fn matches_into<P: AsRef<Path>>(
+        &self,
+        path: P,
+        into: &mut Vec<usize>,
+    ) {
+        self.matches_candidate_into(&Candidate::new(path.as_ref()), into);
+    }
+
+    /// Adds the sequence number of every glob pattern that matches the given
+    /// path to the vec given.
+    ///
+    /// `into` is is cleared before matching begins, and contains the set of
+    /// sequence numbers (in ascending order) after matching ends. If no globs
+    /// were matched, then `into` will be empty.
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the
+    /// cost of preparing a path for matching.
     pub fn matches_candidate_into(
         &self,
         path: &Candidate,
         into: &mut Vec<usize>,
     ) {
         into.clear();
+        if self.is_empty() {
+            return;
+        }
         for strat in &self.strats {
             strat.matches_into(path, into);
         }
@@ -288,6 +322,9 @@ impl GlobSet {
     }
 
     fn new(pats: &[Glob]) -> Result<GlobSet, Error> {
+        if pats.is_empty() {
+            return Ok(GlobSet { len: 0, strats: vec![] });
+        }
         let mut lits = LiteralStrategy::new();
         let mut base_lits = BasenameLiteralStrategy::new();
         let mut exts = ExtensionStrategy::new();
@@ -330,6 +367,7 @@ impl GlobSet {
                 prefixes.literals.len(), suffixes.literals.len(),
                 required_exts.0.len(), regexes.literals.len());
         Ok(GlobSet {
+            len: pats.len(),
             strats: vec![
                 GlobSetMatchStrategy::Extension(exts),
                 GlobSetMatchStrategy::BasenameLiteral(base_lits),
@@ -749,5 +787,12 @@ mod tests {
         assert_eq!(2, matches.len());
         assert_eq!(0, matches[0]);
         assert_eq!(2, matches[1]);
+    }
+
+    #[test]
+    fn empty_set_works() {
+        let set = GlobSetBuilder::new().build().unwrap();
+        assert!(!set.is_match(""));
+        assert!(!set.is_match("a"));
     }
 }
