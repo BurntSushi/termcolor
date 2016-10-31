@@ -3,3 +3,4 @@ tags
 target
 /grep/Cargo.lock
 /globset/Cargo.lock
+/ignore/Cargo.lock
