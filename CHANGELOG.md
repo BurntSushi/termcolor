@@ -1,3 +1,15 @@
+0.2.6
+=====
+Feature enhancements:
+
+* Added or improved file type filtering for Fish.
+
+Bug fixes:
+
+* [BUG #206](https://github.com/BurntSushi/ripgrep/issues/206):
+  Fixed a regression with `-g/--glob` flag in `0.2.5`.
+
+
 0.2.5
 =====
 Feature enhancements:
