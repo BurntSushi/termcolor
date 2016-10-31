@@ -865,6 +865,16 @@ clean!(regression_184, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "baz:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/206
+clean!(regression_206, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("foo");
+    wd.create("foo/bar.txt", "test");
+    cmd.arg("-g").arg("*.txt");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, format!("{}:test\n", path("foo/bar.txt")));
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20_no_filename, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {
