@@ -145,6 +145,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("sql", &["*.sql"]),
     ("sv", &["*.v", "*.vg", "*.sv", "*.svh", "*.h"]),
     ("swift", &["*.swift"]),
+    ("taskpaper", &["*.taskpaper"]),
     ("tcl", &["*.tcl"]),
     ("tex", &["*.tex", "*.ltx", "*.cls", "*.sty", "*.bib"]),
     ("ts", &["*.ts", "*.tsx"]),
