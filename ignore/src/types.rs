@@ -159,6 +159,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("vala", &["*.vala"]),
     ("vb", &["*.vb"]),
     ("vimscript", &["*.vim"]),
+    ("wiki", &["*.mediawiki", "*.wiki"]),
     ("xml", &["*.xml"]),
     ("yacc", &["*.y"]),
     ("yaml", &["*.yaml", "*.yml"]),
