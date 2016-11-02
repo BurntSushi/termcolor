@@ -149,6 +149,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("taskpaper", &["*.taskpaper"]),
     ("tcl", &["*.tcl"]),
     ("tex", &["*.tex", "*.ltx", "*.cls", "*.sty", "*.bib"]),
+    ("textile", &["*.textile"]),
     ("ts", &["*.ts", "*.tsx"]),
     ("txt", &["*.txt"]),
     ("toml", &["*.toml", "Cargo.lock"]),
