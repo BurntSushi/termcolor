@@ -137,6 +137,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("py", &["*.py"]),
     ("readme", &["README*", "*README"]),
     ("r", &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
+    ("rdoc", &["*.rdoc"]),
     ("rst", &["*.rst"]),
     ("ruby", &["*.rb"]),
     ("rust", &["*.rs"]),
