@@ -132,6 +132,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("objc", &["*.h", "*.m"]),
     ("objcpp", &["*.h", "*.mm"]),
     ("ocaml", &["*.ml", "*.mli", "*.mll", "*.mly"]),
+    ("org", &["*.org"]),
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm"]),
     ("php", &["*.php", "*.php3", "*.php4", "*.php5", "*.phtml"]),
     ("py", &["*.py"]),
