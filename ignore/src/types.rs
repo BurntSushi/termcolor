@@ -124,7 +124,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("lisp", &["*.el", "*.jl", "*.lisp", "*.lsp", "*.sc", "*.scm"]),
     ("lua", &["*.lua"]),
     ("m4", &["*.ac", "*.m4"]),
-    ("make", &["gnumakefile", "Gnumakefile", "makefile", "Makefile", "*.mk"]),
+    ("make", &["gnumakefile", "Gnumakefile", "makefile", "Makefile", "*.mk", "*.mak"]),
     ("markdown", &["*.markdown", "*.md", "*.mdown", "*.mkdn"]),
     ("md", &["*.markdown", "*.md", "*.mdown", "*.mkdn"]),
     ("matlab", &["*.m"]),
