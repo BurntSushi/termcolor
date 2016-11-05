@@ -1,6 +1,6 @@
 [root]
 name = "ripgrep"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "ctrlc 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
