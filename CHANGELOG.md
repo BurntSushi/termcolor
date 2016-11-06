@@ -1,3 +1,40 @@
+0.2.7
+=====
+Performance improvements:
+
+* [PERF #223](https://github.com/BurntSushi/ripgrep/pull/223):
+  Added a parallel recursive directory iterator. This results in major
+  performance improvements on large repositories.
+* [PERF #11](https://github.com/BurntSushi/ripgrep/pull/11):
+  ripgrep now uses the `bytecount` library for counting new lines. In some
+  cases, ripgrep runs twice as fast. Use
+  `RUSTFLAGS="-C target-cpu=native" cargo build --release --features 'simd-accel avx-accel'`
+  to get the fastest possible binary.
+
+Feature enhancements:
+
+* Added or improved file type filtering for Agda, Tex, Taskpaper, Markdown,
+  asciidoc, textile, rdoc, org, creole, wiki, pod, C#, PDF, C, C++.
+* [FEATURE #149](https://github.com/BurntSushi/ripgrep/issues/149):
+  Add a new `--no-messages` flag that suppresses error messages.
+  Note that `rg foo 2> /dev/null` also works.
+* [FEATURE #159](https://github.com/BurntSushi/ripgrep/issues/159):
+  Add a new `-m/--max-count` flag that limits the total number of matches
+  printed for each file searched.
+
+Bug fixes:
+
+* [BUG #199](https://github.com/BurntSushi/ripgrep/issues/199):
+  Fixed a bug where `-S/--smart-case` wasn't being applied correctly to
+  literal optimizations.
+* [BUG #203](https://github.com/BurntSushi/ripgrep/issues/203):
+  Mention the full name, ripgrep, in more places. It now appears in
+  the output of `--help` and `--version`. The repository URL is now also
+  in the output of `--help` and the man page.
+* [BUG #215](https://github.com/BurntSushi/ripgrep/issues/215):
+  Include small note about how to search for a pattern that starts with a `-`.
+
+
 0.2.6
 =====
 Feature enhancements:
