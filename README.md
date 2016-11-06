@@ -27,7 +27,7 @@ for a very detailed comparison with more benchmarks and analysis.
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
-| ripgrep | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.245s** |
+| ripgrep | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.134** |
 | [The Silver Searcher](https://github.com/ggreer/the_silver_searcher) | `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
 | [git grep](https://www.kernel.org/pub/software/scm/git/docs/git-grep.html) | `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
 | [git grep (Unicode)](https://www.kernel.org/pub/software/scm/git/docs/git-grep.html) | `LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 2.880s |
@@ -37,6 +37,29 @@ for a very detailed comparison with more benchmarks and analysis.
 
 (Yes, `ack` [has](https://github.com/petdance/ack2/issues/445) a
 [bug](https://github.com/petdance/ack2/issues/14).)
+
+Here's another benchmark that disregards gitignore files and searches with a
+whitelist instead. The corpus is the same as in the previous benchmark, and the
+flags passed to each command ensures that they are doing equivlaent work:
+
+| Tool | Command | Line count | Time |
+| ---- | ------- | ---------- | ---- |
+| ripgrep | `rg -L -u -tc -n -w '[A-Z]+_SUSPEND'` | 404 | 0.132s |
+| [ucg](https://github.com/gvansickle/ucg) | `ucg --type=cc -w '[A-Z]+_SUSPEND' | 392 | 0.234s |
+| [GNU grep](https://www.gnu.org/software/grep/) | `LC_ALL=C egrep -R -n --include='*.c' --include='*.h' -w '[A-Z]+_SUSPEND'` | 404 | 0.744s |
+
+<!-- *_ -->
+
+And finally, a straight up comparison between ripgrep and GNU grep on a single
+large file (~9.3GB, [`OpenSubtitles2016.raw.en.gz`](http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz)):
+
+| Tool | Command | Line count | Time |
+| ---- | ------- | ---------- | ---- |
+| ripgrep | `rg -w 'Sherlock [A-Z]\w+'` | 5268 | 2.520s |
+| [GNU grep](https://www.gnu.org/software/grep/) | `LC_ALL=C egrep -w 'Sherlock [A-Z]\w+'` | 5268 | 7.143s |
+
+In the above benchmark, passing the `-n` flag (for showing line numbers)
+increases the times to `3.081s` for ripgrep and `11.403s` for GNU grep.
 
 ### Why should I use `ripgrep`?
 
@@ -82,8 +105,9 @@ Summarizing, `ripgrep` is fast because:
   [`RegexSet`](https://doc.rust-lang.org/regex/regex/struct.RegexSet.html).
   That means a single file path can be matched against multiple glob patterns
   simultaneously.
-* Uses a Chase-Lev work-stealing queue for quickly distributing work to
-  multiple threads.
+* It uses a lock-free parallel recursive directory, courtesy of
+  [`crossbeam`](https://docs.rs/crossbeam) and
+  [`ignore`](https://docs.rs/ignore).
 
 ### Installation
 
