@@ -45,7 +45,8 @@ kernel32-sys = "0.2"
 winapi = "0.2"
 
 [features]
-simd-accel = ["regex/simd-accel"]
+avx-accel = ["bytecount/avx-accel"]
+simd-accel = ["bytecount/avx-accel", "regex/simd-accel"]
 
 [profile.release]
 debug = true
