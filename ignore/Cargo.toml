@@ -1,6 +1,6 @@
 [package]
 name = "ignore"
-version = "0.1.3"  #:version
+version = "0.1.4"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 A fast library for efficiently matching ignore files such as `.gitignore`
