@@ -153,6 +153,9 @@ Less common options:
         when ripgrep thinks it will be faster. (Note that mmap searching
         doesn't currently support the various context related options.)
 
+    --no-messages
+        Suppress all error messages.
+
     --no-mmap
         Never use memory maps, even when they might be faster.
 
@@ -256,6 +259,7 @@ pub struct RawArgs {
     flag_no_ignore_parent: bool,
     flag_no_ignore_vcs: bool,
     flag_no_line_number: bool,
+    flag_no_messages: bool,
     flag_no_mmap: bool,
     flag_no_filename: bool,
     flag_null: bool,
@@ -306,6 +310,7 @@ pub struct Args {
     no_ignore: bool,
     no_ignore_parent: bool,
     no_ignore_vcs: bool,
+    no_messages: bool,
     null: bool,
     quiet: bool,
     replace: Option<Vec<u8>>,
@@ -429,6 +434,7 @@ impl RawArgs {
             no_ignore_vcs:
                 // --no-ignore implies --no-ignore-vcs
                 self.flag_no_ignore_vcs || no_ignore,
+            no_messages: self.flag_no_messages,
             null: self.flag_null,
             quiet: self.flag_quiet,
             replace: self.flag_replace.clone().map(|s| s.into_bytes()),
@@ -711,6 +717,11 @@ impl Args {
         self.type_list
     }
 
+    /// Returns true if error messages should be suppressed.
+    pub fn no_messages(&self) -> bool {
+        self.no_messages
+    }
+
     /// Create a new recursive directory iterator over the paths in argv.
     pub fn walker(&self) -> ignore::Walk {
         self.walker_builder().build()
@@ -730,7 +741,9 @@ impl Args {
         }
         for path in &self.ignore_files {
             if let Some(err) = wd.add_ignore(path) {
-                eprintln!("{}", err);
+                if !self.no_messages {
+                    eprintln!("{}", err);
+                }
             }
         }
 

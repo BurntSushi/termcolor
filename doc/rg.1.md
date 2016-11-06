@@ -147,6 +147,9 @@ Project home page: https://github.com/BurntSushi/ripgrep
   when ripgrep thinks it will be faster. (Note that mmap searching
   doesn't currently support the various context related options.)
 
+--no-messages
+: Suppress all error messages.
+
 --no-mmap
 : Never use memory maps, even when they might be faster.
 

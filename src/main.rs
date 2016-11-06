@@ -124,7 +124,7 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
             if quiet_matched.has_match() {
                 return Quit;
             }
-            let dent = match get_or_log_dir_entry(result) {
+            let dent = match get_or_log_dir_entry(result, args.no_messages()) {
                 None => return Continue,
                 Some(dent) => dent,
             };
@@ -160,7 +160,9 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
         })
     });
     if !args.paths().is_empty() && paths_searched.load(Ordering::SeqCst) == 0 {
-        eprint_nothing_searched();
+        if !args.no_messages() {
+            eprint_nothing_searched();
+        }
     }
     Ok(match_count.load(Ordering::SeqCst) as u64)
 }
@@ -171,7 +173,7 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
     let mut paths_searched: u64 = 0;
     let mut match_count = 0;
     for result in args.walker() {
-        let dent = match get_or_log_dir_entry(result) {
+        let dent = match get_or_log_dir_entry(result, args.no_messages()) {
             None => continue,
             Some(dent) => dent,
         };
@@ -193,7 +195,9 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
             };
     }
     if !args.paths().is_empty() && paths_searched == 0 {
-        eprint_nothing_searched();
+        if !args.no_messages() {
+            eprint_nothing_searched();
+        }
     }
     Ok(match_count)
 }
@@ -211,10 +215,11 @@ fn run_files_parallel(args: Arc<Args>) -> Result<u64> {
         }
         file_count
     });
+    let no_messages = args.no_messages();
     args.walker_parallel().run(move || {
         let tx = tx.clone();
         Box::new(move |result| {
-            if let Some(dent) = get_or_log_dir_entry(result) {
+            if let Some(dent) = get_or_log_dir_entry(result, no_messages) {
                 tx.send(dent).unwrap();
             }
             ignore::WalkState::Continue
@@ -228,7 +233,7 @@ fn run_files_one_thread(args: Arc<Args>) -> Result<u64> {
     let mut printer = args.printer(term);
     let mut file_count = 0;
     for result in args.walker() {
-        let dent = match get_or_log_dir_entry(result) {
+        let dent = match get_or_log_dir_entry(result, args.no_messages()) {
             None => continue,
             Some(dent) => dent,
         };
@@ -251,15 +256,20 @@ fn run_types(args: Arc<Args>) -> Result<u64> {
 
 fn get_or_log_dir_entry(
     result: result::Result<ignore::DirEntry, ignore::Error>,
+    no_messages: bool,
 ) -> Option<ignore::DirEntry> {
     match result {
         Err(err) => {
-            eprintln!("{}", err);
+            if !no_messages {
+                eprintln!("{}", err);
+            }
             None
         }
         Ok(dent) => {
             if let Some(err) = dent.error() {
-                eprintln!("{}", err);
+                if !no_messages {
+                    eprintln!("{}", err);
+                }
             }
             if !dent.file_type().map_or(true, |x| x.is_file()) {
                 None

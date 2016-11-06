@@ -130,13 +130,6 @@ pub use glob::{Glob, GlobBuilder, GlobMatcher};
 mod glob;
 mod pathutil;
 
-macro_rules! eprintln {
-    ($($tt:tt)*) => {{
-        use std::io::Write;
-        let _ = writeln!(&mut ::std::io::stderr(), $($tt)*);
-    }}
-}
-
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {

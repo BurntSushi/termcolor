@@ -35,6 +35,7 @@ struct Options {
     invert_match: bool,
     line_number: bool,
     max_count: Option<u64>,
+    no_messages: bool,
     quiet: bool,
     text: bool,
 }
@@ -51,6 +52,7 @@ impl Default for Options {
             invert_match: false,
             line_number: false,
             max_count: None,
+            no_messages: false,
             quiet: false,
             text: false,
         }
@@ -186,7 +188,9 @@ impl Worker {
                 let file = match File::open(path) {
                     Ok(file) => file,
                     Err(err) => {
-                        eprintln!("{}: {}", path.display(), err);
+                        if !self.opts.no_messages {
+                            eprintln!("{}: {}", path.display(), err);
+                        }
                         return 0;
                     }
                 };
@@ -205,7 +209,9 @@ impl Worker {
                 count
             }
             Err(err) => {
-                eprintln!("{}", err);
+                if !self.opts.no_messages {
+                    eprintln!("{}", err);
+                }
                 0
             }
         }
