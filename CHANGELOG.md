@@ -1,3 +1,11 @@
+0.2.8
+=====
+Bug fixes:
+
+* Fixed a bug with the SIMD/AVX features for using bytecount in commit
+  `4ca15a`.
+
+
 0.2.7
 =====
 Performance improvements:
