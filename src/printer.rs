@@ -158,6 +158,7 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     /// Flushes the underlying writer and returns it.
+    #[allow(dead_code)]
     pub fn into_inner(mut self) -> W {
         let _ = self.wtr.flush();
         self.wtr

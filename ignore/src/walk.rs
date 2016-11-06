@@ -1,16 +1,293 @@
 use std::ffi::OsStr;
-use std::fs::{FileType, Metadata};
+use std::fmt;
+use std::fs::{self, FileType, Metadata};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::thread;
 use std::vec;
 
-use walkdir::{self, WalkDir, WalkDirIterator};
+use crossbeam::sync::MsQueue;
+use walkdir::{self, WalkDir, WalkDirIterator, is_same_file};
 
 use dir::{Ignore, IgnoreBuilder};
 use gitignore::GitignoreBuilder;
 use overrides::Override;
 use types::Types;
 use {Error, PartialErrorBuilder};
+
+/// A directory entry with a possible error attached.
+///
+/// The error typically refers to a problem parsing ignore files in a
+/// particular directory.
+#[derive(Debug)]
+pub struct DirEntry {
+    dent: DirEntryInner,
+    err: Option<Error>,
+}
+
+impl DirEntry {
+    /// The full path that this entry represents.
+    pub fn path(&self) -> &Path {
+        self.dent.path()
+    }
+
+    /// Whether this entry corresponds to a symbolic link or not.
+    pub fn path_is_symbolic_link(&self) -> bool {
+        self.dent.path_is_symbolic_link()
+    }
+
+    /// Returns true if and only if this entry corresponds to stdin.
+    ///
+    /// i.e., The entry has depth 0 and its file name is `-`.
+    pub fn is_stdin(&self) -> bool {
+        self.dent.is_stdin()
+    }
+
+    /// Return the metadata for the file that this entry points to.
+    pub fn metadata(&self) -> Result<Metadata, Error> {
+        self.dent.metadata()
+    }
+
+    /// Return the file type for the file that this entry points to.
+    ///
+    /// This entry doesn't have a file type if it corresponds to stdin.
+    pub fn file_type(&self) -> Option<FileType> {
+        self.dent.file_type()
+    }
+
+    /// Return the file name of this entry.
+    ///
+    /// If this entry has no file name (e.g., `/`), then the full path is
+    /// returned.
+    pub fn file_name(&self) -> &OsStr {
+        self.dent.file_name()
+    }
+
+    /// Returns the depth at which this entry was created relative to the root.
+    pub fn depth(&self) -> usize {
+        self.dent.depth()
+    }
+
+    /// Returns an error, if one exists, associated with processing this entry.
+    ///
+    /// An example of an error is one that occurred while parsing an ignore
+    /// file.
+    pub fn error(&self) -> Option<&Error> {
+        self.err.as_ref()
+    }
+
+    fn new_stdin() -> DirEntry {
+        DirEntry {
+            dent: DirEntryInner::Stdin,
+            err: None,
+        }
+    }
+
+    fn new_walkdir(dent: walkdir::DirEntry, err: Option<Error>) -> DirEntry {
+        DirEntry {
+            dent: DirEntryInner::Walkdir(dent),
+            err: err,
+        }
+    }
+
+    fn new_raw(dent: DirEntryRaw, err: Option<Error>) -> DirEntry {
+        DirEntry {
+            dent: DirEntryInner::Raw(dent),
+            err: err,
+        }
+    }
+}
+
+/// DirEntryInner is the implementation of DirEntry.
+///
+/// It specifically represents three distinct sources of directory entries:
+///
+/// 1. From the walkdir crate.
+/// 2. Special entries that represent things like stdin.
+/// 3. From a path.
+///
+/// Specifically, (3) has to essentially re-create the DirEntry implementation
+/// from WalkDir.
+#[derive(Debug)]
+enum DirEntryInner {
+    Stdin,
+    Walkdir(walkdir::DirEntry),
+    Raw(DirEntryRaw),
+}
+
+impl DirEntryInner {
+    fn path(&self) -> &Path {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => Path::new("<stdin>"),
+            Walkdir(ref x) => x.path(),
+            Raw(ref x) => x.path(),
+        }
+    }
+
+    fn path_is_symbolic_link(&self) -> bool {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => false,
+            Walkdir(ref x) => x.path_is_symbolic_link(),
+            Raw(ref x) => x.path_is_symbolic_link(),
+        }
+    }
+
+    fn is_stdin(&self) -> bool {
+        match *self {
+            DirEntryInner::Stdin => true,
+            _ => false,
+        }
+    }
+
+    fn metadata(&self) -> Result<Metadata, Error> {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => {
+                let err = Error::Io(io::Error::new(
+                    io::ErrorKind::Other, "<stdin> has no metadata"));
+                Err(err.with_path("<stdin>"))
+            }
+            Walkdir(ref x) => {
+                x.metadata().map_err(|err| {
+                    Error::Io(io::Error::from(err)).with_path(x.path())
+                })
+            }
+            Raw(ref x) => x.metadata(),
+        }
+    }
+
+    fn file_type(&self) -> Option<FileType> {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => None,
+            Walkdir(ref x) => Some(x.file_type()),
+            Raw(ref x) => Some(x.file_type()),
+        }
+    }
+
+    fn file_name(&self) -> &OsStr {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => OsStr::new("<stdin>"),
+            Walkdir(ref x) => x.file_name(),
+            Raw(ref x) => x.file_name(),
+        }
+    }
+
+    fn depth(&self) -> usize {
+        use self::DirEntryInner::*;
+        match *self {
+            Stdin => 0,
+            Walkdir(ref x) => x.depth(),
+            Raw(ref x) => x.depth(),
+        }
+    }
+}
+
+/// DirEntryRaw is essentially copied from the walkdir crate so that we can
+/// build `DirEntry`s from whole cloth in the parallel iterator.
+struct DirEntryRaw {
+    /// The path as reported by the `fs::ReadDir` iterator (even if it's a
+    /// symbolic link).
+    path: PathBuf,
+    /// The file type. Necessary for recursive iteration, so store it.
+    ty: FileType,
+    /// Is set when this entry was created from a symbolic link and the user
+    /// expects the iterator to follow symbolic links.
+    follow_link: bool,
+    /// The depth at which this entry was generated relative to the root.
+    depth: usize,
+}
+
+impl fmt::Debug for DirEntryRaw {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Leaving out FileType because it doesn't have a debug impl
+        // in Rust 1.9. We could add it if we really wanted to by manually
+        // querying each possibly file type. Meh. ---AG
+        f.debug_struct("DirEntryRaw")
+            .field("path", &self.path)
+            .field("follow_link", &self.follow_link)
+            .field("depth", &self.depth)
+            .finish()
+    }
+}
+
+impl DirEntryRaw {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn path_is_symbolic_link(&self) -> bool {
+        self.ty.is_symlink() || self.follow_link
+    }
+
+    fn metadata(&self) -> Result<Metadata, Error> {
+        if self.follow_link {
+            fs::metadata(&self.path)
+        } else {
+            fs::symlink_metadata(&self.path)
+        }.map_err(|err| Error::Io(io::Error::from(err)).with_path(&self.path))
+    }
+
+    fn file_type(&self) -> FileType {
+        self.ty
+    }
+
+    fn file_name(&self) -> &OsStr {
+        self.path.file_name().unwrap_or_else(|| self.path.as_os_str())
+    }
+
+    fn depth(&self) -> usize {
+        self.depth
+    }
+
+    fn from_entry(
+        depth: usize,
+        ent: &fs::DirEntry,
+    ) -> Result<DirEntryRaw, Error> {
+        let ty = try!(ent.file_type().map_err(|err| {
+            let err = Error::Io(io::Error::from(err)).with_path(ent.path());
+            Error::WithDepth {
+                depth: depth,
+                err: Box::new(err),
+            }
+        }));
+        Ok(DirEntryRaw {
+            path: ent.path(),
+            ty: ty,
+            follow_link: false,
+            depth: depth,
+        })
+    }
+
+    fn from_link(depth: usize, pb: PathBuf) -> Result<DirEntryRaw, Error> {
+        let md = try!(fs::metadata(&pb).map_err(|err| {
+            Error::Io(err).with_path(&pb)
+        }));
+        Ok(DirEntryRaw {
+            path: pb,
+            ty: md.file_type(),
+            follow_link: true,
+            depth: depth,
+        })
+    }
+
+    fn from_path(depth: usize, pb: PathBuf) -> Result<DirEntryRaw, Error> {
+        let md = try!(fs::symlink_metadata(&pb).map_err(|err| {
+            Error::Io(err).with_path(&pb)
+        }));
+        Ok(DirEntryRaw {
+            path: pb,
+            ty: md.file_type(),
+            follow_link: false,
+            depth: depth,
+        })
+    }
+}
 
 /// WalkBuilder builds a recursive directory iterator.
 ///
@@ -58,12 +335,14 @@ use {Error, PartialErrorBuilder};
 /// path is skipped.
 /// * Sixth, if the path has made it this far then it is yielded in the
 /// iterator.
+#[derive(Clone, Debug)]
 pub struct WalkBuilder {
     paths: Vec<PathBuf>,
     ig_builder: IgnoreBuilder,
     parents: bool,
     max_depth: Option<usize>,
     follow_links: bool,
+    threads: usize,
 }
 
 impl WalkBuilder {
@@ -80,6 +359,7 @@ impl WalkBuilder {
             parents: true,
             max_depth: None,
             follow_links: false,
+            threads: 0,
         }
     }
 
@@ -109,6 +389,22 @@ impl WalkBuilder {
         }
     }
 
+    /// Build a new `WalkParallel` iterator.
+    ///
+    /// Note that this *doesn't* return something that implements `Iterator`.
+    /// Instead, the returned value must be run with a closure. e.g.,
+    /// `builder.build_parallel().run(|| |path| println!("{:?}", path))`.
+    pub fn build_parallel(&self) -> WalkParallel {
+        WalkParallel {
+            paths: self.paths.clone().into_iter(),
+            ig_root: self.ig_builder.build(),
+            max_depth: self.max_depth,
+            follow_links: self.follow_links,
+            parents: self.parents,
+            threads: self.threads,
+        }
+    }
+
     /// Add a file path to the iterator.
     ///
     /// Each additional file path added is traversed recursively. This should
@@ -130,6 +426,17 @@ impl WalkBuilder {
     /// Whether to follow symbolic links or not.
     pub fn follow_links(&mut self, yes: bool) -> &mut WalkBuilder {
         self.follow_links = yes;
+        self
+    }
+
+    /// The number of threads to use for traversal.
+    ///
+    /// Note that this only has an effect when using `build_parallel`.
+    ///
+    /// The default setting is `0`, which chooses the number of threads
+    /// automatically using heuristics.
+    pub fn threads(&mut self, n: usize) -> &mut WalkBuilder {
+        self.threads = n;
         self
     }
 
@@ -239,7 +546,8 @@ impl WalkBuilder {
     }
 }
 
-/// Walk is a recursive directory iterator over file paths in a directory.
+/// Walk is a recursive directory iterator over file paths in one or more
+/// directories.
 ///
 /// Only file and directory paths matching the rules are returned. By default,
 /// ignore files like `.gitignore` are respected. The precise matching rules
@@ -264,17 +572,9 @@ impl Walk {
 
     fn skip_entry(&self, ent: &walkdir::DirEntry) -> bool {
         if ent.depth() == 0 {
-            // Never skip the root directory.
             return false;
         }
-        let m = self.ig.matched(ent.path(), ent.file_type().is_dir());
-        if m.is_ignore() {
-            debug!("ignoring {}: {:?}", ent.path().display(), m);
-            return true;
-        } else if m.is_whitelist() {
-            debug!("whitelisting {}: {:?}", ent.path().display(), m);
-        }
-        false
+        skip_path(&self.ig, ent.path(), ent.file_type().is_dir())
     }
 }
 
@@ -290,10 +590,7 @@ impl Iterator for Walk {
                     match self.its.next() {
                         None => return None,
                         Some((_, None)) => {
-                            return Some(Ok(DirEntry {
-                                dent: None,
-                                err: None,
-                            }));
+                            return Some(Ok(DirEntry::new_stdin()));
                         }
                         Some((path, Some(it))) => {
                             self.it = Some(it);
@@ -313,15 +610,7 @@ impl Iterator for Walk {
             };
             match ev {
                 Err(err) => {
-                    let path = err.path().map(|p| p.to_path_buf());
-                    let mut ig_err = Error::Io(io::Error::from(err));
-                    if let Some(path) = path {
-                        ig_err = Error::WithPath {
-                            path: path.to_path_buf(),
-                            err: Box::new(ig_err),
-                        };
-                    }
-                    return Some(Err(ig_err));
+                    return Some(Err(Error::from(err)));
                 }
                 Ok(WalkEvent::Exit) => {
                     self.ig = self.ig.parent().unwrap();
@@ -338,95 +627,16 @@ impl Iterator for Walk {
                     }
                     let (igtmp, err) = self.ig.add_child(ent.path());
                     self.ig = igtmp;
-                    return Some(Ok(DirEntry { dent: Some(ent), err: err }));
+                    return Some(Ok(DirEntry::new_walkdir(ent, err)));
                 }
                 Ok(WalkEvent::File(ent)) => {
                     if self.skip_entry(&ent) {
                         continue;
                     }
-                    // If this isn't actually a file (e.g., a symlink),
-                    // then skip it.
-                    if !ent.file_type().is_file() {
-                        continue;
-                    }
-                    return Some(Ok(DirEntry { dent: Some(ent), err: None }));
+                    return Some(Ok(DirEntry::new_walkdir(ent, None)));
                 }
             }
         }
-    }
-}
-
-/// A directory entry with a possible error attached.
-///
-/// The error typically refers to a problem parsing ignore files in a
-/// particular directory.
-#[derive(Debug)]
-pub struct DirEntry {
-    dent: Option<walkdir::DirEntry>,
-    err: Option<Error>,
-}
-
-impl DirEntry {
-    /// The full path that this entry represents.
-    pub fn path(&self) -> &Path {
-        self.dent.as_ref().map_or(Path::new("<stdin>"), |x| x.path())
-    }
-
-    /// Whether this entry corresponds to a symbolic link or not.
-    pub fn path_is_symbolic_link(&self) -> bool {
-        self.dent.as_ref().map_or(false, |x| x.path_is_symbolic_link())
-    }
-
-    /// Returns true if and only if this entry corresponds to stdin.
-    ///
-    /// i.e., The entry has depth 0 and its file name is `-`.
-    pub fn is_stdin(&self) -> bool {
-        self.dent.is_none()
-    }
-
-    /// Return the metadata for the file that this entry points to.
-    pub fn metadata(&self) -> Result<Metadata, Error> {
-        if let Some(dent) = self.dent.as_ref() {
-            dent.metadata().map_err(|err| Error::WithPath {
-                path: self.path().to_path_buf(),
-                err: Box::new(Error::Io(io::Error::from(err))),
-            })
-        } else {
-            let ioerr = io::Error::new(
-                io::ErrorKind::Other, "stdin has no metadata");
-            Err(Error::WithPath {
-                path: Path::new("<stdin>").to_path_buf(),
-                err: Box::new(Error::Io(ioerr)),
-            })
-        }
-    }
-
-    /// Return the file type for the file that this entry points to.
-    ///
-    /// This entry doesn't have a file type if it corresponds to stdin.
-    pub fn file_type(&self) -> Option<FileType> {
-        self.dent.as_ref().map(|x| x.file_type())
-    }
-
-    /// Return the file name of this entry.
-    ///
-    /// If this entry has no file name (e.g., `/`), then the full path is
-    /// returned.
-    pub fn file_name(&self) -> &OsStr {
-        self.dent.as_ref().map_or(OsStr::new("<stdin>"), |x| x.file_name())
-    }
-
-    /// Returns the depth at which this entry was created relative to the root.
-    pub fn depth(&self) -> usize {
-        self.dent.as_ref().map_or(0, |x| x.depth())
-    }
-
-    /// Returns an error, if one exists, associated with processing this entry.
-    ///
-    /// An example of an error is one that occurred while parsing an ignore
-    /// file.
-    pub fn error(&self) -> Option<&Error> {
-        self.err.as_ref()
     }
 }
 
@@ -485,19 +695,495 @@ impl Iterator for WalkEventIter {
     }
 }
 
+/// WalkState is used in the parallel recursive directory iterator to indicate
+/// whether walking should continue as normal, skip descending into a
+/// particular directory or quit the walk entirely.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WalkState {
+    /// Continue walking as normal.
+    Continue,
+    /// If the directory entry given is a directory, don't descend into it.
+    /// In all other cases, this has no effect.
+    Skip,
+    /// Quit the entire iterator as soon as possible.
+    ///
+    /// Note that this is an inherently asynchronous action. It is possible
+    /// for more entries to be yielded even after instructing the iterator
+    /// to quit.
+    Quit,
+}
+
+impl WalkState {
+    fn is_quit(&self) -> bool {
+        *self == WalkState::Quit
+    }
+}
+
+/// WalkParallel is a parallel recursive directory iterator over files paths
+/// in one or more directories.
+///
+/// Only file and directory paths matching the rules are returned. By default,
+/// ignore files like `.gitignore` are respected. The precise matching rules
+/// and precedence is explained in the documentation for `WalkBuilder`.
+///
+/// Unlike `Walk`, this uses multiple threads for traversing a directory.
+pub struct WalkParallel {
+    paths: vec::IntoIter<PathBuf>,
+    ig_root: Ignore,
+    parents: bool,
+    max_depth: Option<usize>,
+    follow_links: bool,
+    threads: usize,
+}
+
+impl WalkParallel {
+    /// Execute the parallel recursive directory iterator. `mkf` is called
+    /// for each thread used for iteration. The function produced by `mkf`
+    /// is then in turn called for each visited file path.
+    pub fn run<F>(
+        self,
+        mut mkf: F,
+    ) where F: FnMut() -> Box<FnMut(Result<DirEntry, Error>) -> WalkState + Send + 'static> {
+        let mut f = mkf();
+        let threads = self.threads();
+        let queue = Arc::new(MsQueue::new());
+        let mut any_dirs = false;
+        // Send the initial set of root paths to the pool of workers.
+        // Note that we only send directories. For files, we send to them the
+        // callback directly.
+        for path in self.paths {
+            if path == Path::new("-") {
+                if f(Ok(DirEntry::new_stdin())).is_quit() {
+                    return;
+                }
+                continue;
+            }
+            let dent = match DirEntryRaw::from_path(0, path) {
+                Ok(dent) => DirEntry::new_raw(dent, None),
+                Err(err) => {
+                    if f(Err(err)).is_quit() {
+                        return;
+                    }
+                    continue;
+                }
+            };
+            if !dent.file_type().map_or(false, |t| t.is_dir()) {
+                if f(Ok(dent)).is_quit() {
+                    return;
+                }
+            } else {
+                any_dirs = true;
+                queue.push(Message::Work(Work {
+                    dent: dent,
+                    ignore: self.ig_root.clone(),
+                }));
+            }
+        }
+        // ... but there's no need to start workers if we don't need them.
+        if !any_dirs {
+            return;
+        }
+        // Create the workers and then wait for them to finish.
+        let num_waiting = Arc::new(AtomicUsize::new(0));
+        let num_quitting = Arc::new(AtomicUsize::new(0));
+        let mut handles = vec![];
+        for _ in 0..threads {
+            let worker = Worker {
+                f: mkf(),
+                queue: queue.clone(),
+                quit_now: Arc::new(AtomicBool::new(false)),
+                is_waiting: false,
+                is_quitting: false,
+                num_waiting: num_waiting.clone(),
+                num_quitting: num_quitting.clone(),
+                threads: threads,
+                parents: self.parents,
+                max_depth: self.max_depth,
+                follow_links: self.follow_links,
+            };
+            handles.push(thread::spawn(|| worker.run()));
+        }
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    fn threads(&self) -> usize {
+        if self.threads == 0 {
+            2
+        } else {
+            self.threads
+        }
+    }
+}
+
+/// Message is the set of instructions that a worker knows how to process.
+enum Message {
+    /// A work item corresponds to a directory that should be descended into.
+    /// Work items for entries that should be skipped or ignored should not
+    /// be produced.
+    Work(Work),
+    /// This instruction indicates that the worker should start quitting.
+    Quit,
+}
+
+/// A unit of work for each worker to process.
+///
+/// Each unit of work corresponds to a directory that should be descended
+/// into.
+struct Work {
+    /// The directory entry.
+    dent: DirEntry,
+    /// Any ignore matchers that have been built for this directory's parents.
+    ignore: Ignore,
+}
+
+impl Work {
+    /// Adds ignore rules for parent directories.
+    ///
+    /// Note that this only applies to entries at depth 0. On all other
+    /// entries, this is a no-op.
+    fn add_parents(&mut self) -> Option<Error> {
+        if self.dent.depth() > 0 {
+            return None;
+        }
+        // At depth 0, the path of this entry is a root path, so we can
+        // use it directly to add parent ignore rules.
+        let (ig, err) = self.ignore.add_parents(self.dent.path());
+        self.ignore = ig;
+        err
+    }
+
+    /// Reads the directory contents of this work item and adds ignore
+    /// rules for this directory.
+    ///
+    /// If there was a problem with reading the directory contents, then
+    /// an error is returned. If there was a problem reading the ignore
+    /// rules for this directory, then the error is attached to this
+    /// work item's directory entry.
+    fn read_dir(&mut self) -> Result<fs::ReadDir, Error> {
+        let readdir = match fs::read_dir(self.dent.path()) {
+            Ok(readdir) => readdir,
+            Err(err) => {
+                let err = Error::from(err)
+                    .with_path(self.dent.path())
+                    .with_depth(self.dent.depth());
+                return Err(err);
+            }
+        };
+        let (ig, err) = self.ignore.add_child(self.dent.path());
+        self.ignore = ig;
+        self.dent.err = err;
+        Ok(readdir)
+    }
+}
+
+/// A worker is responsible for descending into directories, updating the
+/// ignore matchers, producing new work and invoking the caller's callback.
+///
+/// Note that a worker is *both* a producer and a consumer.
+struct Worker {
+    /// The caller's callback.
+    f: Box<FnMut(Result<DirEntry, Error>) -> WalkState + Send + 'static>,
+    /// A queue of work items. This is multi-producer and multi-consumer.
+    queue: Arc<MsQueue<Message>>,
+    /// Whether all workers should quit at the next opportunity. Note that
+    /// this is distinct from quitting because of exhausting the contents of
+    /// a directory. Instead, this is used when the caller's callback indicates
+    /// that the iterator should quit immediately.
+    quit_now: Arc<AtomicBool>,
+    /// Whether this worker is waiting for more work.
+    is_waiting: bool,
+    /// Whether this worker has started to quit.
+    is_quitting: bool,
+    /// The number of workers waiting for more work.
+    num_waiting: Arc<AtomicUsize>,
+    /// The number of workers waiting to quit.
+    num_quitting: Arc<AtomicUsize>,
+    /// The total number of workers.
+    threads: usize,
+    /// Whether to create ignore matchers for parents of caller specified
+    /// directories.
+    parents: bool,
+    /// The maximum depth of directories to descend. A value of `0` means no
+    /// descension at all.
+    max_depth: Option<usize>,
+    /// Whether to follow symbolic links or not. When this is enabled, loop
+    /// detection is performed.
+    follow_links: bool,
+}
+
+impl Worker {
+    /// Runs this worker until there is no more work left to do.
+    ///
+    /// The worker will call the caller's callback for all entries that aren't
+    /// skipped by the ignore matcher.
+    fn run(mut self) {
+        while let Some(mut work) = self.get_work() {
+            let depth = work.dent.depth();
+            if self.parents {
+                if let Some(err) = work.add_parents() {
+                    if (self.f)(Err(err)).is_quit() {
+                        self.quit_now();
+                        return;
+                    }
+                }
+            }
+            let readdir = match work.read_dir() {
+                Ok(readdir) => readdir,
+                Err(err) => {
+                    if (self.f)(Err(err)).is_quit() {
+                        self.quit_now();
+                        return;
+                    }
+                    continue;
+                }
+            };
+            match (self.f)(Ok(work.dent)) {
+                WalkState::Continue => {}
+                WalkState::Skip => continue,
+                WalkState::Quit => {
+                    self.quit_now();
+                    return;
+                }
+            }
+            if self.max_depth.map_or(false, |max| depth >= max) {
+                continue;
+            }
+            for result in readdir {
+                if self.run_one(&work.ignore, depth + 1, result).is_quit() {
+                    self.quit_now();
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Runs the worker on a single entry from a directory iterator.
+    ///
+    /// If the entry is a path that should be ignored, then this is a no-op.
+    /// Otherwise, if the entry is a directory, then it is pushed on to the
+    /// queue. If the entry isn't a directory, the caller's callback is
+    /// applied.
+    ///
+    /// If an error occurs while reading the entry, then it is sent to the
+    /// caller's callback.
+    ///
+    /// `ig` is the `Ignore` matcher for the parent directory. `depth` should
+    /// be the depth of this entry. `result` should be the item yielded by
+    /// a directory iterator.
+    fn run_one(
+        &mut self,
+        ig: &Ignore,
+        depth: usize,
+        result: Result<fs::DirEntry, io::Error>,
+    ) -> WalkState {
+        let fs_dent = match result {
+            Ok(fs_dent) => fs_dent,
+            Err(err) => {
+                return (self.f)(Err(Error::from(err).with_depth(depth)));
+            }
+        };
+        let mut dent = match DirEntryRaw::from_entry(depth, &fs_dent) {
+            Ok(dent) => DirEntry::new_raw(dent, None),
+            Err(err) => {
+                return (self.f)(Err(err));
+            }
+        };
+        let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
+        if self.follow_links && is_symlink {
+            let path = dent.path().to_path_buf();
+            dent = match DirEntryRaw::from_link(depth, path) {
+                Ok(dent) => DirEntry::new_raw(dent, None),
+                Err(err) => {
+                    return (self.f)(Err(err));
+                }
+            };
+            if dent.file_type().map_or(false, |ft| ft.is_dir()) {
+                if let Err(err) = check_symlink_loop(ig, dent.path(), depth) {
+                    return (self.f)(Err(err));
+                }
+            }
+        }
+        let is_dir = dent.file_type().map_or(false, |ft| ft.is_dir());
+        if skip_path(ig, dent.path(), is_dir) {
+            WalkState::Continue
+        } else if !is_dir {
+            (self.f)(Ok(dent))
+        } else {
+            self.queue.push(Message::Work(Work {
+                dent: dent,
+                ignore: ig.clone(),
+            }));
+            WalkState::Continue
+        }
+    }
+
+    /// Returns the next directory to descend into.
+    ///
+    /// If all work has been exhausted, then this returns None. The worker
+    /// should then subsequently quit.
+    fn get_work(&mut self) -> Option<Work> {
+        loop {
+            if self.is_quit_now() {
+                return None;
+            }
+            match self.queue.try_pop() {
+                Some(Message::Work(work)) => {
+                    self.waiting(false);
+                    self.quitting(false);
+                    return Some(work);
+                }
+                Some(Message::Quit) => {
+                    // We can't just quit because a Message::Quit could be
+                    // spurious. For example, it's possible to observe that
+                    // all workers are waiting even if there's more work to
+                    // be done.
+                    //
+                    // Therefore, we do a bit of a dance to wait until all
+                    // workers have signaled that they're ready to quit before
+                    // actually quitting.
+                    //
+                    // If the Quit message turns out to be spurious, then the
+                    // loop below will break and we'll go back to looking for
+                    // more work.
+                    self.waiting(true);
+                    self.quitting(true);
+                    while !self.is_quit_now() {
+                        let nwait = self.num_waiting();
+                        let nquit = self.num_quitting();
+                        // If the number of waiting workers dropped, then
+                        // abort our attempt to quit.
+                        if nwait < self.threads {
+                            break;
+                        }
+                        // If all workers are in this quit loop, then we
+                        // can stop.
+                        if nquit == self.threads {
+                            return None;
+                        }
+                        // Otherwise, spin.
+                    }
+                    // If we're here, then we've aborted our quit attempt.
+                    continue;
+                }
+                None => {
+                    self.waiting(true);
+                    self.quitting(false);
+                    if self.num_waiting() == self.threads {
+                        for _ in 0..self.threads {
+                            self.queue.push(Message::Quit);
+                        }
+                    }
+                    continue;
+                }
+            }
+        }
+    }
+
+    /// Indicates that all workers should quit immediately.
+    fn quit_now(&self) {
+        self.quit_now.store(true, Ordering::SeqCst);
+    }
+
+    /// Returns true if this worker should quit immediately.
+    fn is_quit_now(&self) -> bool {
+        self.quit_now.load(Ordering::SeqCst)
+    }
+
+    /// Returns the total number of workers waiting for work.
+    fn num_waiting(&self) -> usize {
+        self.num_waiting.load(Ordering::SeqCst)
+    }
+
+    /// Returns the total number of workers ready to quit.
+    fn num_quitting(&self) -> usize {
+        self.num_quitting.load(Ordering::SeqCst)
+    }
+
+    /// Sets this worker's "quitting" state to the value of `yes`.
+    fn quitting(&mut self, yes: bool) {
+        if yes {
+            if !self.is_quitting {
+                self.is_quitting = true;
+                self.num_quitting.fetch_add(1, Ordering::SeqCst);
+            }
+        } else {
+            if self.is_quitting {
+                self.is_quitting = false;
+                self.num_quitting.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+    }
+
+    /// Sets this worker's "waiting" state to the value of `yes`.
+    fn waiting(&mut self, yes: bool) {
+        if yes {
+            if !self.is_waiting {
+                self.is_waiting = true;
+                self.num_waiting.fetch_add(1, Ordering::SeqCst);
+            }
+        } else {
+            if self.is_waiting {
+                self.is_waiting = false;
+                self.num_waiting.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+    }
+}
+
+fn check_symlink_loop(
+    ig_parent: &Ignore,
+    child_path: &Path,
+    child_depth: usize,
+) -> Result<(), Error> {
+    for ig in ig_parent.parents().take_while(|ig| !ig.is_absolute_parent()) {
+        let same = try!(is_same_file(ig.path(), child_path).map_err(|err| {
+            Error::from(err).with_path(child_path).with_depth(child_depth)
+        }));
+        if same {
+            return Err(Error::Loop {
+                ancestor: ig.path().to_path_buf(),
+                child: child_path.to_path_buf(),
+            }.with_depth(child_depth));
+        }
+    }
+    Ok(())
+}
+
+fn skip_path(ig: &Ignore, path: &Path, is_dir: bool) -> bool {
+    let m = ig.matched(path, is_dir);
+    if m.is_ignore() {
+        debug!("ignoring {}: {:?}", path.display(), m);
+        true
+    } else if m.is_whitelist() {
+        debug!("whitelisting {}: {:?}", path.display(), m);
+        false
+    } else {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::{self, File};
     use std::io::Write;
     use std::path::Path;
+    use std::sync::{Arc, Mutex};
 
     use tempdir::TempDir;
 
-    use super::{Walk, WalkBuilder};
+    use super::{WalkBuilder, WalkState};
 
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {
         let mut file = File::create(path).unwrap();
         file.write_all(contents.as_bytes()).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn symlink<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) {
+        use std::os::unix::fs::symlink;
+        symlink(src, dst).unwrap();
     }
 
     fn mkdirp<P: AsRef<Path>>(path: P) {
@@ -512,10 +1198,13 @@ mod tests {
         }
     }
 
-    fn walk_collect(prefix: &Path, walk: Walk) -> Vec<String> {
+    fn walk_collect(prefix: &Path, builder: &WalkBuilder) -> Vec<String> {
         let mut paths = vec![];
-        for dent in walk {
-            let dent = dent.unwrap();
+        for result in builder.build() {
+            let dent = match result {
+                Err(_) => continue,
+                Ok(dent) => dent,
+            };
             let path = dent.path().strip_prefix(prefix).unwrap();
             if path.as_os_str().is_empty() {
                 continue;
@@ -526,10 +1215,49 @@ mod tests {
         paths
     }
 
+    fn walk_collect_parallel(
+        prefix: &Path,
+        builder: &WalkBuilder,
+    ) -> Vec<String> {
+        let paths = Arc::new(Mutex::new(vec![]));
+        let prefix = Arc::new(prefix.to_path_buf());
+        builder.build_parallel().run(|| {
+            let paths = paths.clone();
+            let prefix = prefix.clone();
+            Box::new(move |result| {
+                let dent = match result {
+                    Err(_) => return WalkState::Continue,
+                    Ok(dent) => dent,
+                };
+                let path = dent.path().strip_prefix(&**prefix).unwrap();
+                if path.as_os_str().is_empty() {
+                    return WalkState::Continue;
+                }
+                let mut paths = paths.lock().unwrap();
+                paths.push(normal_path(path.to_str().unwrap()));
+                WalkState::Continue
+            })
+        });
+        let mut paths = paths.lock().unwrap();
+        paths.sort();
+        paths.to_vec()
+    }
+
     fn mkpaths(paths: &[&str]) -> Vec<String> {
         let mut paths: Vec<_> = paths.iter().map(|s| s.to_string()).collect();
         paths.sort();
         paths
+    }
+
+    fn assert_paths(
+        prefix: &Path,
+        builder: &WalkBuilder,
+        expected: &[&str],
+    ) {
+        let got = walk_collect(prefix, builder);
+        assert_eq!(got, mkpaths(expected));
+        let got = walk_collect_parallel(prefix, builder);
+        assert_eq!(got, mkpaths(expected));
     }
 
     #[test]
@@ -540,10 +1268,9 @@ mod tests {
         wfile(td.path().join("a/b/foo"), "");
         wfile(td.path().join("x/y/foo"), "");
 
-        let got = walk_collect(td.path(), Walk::new(td.path()));
-        assert_eq!(got, mkpaths(&[
+        assert_paths(td.path(), &WalkBuilder::new(td.path()), &[
             "x", "x/y", "x/y/foo", "a", "a/b", "a/b/foo", "a/b/c",
-        ]));
+        ]);
     }
 
     #[test]
@@ -556,8 +1283,9 @@ mod tests {
         wfile(td.path().join("bar"), "");
         wfile(td.path().join("a/bar"), "");
 
-        let got = walk_collect(td.path(), Walk::new(td.path()));
-        assert_eq!(got, mkpaths(&["bar", "a", "a/bar"]));
+        assert_paths(td.path(), &WalkBuilder::new(td.path()), &[
+            "bar", "a", "a/bar",
+        ]);
     }
 
     #[test]
@@ -573,8 +1301,7 @@ mod tests {
 
         let mut builder = WalkBuilder::new(td.path());
         assert!(builder.add_ignore(&igpath).is_none());
-        let got = walk_collect(td.path(), builder.build());
-        assert_eq!(got, mkpaths(&["bar", "a", "a/bar"]));
+        assert_paths(td.path(), &builder, &["bar", "a", "a/bar"]);
     }
 
     #[test]
@@ -586,7 +1313,59 @@ mod tests {
         wfile(td.path().join("a/bar"), "");
 
         let root = td.path().join("a");
-        let got = walk_collect(&root, Walk::new(&root));
-        assert_eq!(got, mkpaths(&["bar"]));
+        assert_paths(&root, &WalkBuilder::new(&root), &["bar"]);
+    }
+
+    #[test]
+    fn max_depth() {
+        let td = TempDir::new("walk-test-").unwrap();
+        mkdirp(td.path().join("a/b/c"));
+        wfile(td.path().join("foo"), "");
+        wfile(td.path().join("a/foo"), "");
+        wfile(td.path().join("a/b/foo"), "");
+        wfile(td.path().join("a/b/c/foo"), "");
+
+        let mut builder = WalkBuilder::new(td.path());
+        assert_paths(td.path(), &builder, &[
+            "a", "a/b", "a/b/c", "foo", "a/foo", "a/b/foo", "a/b/c/foo",
+        ]);
+        assert_paths(td.path(), builder.max_depth(Some(0)), &[]);
+        assert_paths(td.path(), builder.max_depth(Some(1)), &["a", "foo"]);
+        assert_paths(td.path(), builder.max_depth(Some(2)), &[
+            "a", "a/b", "foo", "a/foo",
+        ]);
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlinks() {
+        let td = TempDir::new("walk-test-").unwrap();
+        mkdirp(td.path().join("a/b"));
+        symlink(td.path().join("a/b"), td.path().join("z"));
+        wfile(td.path().join("a/b/foo"), "");
+
+        let mut builder = WalkBuilder::new(td.path());
+        assert_paths(td.path(), &builder, &[
+            "a", "a/b", "a/b/foo", "z",
+        ]);
+        assert_paths(td.path(), &builder.follow_links(true), &[
+            "a", "a/b", "a/b/foo", "z", "z/foo",
+        ]);
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_loop() {
+        let td = TempDir::new("walk-test-").unwrap();
+        mkdirp(td.path().join("a/b"));
+        symlink(td.path().join("a"), td.path().join("a/b/c"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        assert_paths(td.path(), &builder, &[
+            "a", "a/b", "a/b/c",
+        ]);
+        assert_paths(td.path(), &builder.follow_links(true), &[
+            "a", "a/b",
+        ]);
     }
 }
