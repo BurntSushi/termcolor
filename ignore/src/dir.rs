@@ -75,7 +75,7 @@ struct IgnoreOptions {
 
 impl IgnoreOptions {
     /// Returns true if at least one type of ignore rules should be matched.
-    fn should_ignores(&self) -> bool {
+    fn has_any_ignore_options(&self) -> bool {
         self.ignore || self.git_global || self.git_ignore || self.git_exclude
     }
 }
@@ -280,7 +280,7 @@ impl Ignore {
             }
         }
         let mut whitelisted = Match::None;
-        if self.0.opts.should_ignores() {
+        if self.0.opts.has_any_ignore_options() {
             let mat = self.matched_ignore(path, is_dir);
             if mat.is_ignore() {
                 return mat;
