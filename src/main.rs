@@ -271,10 +271,19 @@ fn get_or_log_dir_entry(
                     eprintln!("{}", err);
                 }
             }
-            if !dent.file_type().map_or(true, |x| x.is_file()) {
-                None
-            } else {
+            // A depth of 0 means the user gave the path explicitly, so we
+            // should always try to search it.
+            if dent.depth() == 0 {
+                return Some(dent);
+            }
+            let ft = match dent.file_type() {
+                None => return Some(dent), // entry is stdin
+                Some(ft) => ft,
+            };
+            if ft.is_file() {
                 Some(dent)
+            } else {
+                None
             }
         }
     }
