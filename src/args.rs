@@ -1,8 +1,9 @@
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process;
 
-use docopt::Docopt;
+use docopt::{self, Docopt};
 use env_logger;
 use grep::{Grep, GrepBuilder};
 use log;
@@ -38,7 +39,9 @@ Usage: rg [options] -e PATTERN ... [<path> ...]
        rg [options] --help
        rg [options] --version
 
-rg recursively searches your current directory for a regex pattern.
+ripgrep (rg) recursively searches your current directory for a regex pattern.
+
+Project home page: https://github.com/BurntSushi/ripgrep
 
 Common options:
     -a, --text                 Search binary files as if they were text.
@@ -538,7 +541,15 @@ impl Args {
         let mut raw: RawArgs =
             Docopt::new(USAGE)
                 .and_then(|d| d.argv(argv).version(Some(version())).decode())
-                .unwrap_or_else(|e| e.exit());
+                .unwrap_or_else(|e| {
+                    match e {
+                        docopt::Error::Version(ref v) => {
+                            println!("ripgrep {}", v);
+                            process::exit(0);
+                        }
+                        e => e.exit(),
+                    }
+                });
 
         let mut logb = env_logger::LogBuilder::new();
         if raw.flag_debug {

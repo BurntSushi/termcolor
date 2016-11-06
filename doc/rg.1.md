@@ -18,8 +18,10 @@ rg [*options*] --version
 
 # DESCRIPTION
 
-rg (ripgrep) combines the usability of The Silver Searcher (an ack clone) with
+ripgrep (rg) combines the usability of The Silver Searcher (an ack clone) with
 the raw speed of grep.
+
+Project home page: https://github.com/BurntSushi/ripgrep
 
 # COMMON OPTIONS
 
