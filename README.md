@@ -15,7 +15,7 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 [![A screenshot of a sample search with ripgrep](http://burntsushi.net/stuff/ripgrep1.png)](http://burntsushi.net/stuff/ripgrep1.png)
 
-### Quick example comparing tools
+### Quick examples comparing tools
 
 This example searches the entire Linux kernel source tree (after running
 `make defconfig && make -j8`) for `[A-Z]+_SUSPEND`, where all matches must be
@@ -27,7 +27,7 @@ for a very detailed comparison with more benchmarks and analysis.
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
-| ripgrep | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.134** |
+| ripgrep (Unicode) | `rg -n -w '[A-Z]+_SUSPEND'` | 450 | **0.134s** |
 | [The Silver Searcher](https://github.com/ggreer/the_silver_searcher) | `ag -w '[A-Z]+_SUSPEND'` | 450 | 0.753s |
 | [git grep](https://www.kernel.org/pub/software/scm/git/docs/git-grep.html) | `LC_ALL=C git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 0.823s |
 | [git grep (Unicode)](https://www.kernel.org/pub/software/scm/git/docs/git-grep.html) | `LC_ALL=en_US.UTF-8 git grep -E -n -w '[A-Z]+_SUSPEND'` | 450 | 2.880s |
@@ -44,18 +44,19 @@ flags passed to each command ensures that they are doing equivlaent work:
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
-| ripgrep | `rg -L -u -tc -n -w '[A-Z]+_SUSPEND'` | 404 | 0.132s |
-| [ucg](https://github.com/gvansickle/ucg) | `ucg --type=cc -w '[A-Z]+_SUSPEND' | 392 | 0.234s |
-| [GNU grep](https://www.gnu.org/software/grep/) | `LC_ALL=C egrep -R -n --include='*.c' --include='*.h' -w '[A-Z]+_SUSPEND'` | 404 | 0.744s |
+| ripgrep | `rg -L -u -tc -n -w '[A-Z]+_SUSPEND'` | 404 | **0.132s** |
+| [ucg](https://github.com/gvansickle/ucg) | `ucg --type=cc -w '[A-Z]+_SUSPEND'` | 392 | 0.234s |
+| [GNU grep](https://www.gnu.org/software/grep/) | `egrep -R -n --include='*.c' --include='*.h' -w '[A-Z]+_SUSPEND'` | 404 | 0.744s |
 
-<!-- *_ -->
+(`ucg` [might have a bug](https://github.com/gvansickle/ucg/issues/106).)
 
 And finally, a straight up comparison between ripgrep and GNU grep on a single
-large file (~9.3GB, [`OpenSubtitles2016.raw.en.gz`](http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz)):
+large file (~9.3GB,
+[`OpenSubtitles2016.raw.en.gz`](http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz)):
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
-| ripgrep | `rg -w 'Sherlock [A-Z]\w+'` | 5268 | 2.520s |
+| ripgrep | `rg -w 'Sherlock [A-Z]\w+'` | 5268 | **2.520s** |
 | [GNU grep](https://www.gnu.org/software/grep/) | `LC_ALL=C egrep -w 'Sherlock [A-Z]\w+'` | 5268 | 7.143s |
 
 In the above benchmark, passing the `-n` flag (for showing line numbers)
@@ -306,8 +307,11 @@ If you have a Rust nightly compiler, then you can enable optional SIMD
 acceleration like so:
 
 ```
-RUSTFLAGS="-C target-cpu=native" cargo build --release --features simd-accel
+RUSTFLAGS="-C target-cpu=native" cargo build --release --features 'simd-accel avx-accel'
 ```
+
+If your machine doesn't support AVX instructions, then simply remove
+`avx-accel` from the features list. Similarly for SIMD.
 
 ### Running tests
 
