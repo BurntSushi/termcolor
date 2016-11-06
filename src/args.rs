@@ -48,7 +48,8 @@ Common options:
                                [default: auto]
     -e, --regexp PATTERN ...   Use PATTERN to search. This option can be
                                provided multiple times, where all patterns
-                               given are searched.
+                               given are searched. This is also useful when
+                               searching for a pattern that starts with a dash.
     -F, --fixed-strings        Treat the pattern as a literal string instead of
                                a regular expression.
     -g, --glob GLOB ...        Include or exclude files for searching that

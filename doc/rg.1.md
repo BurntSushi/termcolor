@@ -35,7 +35,8 @@ the raw speed of grep.
 
 -e, --regexp *PATTERN* ...
 : Use PATTERN to search. This option can be provided multiple times, where all
-  patterns given are searched.
+  patterns given are searched. This is also useful when searching for patterns
+  that start with a dash.
 
 -F, --fixed-strings
 : Treat the pattern as a literal string instead of a regular expression.
