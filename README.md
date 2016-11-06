@@ -107,7 +107,7 @@ Summarizing, `ripgrep` is fast because:
   [`RegexSet`](https://doc.rust-lang.org/regex/regex/struct.RegexSet.html).
   That means a single file path can be matched against multiple glob patterns
   simultaneously.
-* It uses a lock-free parallel recursive directory, courtesy of
+* It uses a lock-free parallel recursive directory iterator, courtesy of
   [`crossbeam`](https://docs.rs/crossbeam) and
   [`ignore`](https://docs.rs/ignore).
 
