@@ -41,7 +41,7 @@ for a very detailed comparison with more benchmarks and analysis.
 
 Here's another benchmark that disregards gitignore files and searches with a
 whitelist instead. The corpus is the same as in the previous benchmark, and the
-flags passed to each command ensures that they are doing equivlaent work:
+flags passed to each command ensures that they are doing equivalent work:
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
