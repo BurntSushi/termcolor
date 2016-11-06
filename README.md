@@ -19,7 +19,8 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 This example searches the entire Linux kernel source tree (after running
 `make defconfig && make -j8`) for `[A-Z]+_SUSPEND`, where all matches must be
-words. Timings were collected on a system with an Intel i7-6900K 3.2 GHz.
+words. Timings were collected on a system with an Intel i7-6900K 3.2 GHz, and
+ripgrep was compiled using the `compile` script in this repo.
 
 Please remember that a single benchmark is never enough! See my
 [blog post on `ripgrep`](http://blog.burntsushi.net/ripgrep/)
