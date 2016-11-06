@@ -144,14 +144,19 @@ impl GrepBuilder {
         let expr = try!(self.parse());
         let literals = LiteralSets::create(&expr);
         let re = try!(self.regex(&expr));
-        let required = literals.to_regex().or_else(|| {
-            let expr = match strip_unicode_word_boundaries(&expr) {
-                None => return None,
-                Some(expr) => expr,
-            };
-            debug!("Stripped Unicode word boundaries. New AST:\n{:?}", expr);
-            self.regex(&expr).ok()
-        });
+        let required = match literals.to_regex_builder() {
+            Some(builder) => Some(try!(self.regex_build(builder))),
+            None => {
+                match strip_unicode_word_boundaries(&expr) {
+                    None => None,
+                    Some(expr) => {
+                        debug!("Stripped Unicode word boundaries. \
+                                New AST:\n{:?}", expr);
+                        self.regex(&expr).ok()
+                    }
+                }
+            }
+        };
         Ok(Grep {
             re: re,
             required: required,
@@ -162,11 +167,12 @@ impl GrepBuilder {
     /// Creates a new regex from the given expression with the current
     /// configuration.
     fn regex(&self, expr: &Expr) -> Result<Regex> {
-        let casei =
-            self.opts.case_insensitive
-            || (self.opts.case_smart && !has_uppercase_literal(expr));
-        RegexBuilder::new(&expr.to_string())
-            .case_insensitive(casei)
+        self.regex_build(RegexBuilder::new(&expr.to_string()))
+    }
+
+    /// Builds a new regex from the given builder using the caller's settings.
+    fn regex_build(&self, builder: RegexBuilder) -> Result<Regex> {
+        builder
             .multi_line(true)
             .unicode(true)
             .size_limit(self.opts.size_limit)
@@ -182,11 +188,29 @@ impl GrepBuilder {
             try!(syntax::ExprBuilder::new()
                  .allow_bytes(true)
                  .unicode(true)
-                 .case_insensitive(self.opts.case_insensitive)
+                 .case_insensitive(try!(self.is_case_insensitive()))
                  .parse(&self.pattern));
         let expr = try!(nonl::remove(expr, self.opts.line_terminator));
         debug!("regex ast:\n{:#?}", expr);
         Ok(expr)
+    }
+
+    /// Determines whether the case insensitive flag should be enabled or not.
+    ///
+    /// An error is returned if the regex could not be parsed.
+    fn is_case_insensitive(&self) -> Result<bool> {
+        if self.opts.case_insensitive {
+            return Ok(true);
+        }
+        if !self.opts.case_smart {
+            return Ok(false);
+        }
+        let expr =
+            try!(syntax::ExprBuilder::new()
+                 .allow_bytes(true)
+                 .unicode(true)
+                 .parse(&self.pattern));
+        Ok(!has_uppercase_literal(&expr))
     }
 }
 

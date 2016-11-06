@@ -9,7 +9,7 @@ principled.
 */
 use std::cmp;
 
-use regex::bytes::Regex;
+use regex::bytes::RegexBuilder;
 use syntax::{
     Expr, Literals, Lit,
     ByteClass, ByteRange, CharClass, ClassRange, Repeater,
@@ -33,7 +33,7 @@ impl LiteralSets {
         }
     }
 
-    pub fn to_regex(&self) -> Option<Regex> {
+    pub fn to_regex_builder(&self) -> Option<RegexBuilder> {
         if self.prefixes.all_complete() && !self.prefixes.is_empty() {
             debug!("literal prefixes detected: {:?}", self.prefixes);
             // When this is true, the regex engine will do a literal scan.
@@ -79,14 +79,12 @@ impl LiteralSets {
             debug!("required literals found: {:?}", req_lits);
             let alts: Vec<String> =
                 req_lits.into_iter().map(|x| bytes_to_regex(x)).collect();
-            // Literals always compile.
-            Some(Regex::new(&alts.join("|")).unwrap())
+            Some(RegexBuilder::new(&alts.join("|")))
         } else if lit.is_empty() {
             None
         } else {
-            // Literals always compile.
             debug!("required literal found: {:?}", show(lit));
-            Some(Regex::new(&bytes_to_regex(lit)).unwrap())
+            Some(RegexBuilder::new(&bytes_to_regex(lit)))
         }
     }
 }

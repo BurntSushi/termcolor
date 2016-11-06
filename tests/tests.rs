@@ -874,6 +874,15 @@ clean!(regression_184, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "baz:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/199
+clean!(regression_199, r"\btest\b", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "tEsT");
+    cmd.arg("--smart-case");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:tEsT\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/206
 clean!(regression_206, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create_dir("foo");
