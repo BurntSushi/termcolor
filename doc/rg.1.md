@@ -135,6 +135,9 @@ Project home page: https://github.com/BurntSushi/ripgrep
 -L, --follow
 : Follow symlinks.
 
+-m, --max-count NUM
+: Limit the number of matching lines per file searched to NUM.
+
 --maxdepth *NUM*
 : Descend at most NUM directories below the command line arguments.
   A value of zero searches only the starting-points themselves.

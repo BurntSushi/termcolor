@@ -141,6 +141,9 @@ Less common options:
     -L, --follow
         Follow symlinks.
 
+    -m, --max-count NUM
+        Limit the number of matching lines per file searched to NUM.
+
     --maxdepth NUM
         Descend at most NUM directories below the command line arguments.
         A value of zero only searches the starting-points themselves.
@@ -245,6 +248,7 @@ pub struct RawArgs {
     flag_invert_match: bool,
     flag_line_number: bool,
     flag_fixed_strings: bool,
+    flag_max_count: Option<usize>,
     flag_maxdepth: Option<usize>,
     flag_mmap: bool,
     flag_no_heading: bool,
@@ -296,6 +300,7 @@ pub struct Args {
     invert_match: bool,
     line_number: bool,
     line_per_match: bool,
+    max_count: Option<u64>,
     maxdepth: Option<usize>,
     mmap: bool,
     no_ignore: bool,
@@ -414,6 +419,7 @@ impl RawArgs {
             invert_match: self.flag_invert_match,
             line_number: !self.flag_no_line_number && self.flag_line_number,
             line_per_match: self.flag_vimgrep,
+            max_count: self.flag_max_count.map(|max| max as u64),
             maxdepth: self.flag_maxdepth,
             mmap: mmap,
             no_ignore: no_ignore,
@@ -629,6 +635,11 @@ impl Args {
         }
     }
 
+    /// Returns true if the given arguments are known to never produce a match.
+    pub fn never_match(&self) -> bool {
+        self.max_count == Some(0)
+    }
+
     /// Create a new buffer for use with searching.
     #[cfg(not(windows))]
     pub fn outbuf(&self) -> ColoredTerminal<term::TerminfoTerminal<Vec<u8>>> {
@@ -677,6 +688,7 @@ impl Args {
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
+            .max_count(self.max_count)
             .mmap(self.mmap)
             .quiet(self.quiet)
             .text(self.text)

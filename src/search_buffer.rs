@@ -81,6 +81,14 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
         self
     }
 
+    /// Limit the number of matches to the given count.
+    ///
+    /// The default is None, which corresponds to no limit.
+    pub fn max_count(mut self, count: Option<u64>) -> Self {
+        self.opts.max_count = count;
+        self
+    }
+
     /// If enabled, don't show any output and quit searching after the first
     /// match is found.
     pub fn quiet(mut self, yes: bool) -> Self {
@@ -111,11 +119,11 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
                 self.print_match(m.start(), m.end());
             }
             last_end = m.end();
-            if self.opts.stop_after_first_match() {
+            if self.opts.terminate(self.match_count) {
                 break;
             }
         }
-        if self.opts.invert_match {
+        if self.opts.invert_match && !self.opts.terminate(self.match_count) {
             let upto = self.buf.len();
             self.print_inverted_matches(last_end, upto);
         }
@@ -146,6 +154,9 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
         debug_assert!(self.opts.invert_match);
         let mut it = IterLines::new(self.opts.eol, start);
         while let Some((s, e)) = it.next(&self.buf[..end]) {
+            if self.opts.terminate(self.match_count) {
+                return;
+            }
             self.print_match(s, e);
         }
     }
@@ -264,6 +275,26 @@ and exhibited clearly, with a label attached.\
             "Sherlock", SHERLOCK, |s| s.files_with_matches(true));
         assert_eq!(1, count);
         assert_eq!(out, "/baz.rs\n");
+    }
+
+    #[test]
+    fn max_count() {
+        let (count, out) = search(
+            "Sherlock", SHERLOCK, |s| s.max_count(Some(1)));
+        assert_eq!(1, count);
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+");
+    }
+
+    #[test]
+    fn invert_match_max_count() {
+        let (count, out) = search(
+            "zzzz", SHERLOCK, |s| s.invert_match(true).max_count(Some(1)));
+        assert_eq!(1, count);
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+");
     }
 
     #[test]

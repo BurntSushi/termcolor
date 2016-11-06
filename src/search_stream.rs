@@ -86,6 +86,7 @@ pub struct Options {
     pub eol: u8,
     pub invert_match: bool,
     pub line_number: bool,
+    pub max_count: Option<u64>,
     pub quiet: bool,
     pub text: bool,
 }
@@ -100,6 +101,7 @@ impl Default for Options {
             eol: b'\n',
             invert_match: false,
             line_number: false,
+            max_count: None,
             quiet: false,
             text: false,
         }
@@ -118,6 +120,17 @@ impl Options {
     /// searching after the first match.
     pub fn stop_after_first_match(&self) -> bool {
         self.files_with_matches || self.quiet
+    }
+
+    /// Returns true if the search should terminate based on the match count.
+    pub fn terminate(&self, match_count: u64) -> bool {
+        if match_count > 0 && self.stop_after_first_match() {
+            return true;
+        }
+        if self.max_count.map_or(false, |max| match_count >= max) {
+            return true;
+        }
+        false
     }
 }
 
@@ -207,6 +220,14 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
         self
     }
 
+    /// Limit the number of matches to the given count.
+    ///
+    /// The default is None, which corresponds to no limit.
+    pub fn max_count(mut self, count: Option<u64>) -> Self {
+        self.opts.max_count = count;
+        self
+    }
+
     /// If enabled, don't show any output and quit searching after the first
     /// match is found.
     pub fn quiet(mut self, yes: bool) -> Self {
@@ -282,7 +303,7 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn terminate(&self) -> bool {
-        self.match_count > 0 && self.opts.stop_after_first_match()
+        self.opts.terminate(self.match_count)
     }
 
     #[inline(always)]
@@ -319,6 +340,9 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
         debug_assert!(self.opts.invert_match);
         let mut it = IterLines::new(self.opts.eol, self.inp.pos);
         while let Some((start, end)) = it.next(&self.inp.buf[..upto]) {
+            if self.terminate() {
+                return;
+            }
             self.print_match(start, end);
             self.inp.pos = end;
         }
@@ -960,6 +984,26 @@ fn main() {
             "Sherlock", SHERLOCK, |s| s.files_with_matches(true));
         assert_eq!(1, count);
         assert_eq!(out, "/baz.rs\n");
+    }
+
+    #[test]
+    fn max_count() {
+        let (count, out) = search_smallcap(
+            "Sherlock", SHERLOCK, |s| s.max_count(Some(1)));
+        assert_eq!(1, count);
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+");
+    }
+
+    #[test]
+    fn invert_match_max_count() {
+        let (count, out) = search(
+            "zzzz", SHERLOCK, |s| s.invert_match(true).max_count(Some(1)));
+        assert_eq!(1, count);
+        assert_eq!(out, "\
+/baz.rs:For the Doctor Watsons of this world, as opposed to the Sherlock
+");
     }
 
     #[test]

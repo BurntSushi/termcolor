@@ -34,6 +34,7 @@ struct Options {
     eol: u8,
     invert_match: bool,
     line_number: bool,
+    max_count: Option<u64>,
     quiet: bool,
     text: bool,
 }
@@ -49,6 +50,7 @@ impl Default for Options {
             eol: b'\n',
             invert_match: false,
             line_number: false,
+            max_count: None,
             quiet: false,
             text: false,
         }
@@ -125,6 +127,14 @@ impl WorkerBuilder {
     /// them.
     pub fn line_number(mut self, yes: bool) -> Self {
         self.opts.line_number = yes;
+        self
+    }
+
+    /// Limit the number of matches to the given count.
+    ///
+    /// The default is None, which corresponds to no limit.
+    pub fn max_count(mut self, count: Option<u64>) -> Self {
+        self.opts.max_count = count;
         self
     }
 
@@ -217,6 +227,7 @@ impl Worker {
             .eol(self.opts.eol)
             .line_number(self.opts.line_number)
             .invert_match(self.opts.invert_match)
+            .max_count(self.opts.max_count)
             .quiet(self.opts.quiet)
             .text(self.opts.text)
             .run()
@@ -246,6 +257,7 @@ impl Worker {
             .eol(self.opts.eol)
             .line_number(self.opts.line_number)
             .invert_match(self.opts.invert_match)
+            .max_count(self.opts.max_count)
             .quiet(self.opts.quiet)
             .text(self.opts.text)
             .run())

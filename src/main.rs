@@ -73,6 +73,9 @@ fn main() {
 }
 
 fn run(args: Arc<Args>) -> Result<u64> {
+    if args.never_match() {
+        return Ok(0);
+    }
     {
         let args = args.clone();
         ctrlc::set_handler(move || {

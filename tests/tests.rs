@@ -1071,6 +1071,21 @@ clean!(feature_109_case_sensitive_part2, "test", ".",
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/159
+clean!(feature_159_works, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "test\ntest");
+    cmd.arg("-m1");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:test\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/159
+clean!(feature_159_zero_max, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "test\ntest");
+    cmd.arg("-m0");
+    wd.assert_err(&mut cmd);
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");
