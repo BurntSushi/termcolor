@@ -137,6 +137,11 @@ impl Ignore {
         self.0.parent.is_none()
     }
 
+    /// Returns true if this matcher was added via the `add_parents` method.
+    pub fn is_absolute_parent(&self) -> bool {
+        self.0.is_absolute_parent
+    }
+
     /// Return this matcher's parent, if one exists.
     pub fn parent(&self) -> Option<Ignore> {
         self.0.parent.clone()
@@ -376,7 +381,7 @@ impl Ignore {
     }
 
     /// Returns an iterator over parent ignore matchers, including this one.
-    fn parents(&self) -> Parents {
+    pub fn parents(&self) -> Parents {
         Parents(Some(self))
     }
 
@@ -387,7 +392,10 @@ impl Ignore {
     }
 }
 
-struct Parents<'a>(Option<&'a Ignore>);
+/// An iterator over all parents of an ignore matcher, including itself.
+///
+/// The lifetime `'a` refers to the lifetime of the initial `Ignore` matcher.
+pub struct Parents<'a>(Option<&'a Ignore>);
 
 impl<'a> Iterator for Parents<'a> {
     type Item = &'a Ignore;

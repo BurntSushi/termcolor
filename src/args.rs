@@ -1,4 +1,3 @@
-use std::cmp;
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -21,10 +20,9 @@ use ignore::types::{FileTypeDef, Types, TypesBuilder};
 use ignore;
 use out::{Out, ColoredTerminal};
 use printer::Printer;
-use search_buffer::BufferSearcher;
-use search_stream::{InputBuffer, Searcher};
 #[cfg(windows)]
 use terminal_win::WindowsBuffer;
+use worker::{Worker, WorkerBuilder};
 
 use Result;
 
@@ -364,7 +362,7 @@ impl RawArgs {
             };
         let threads =
             if self.flag_threads == 0 {
-                cmp::min(8, num_cpus::get())
+                num_cpus::get()
             } else {
                 self.flag_threads
             };
@@ -576,18 +574,6 @@ impl Args {
         self.grep.clone()
     }
 
-    /// Creates a new input buffer that is used in searching.
-    pub fn input_buffer(&self) -> InputBuffer {
-        let mut inp = InputBuffer::new();
-        inp.eol(self.eol);
-        inp
-    }
-
-    /// Whether we should prefer memory maps for searching or not.
-    pub fn mmap(&self) -> bool {
-        self.mmap
-    }
-
     /// Whether ripgrep should be quiet or not.
     pub fn quiet(&self) -> bool {
         self.quiet
@@ -662,18 +648,16 @@ impl Args {
         &self.paths
     }
 
-    /// Create a new line based searcher whose configuration is taken from the
-    /// command line. This searcher supports a dizzying array of features:
-    /// inverted matching, line counting, context control and more.
-    pub fn searcher<'a, R: io::Read, W: Send + Terminal>(
-        &self,
-        inp: &'a mut InputBuffer,
-        printer: &'a mut Printer<W>,
-        grep: &'a Grep,
-        path: &'a Path,
-        rdr: R,
-    ) -> Searcher<'a, R, W> {
-        Searcher::new(inp, printer, grep, path, rdr)
+    /// Returns true if there is exactly one file path given to search.
+    pub fn is_one_path(&self) -> bool {
+        self.paths.len() == 1
+        && (self.paths[0] == Path::new("-") || self.paths[0].is_file())
+    }
+
+    /// Create a worker whose configuration is taken from the
+    /// command line.
+    pub fn worker(&self) -> Worker {
+        WorkerBuilder::new(self.grep())
             .after_context(self.after_context)
             .before_context(self.before_context)
             .count(self.count)
@@ -681,28 +665,10 @@ impl Args {
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
+            .mmap(self.mmap)
             .quiet(self.quiet)
             .text(self.text)
-    }
-
-    /// Create a new line based searcher whose configuration is taken from the
-    /// command line. This search operates on an entire file all once (which
-    /// may have been memory mapped).
-    pub fn searcher_buffer<'a, W: Send + Terminal>(
-        &self,
-        printer: &'a mut Printer<W>,
-        grep: &'a Grep,
-        path: &'a Path,
-        buf: &'a [u8],
-    ) -> BufferSearcher<'a, W> {
-        BufferSearcher::new(printer, grep, path, buf)
-            .count(self.count)
-            .files_with_matches(self.files_with_matches)
-            .eol(self.eol)
-            .line_number(self.line_number)
-            .invert_match(self.invert_match)
-            .quiet(self.quiet)
-            .text(self.text)
+            .build()
     }
 
     /// Returns the number of worker search threads that should be used.
@@ -722,7 +688,17 @@ impl Args {
     }
 
     /// Create a new recursive directory iterator over the paths in argv.
-    pub fn walker(&self) -> Walk {
+    pub fn walker(&self) -> ignore::Walk {
+        self.walker_builder().build()
+    }
+
+    /// Create a new parallel recursive directory iterator over the paths
+    /// in argv.
+    pub fn walker_parallel(&self) -> ignore::WalkParallel {
+        self.walker_builder().build_parallel()
+    }
+
+    fn walker_builder(&self) -> ignore::WalkBuilder {
         let paths = self.paths();
         let mut wd = ignore::WalkBuilder::new(&paths[0]);
         for path in &paths[1..] {
@@ -744,7 +720,8 @@ impl Args {
         wd.git_exclude(!self.no_ignore && !self.no_ignore_vcs);
         wd.ignore(!self.no_ignore);
         wd.parents(!self.no_ignore_parent);
-        Walk(wd.build())
+        wd.threads(self.threads());
+        wd
     }
 }
 
@@ -758,34 +735,6 @@ fn version() -> String {
         (Some(maj), Some(min), Some(pat)) =>
             format!("{}.{}.{}", maj, min, pat),
         _ => "".to_owned(),
-    }
-}
-
-/// A simple wrapper around the ignore::Walk iterator. This will
-/// automatically emit error messages to stderr and will skip directories.
-pub struct Walk(ignore::Walk);
-
-impl Iterator for Walk {
-    type Item = ignore::DirEntry;
-
-    fn next(&mut self) -> Option<ignore::DirEntry> {
-        while let Some(result) = self.0.next() {
-            match result {
-                Ok(dent) => {
-                    if let Some(err) = dent.error() {
-                        eprintln!("{}", err);
-                    }
-                    if dent.file_type().map_or(false, |x| x.is_dir()) {
-                        continue;
-                    }
-                    return Some(dent);
-                }
-                Err(err) => {
-                    eprintln!("{}", err);
-                }
-            }
-        }
-        None
     }
 }
 
