@@ -550,9 +550,10 @@ impl InputBuffer {
         keep_from: usize,
     ) -> Result<bool, io::Error> {
         // Rollover bytes from buf[keep_from..end] and update our various
-        // pointers. N.B. This could be done with the unsafe ptr::copy, but
-        // I haven't been able to produce a benchmark that notices a difference
-        // in performance. (Invariably, ptr::copy is also clearer IMO.)
+        // pointers. N.B. This could be done with the ptr::copy, but I haven't
+        // been able to produce a benchmark that notices a difference in
+        // performance. (Invariably, ptr::copy is seems clearer IMO, but it's
+        // unsafe.)
         self.tmp.clear();
         self.tmp.extend_from_slice(&self.buf[keep_from..self.end]);
         self.buf[0..self.tmp.len()].copy_from_slice(&self.tmp);
