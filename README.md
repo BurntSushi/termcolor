@@ -49,7 +49,7 @@ flags passed to each command ensures that they are doing equivalent work:
 | [ucg](https://github.com/gvansickle/ucg) | `ucg --type=cc -w '[A-Z]+_SUSPEND'` | 392 | 0.219s |
 | [GNU grep](https://www.gnu.org/software/grep/) | `egrep -R -n --include='*.c' --include='*.h' -w '[A-Z]+_SUSPEND'` | 404 | 0.733s |
 
-(`ucg` [might have a bug](https://github.com/gvansickle/ucg/issues/106).)
+(`ucg` [has slightly different behavior in the presence of symbolic links](https://github.com/gvansickle/ucg/issues/106).)
 
 And finally, a straight up comparison between ripgrep and GNU grep on a single
 large file (~9.3GB,
