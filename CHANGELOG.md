@@ -1,3 +1,15 @@
+0.2.9
+=====
+Bug fixes:
+
+* [BUG #226](https://github.com/BurntSushi/ripgrep/issues/226):
+  File paths explicitly given on the command line weren't searched in parallel.
+  (This was a regression in `0.2.7`.)
+* [BUG #228](https://github.com/BurntSushi/ripgrep/issues/228):
+  If a directory was given to `--ignore-file`, ripgrep's memory usage would
+  grow without bound.
+
+
 0.2.8
 =====
 Bug fixes:
