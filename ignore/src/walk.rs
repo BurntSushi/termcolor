@@ -747,40 +747,33 @@ impl WalkParallel {
         let mut f = mkf();
         let threads = self.threads();
         let queue = Arc::new(MsQueue::new());
-        let mut any_dirs = false;
+        let mut any_work = false;
         // Send the initial set of root paths to the pool of workers.
         // Note that we only send directories. For files, we send to them the
         // callback directly.
         for path in self.paths {
-            if path == Path::new("-") {
-                if f(Ok(DirEntry::new_stdin())).is_quit() {
-                    return;
-                }
-                continue;
-            }
-            let dent = match DirEntryRaw::from_path(0, path) {
-                Ok(dent) => DirEntry::new_raw(dent, None),
-                Err(err) => {
-                    if f(Err(err)).is_quit() {
-                        return;
+            let dent =
+                if path == Path::new("-") {
+                    DirEntry::new_stdin()
+                } else {
+                    match DirEntryRaw::from_path(0, path) {
+                        Ok(dent) => DirEntry::new_raw(dent, None),
+                        Err(err) => {
+                            if f(Err(err)).is_quit() {
+                                return;
+                            }
+                            continue;
+                        }
                     }
-                    continue;
-                }
-            };
-            if !dent.file_type().map_or(false, |t| t.is_dir()) {
-                if f(Ok(dent)).is_quit() {
-                    return;
-                }
-            } else {
-                any_dirs = true;
-                queue.push(Message::Work(Work {
-                    dent: dent,
-                    ignore: self.ig_root.clone(),
-                }));
-            }
+                };
+            queue.push(Message::Work(Work {
+                dent: dent,
+                ignore: self.ig_root.clone(),
+            }));
+            any_work = true;
         }
         // ... but there's no need to start workers if we don't need them.
-        if !any_dirs {
+        if !any_work {
             return;
         }
         // Create the workers and then wait for them to finish.
@@ -839,6 +832,11 @@ struct Work {
 }
 
 impl Work {
+    /// Returns true if and only if this work item is a directory.
+    fn is_dir(&self) -> bool {
+        self.dent.file_type().map_or(false, |t| t.is_dir())
+    }
+
     /// Adds ignore rules for parent directories.
     ///
     /// Note that this only applies to entries at depth 0. On all other
@@ -921,6 +919,15 @@ impl Worker {
     fn run(mut self) {
         while let Some(mut work) = self.get_work() {
             let depth = work.dent.depth();
+            // If this is an explicitly given path and is not a directory,
+            // then execute the caller's callback and move on.
+            if depth == 0 && !work.is_dir() {
+                if (self.f)(Ok(work.dent)).is_quit() {
+                    self.quit_now();
+                    return;
+                }
+                continue;
+            }
             if self.parents {
                 if let Some(err) = work.add_parents() {
                     if (self.f)(Err(err)).is_quit() {

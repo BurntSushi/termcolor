@@ -1,3 +1,4 @@
+use std::cmp;
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -376,7 +377,7 @@ impl RawArgs {
             };
         let threads =
             if self.flag_threads == 0 {
-                num_cpus::get()
+                cmp::min(12, num_cpus::get())
             } else {
                 self.flag_threads
             };
