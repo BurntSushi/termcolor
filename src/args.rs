@@ -1,6 +1,7 @@
 use std::cmp;
 use std::env;
-use std::io;
+use std::fs;
+use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -34,6 +35,7 @@ use Result;
 /// (TL;DR: The CLI parser is generated from the usage string below.)
 const USAGE: &'static str = "
 Usage: rg [options] -e PATTERN ... [<path> ...]
+       rg [options] -f FILE [<path> ...]
        rg [options] <pattern> [<path> ...]
        rg [options] --files [<path> ...]
        rg [options] --type-list
@@ -106,6 +108,11 @@ Less common options:
 
     --debug
         Show debug messages.
+
+    -f, --file FILE
+        Search for patterns specified in a file, one per line.  Empty pattern
+        lines will match all input lines, and the newline is not counted as part
+        of the pattern.
 
     --files
         Print each file that would be searched (but don't search).
@@ -242,6 +249,7 @@ pub struct RawArgs {
     flag_count: bool,
     flag_files_with_matches: bool,
     flag_debug: bool,
+    flag_file: Option<String>,
     flag_files: bool,
     flag_follow: bool,
     flag_glob: Vec<String>,
@@ -479,23 +487,32 @@ impl RawArgs {
         btypes.build().map_err(From::from)
     }
 
-    fn pattern(&self) -> String {
-        if !self.flag_regexp.is_empty() {
-            if self.flag_fixed_strings {
-                self.flag_regexp.iter().cloned().map(|lit| {
-                    self.word_pattern(regex::quote(&lit))
-                }).collect::<Vec<String>>().join("|")
+    fn pattern(&self) -> Result<String> {
+        let patterns: Vec<String> = if !self.flag_regexp.is_empty() {
+            self.flag_regexp.iter().cloned().collect()
+        } else if let Some(ref file) = self.flag_file {
+            if file == "-" {
+                // We need two local variables here to get the lock
+                // lifetimes correct.
+                let stdin = io::stdin();
+                let result = stdin.lock().lines().collect();
+                try!(result)
             } else {
-                self.flag_regexp.iter().cloned().map(|pat| {
-                    self.word_pattern(pat)
-                }).collect::<Vec<String>>().join("|")
+                let f = try!(fs::File::open(&Path::new(file)));
+                try!(io::BufReader::new(f).lines().collect())
             }
         } else {
-            if self.flag_fixed_strings {
-                self.word_pattern(regex::quote(&self.arg_pattern))
-            } else {
-                self.word_pattern(self.arg_pattern.clone())
-            }
+            vec![self.arg_pattern.clone()]
+        };
+
+        if self.flag_fixed_strings {
+            Ok(patterns.into_iter().map(|p| {
+                self.word_pattern(regex::quote(&p))
+            }).collect::<Vec<String>>().join("|"))
+        } else {
+            Ok(patterns.into_iter().map(|p| {
+                self.word_pattern(p)
+            }).collect::<Vec<String>>().join("|"))
         }
     }
 
@@ -520,7 +537,7 @@ impl RawArgs {
         let casei =
             self.flag_ignore_case
             && !self.flag_case_sensitive;
-        GrepBuilder::new(&self.pattern())
+        GrepBuilder::new(&try!(self.pattern()))
             .case_smart(smart)
             .case_insensitive(casei)
             .line_terminator(self.eol())
