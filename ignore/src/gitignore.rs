@@ -311,7 +311,7 @@ impl GitignoreBuilder {
                 Ok(line) => line,
                 Err(err) => {
                     errs.push(Error::Io(err).tagged(path, lineno));
-                    continue;
+                    break;
                 }
             };
             if let Err(err) = self.add_line(Some(path.to_path_buf()), &line) {

@@ -893,6 +893,13 @@ clean!(regression_206, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, format!("{}:test\n", path("foo/bar.txt")));
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/228
+clean!(regression_228, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("foo");
+    cmd.arg("--ignore-file").arg("foo");
+    wd.assert_err(&mut cmd);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20_no_filename, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {

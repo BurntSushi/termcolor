@@ -451,7 +451,7 @@ impl WalkBuilder {
     pub fn add_ignore<P: AsRef<Path>>(&mut self, path: P) -> Option<Error> {
         let mut builder = GitignoreBuilder::new("");
         let mut errs = PartialErrorBuilder::default();
-        errs.maybe_push_ignore_io(builder.add(path));
+        errs.maybe_push(builder.add(path));
         match builder.build() {
             Ok(gi) => { self.ig_builder.add_ignore(gi); }
             Err(err) => { errs.push(err); }
