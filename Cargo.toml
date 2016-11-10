@@ -37,7 +37,7 @@ memchr = "0.1"
 memmap = "0.5"
 num_cpus = "1"
 regex = "0.1.77"
-rustc-serialize = "0.3"
+rustc-serialize = "=0.3.19"
 term = "0.4"
 
 [target.'cfg(windows)'.dependencies]
