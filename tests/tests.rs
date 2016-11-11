@@ -552,6 +552,7 @@ sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
     assert_eq!(lines, expected);
 });
 
+#[cfg(not(windows))]
 sherlock!(symlink_nofollow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.remove("sherlock");
     wd.create_dir("foo");
@@ -563,6 +564,7 @@ sherlock!(symlink_nofollow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+#[cfg(not(windows))]
 sherlock!(symlink_follow, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     wd.remove("sherlock");
     wd.create_dir("foo");
