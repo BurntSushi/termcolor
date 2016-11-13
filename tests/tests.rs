@@ -895,12 +895,30 @@ clean!(regression_206, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, format!("{}:test\n", path("foo/bar.txt")));
 });
 
-// See: https://github.com/BurntSushi/ripgrep/issues/228
-clean!(regression_228, "test", ".", |wd: WorkDir, mut cmd: Command| {
+// See: https://github.com/BurntSushi/ripgrep/issues/210
+clean!(regression_210, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create_dir("foo");
     cmd.arg("--ignore-file").arg("foo");
     wd.assert_err(&mut cmd);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/228
+#[cfg(unix)]
+#[test]
+fn regression_228() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let badutf8 = OsStr::from_bytes(&b"foo\xffbar"[..]);
+
+    let wd = WorkDir::new("regression_228");
+    let mut cmd = wd.command();
+    wd.create(badutf8, "test");
+    cmd.arg("-H").arg("test").arg(badutf8);
+
+    let out = wd.output(&mut cmd);
+    assert_eq!(out.stdout, b"foo\xffbar:test\n".to_vec());
+}
 
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {

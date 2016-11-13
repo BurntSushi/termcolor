@@ -19,6 +19,7 @@ mk_tarball() {
 
     cp target/$TARGET/release/rg "$td/$name/"
     cp {doc/rg.1,README.md,UNLICENSE,COPYING,LICENSE-MIT} "$td/$name/"
+    cp target/$TARGET/release/build/ripgrep-*/out/{_rg.,rg.}* "$td/$name/"
 
     pushd $td
     tar czf "$out_dir/$name.tar.gz" *

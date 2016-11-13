@@ -4,9 +4,9 @@ rg - recursively search current directory for lines matching a pattern
 
 # SYNOPSIS
 
-rg [*options*] -e PATTERN ... [*<*path*> ...*]
-
 rg [*options*] <*pattern*> [*<*path*> ...*]
+
+rg [*options*] (-e PATTERN | -f FILE) ... [*<*path*> ...*]
 
 rg [*options*] --files [*<*path*> ...*]
 
@@ -107,6 +107,12 @@ Project home page: https://github.com/BurntSushi/ripgrep
 --debug
 : Show debug messages.
 
+-f, --file FILE ...
+: Search for patterns from the given file, with one pattern per line. When this
+  flag is used or multiple times or in combination with the -e/--regexp flag,
+  then all patterns provided are searched. Empty pattern lines will match all
+  input lines, and the newline is not counted as part of the pattern.
+
 --files
 : Print each file that would be searched (but don't search).
 
@@ -131,6 +137,14 @@ Project home page: https://github.com/BurntSushi/ripgrep
 --hidden
 : Search hidden directories and files. (Hidden directories and files are
   skipped by default.)
+
+--ignore-file FILE ...
+: Specify additional ignore files for filtering file paths.
+  Ignore files should be in the gitignore format and are matched
+  relative to the current working directory. These ignore files
+  have lower precedence than all other ignore files. When
+  specifying multiple ignore files, earlier files have lower
+  precedence than later files.
 
 -L, --follow
 : Follow symlinks.

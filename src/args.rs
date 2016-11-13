@@ -1,11 +1,13 @@
 use std::cmp;
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, BufRead};
+use std::ops;
 use std::path::{Path, PathBuf};
 use std::process;
 
-use docopt::{self, Docopt};
+use clap;
 use env_logger;
 use grep::{Grep, GrepBuilder};
 use log;
@@ -18,6 +20,7 @@ use term;
 use term::WinConsole;
 
 use atty;
+use app;
 use ignore::overrides::{Override, OverrideBuilder};
 use ignore::types::{FileTypeDef, Types, TypesBuilder};
 use ignore;
@@ -25,272 +28,12 @@ use out::{Out, ColoredTerminal};
 use printer::Printer;
 #[cfg(windows)]
 use terminal_win::WindowsBuffer;
+use unescape::unescape;
 use worker::{Worker, WorkerBuilder};
 
-use Result;
+use {Result, version};
 
-/// The Docopt usage string.
-///
-/// If you've never heard of Docopt before, see: http://docopt.org
-/// (TL;DR: The CLI parser is generated from the usage string below.)
-const USAGE: &'static str = "
-Usage: rg [options] -e PATTERN ... [<path> ...]
-       rg [options] -f FILE [<path> ...]
-       rg [options] <pattern> [<path> ...]
-       rg [options] --files [<path> ...]
-       rg [options] --type-list
-       rg [options] --help
-       rg [options] --version
-
-ripgrep (rg) recursively searches your current directory for a regex pattern.
-
-Project home page: https://github.com/BurntSushi/ripgrep
-
-Common options:
-    -a, --text                 Search binary files as if they were text.
-    -c, --count                Only show count of line matches for each file.
-    --color WHEN               Whether to use coloring in match.
-                               Valid values are never, always or auto.
-                               [default: auto]
-    -e, --regexp PATTERN ...   Use PATTERN to search. This option can be
-                               provided multiple times, where all patterns
-                               given are searched. This is also useful when
-                               searching for a pattern that starts with a dash.
-    -F, --fixed-strings        Treat the pattern as a literal string instead of
-                               a regular expression.
-    -g, --glob GLOB ...        Include or exclude files for searching that
-                               match the given glob. This always overrides any
-                               other ignore logic. Multiple glob flags may be
-                               used. Globbing rules match .gitignore globs.
-                               Precede a glob with a '!' to exclude it.
-    -h, --help                 Show this usage message.
-    -i, --ignore-case          Case insensitive search.
-                               Overridden by --case-sensitive.
-    -n, --line-number          Show line numbers (1-based). This is enabled
-                               by default at a tty.
-    -N, --no-line-number       Suppress line numbers.
-    -q, --quiet                Do not print anything to stdout. If a match is
-                               found in a file, stop searching that file.
-    -t, --type TYPE ...        Only search files matching TYPE. Multiple type
-                               flags may be provided. Use the --type-list flag
-                               to list all available types.
-    -T, --type-not TYPE ...    Do not search files matching TYPE. Multiple
-                               not-type flags may be provided.
-    -u, --unrestricted ...     Reduce the level of 'smart' searching. A
-                               single -u doesn't respect .gitignore (etc.)
-                               files. Two -u flags will search hidden files
-                               and directories. Three -u flags will search
-                               binary files. -uu is equivalent to grep -r,
-                               and -uuu is equivalent to grep -a -r.
-    -v, --invert-match         Invert matching.
-    -w, --word-regexp          Only show matches surrounded by word boundaries.
-                               This is equivalent to putting \\b before and
-                               after the search pattern.
-
-Less common options:
-    -A, --after-context NUM
-        Show NUM lines after each match.
-
-    -B, --before-context NUM
-        Show NUM lines before each match.
-
-    -C, --context NUM
-        Show NUM lines before and after each match.
-
-    --column
-        Show column numbers (1 based) in output. This only shows the column
-        numbers for the first match on each line. Note that this doesn't try
-        to account for Unicode. One byte is equal to one column.
-
-    --context-separator ARG
-        The string to use when separating non-continuous context lines. Escape
-        sequences may be used. [default: --]
-
-    --debug
-        Show debug messages.
-
-    -f, --file FILE
-        Search for patterns specified in a file, one per line.  Empty pattern
-        lines will match all input lines, and the newline is not counted as part
-        of the pattern.
-
-    --files
-        Print each file that would be searched (but don't search).
-
-    -l, --files-with-matches
-        Only show path of each file with matches.
-
-    -H, --with-filename
-        Prefix each match with the file name that contains it. This is the
-        default when more than one file is searched.
-
-    --no-filename
-        Never show the filename for a match. This is the default when
-        one file is searched.
-
-    --heading
-        Show the file name above clusters of matches from each file.
-        This is the default mode at a tty.
-
-    --no-heading
-        Don't show any file name heading.
-
-    --hidden
-        Search hidden directories and files. (Hidden directories and files are
-        skipped by default.)
-
-    --ignore-file FILE ...
-        Specify additional ignore files for filtering file paths. Ignore files
-        should be in the gitignore format and are matched relative to the
-        current working directory. These ignore files have lower precedence
-        than all other ignore file types. When specifying multiple ignore
-        files, earlier files have lower precedence than later files.
-
-    -L, --follow
-        Follow symlinks.
-
-    -m, --max-count NUM
-        Limit the number of matching lines per file searched to NUM.
-
-    --maxdepth NUM
-        Descend at most NUM directories below the command line arguments.
-        A value of zero only searches the starting-points themselves.
-
-    --mmap
-        Search using memory maps when possible. This is enabled by default
-        when ripgrep thinks it will be faster. (Note that mmap searching
-        doesn't currently support the various context related options.)
-
-    --no-messages
-        Suppress all error messages.
-
-    --no-mmap
-        Never use memory maps, even when they might be faster.
-
-    --no-ignore
-        Don't respect ignore files (.gitignore, .ignore, etc.)
-        This implies --no-ignore-parent.
-
-    --no-ignore-parent
-        Don't respect ignore files in parent directories.
-
-    --no-ignore-vcs
-        Don't respect version control ignore files (e.g., .gitignore).
-        Note that .ignore files will continue to be respected.
-
-    --null
-        Whenever a file name is printed, follow it with a NUL byte.
-        This includes printing filenames before matches, and when printing
-        a list of matching files such as with --count, --files-with-matches
-        and --files.
-
-    -p, --pretty
-        Alias for --color=always --heading -n.
-
-    -r, --replace ARG
-        Replace every match with the string given when printing search results.
-        Neither this flag nor any other flag will modify your files.
-
-        Capture group indices (e.g., $5) and names (e.g., $foo) are supported
-        in the replacement string.
-
-    -s, --case-sensitive
-        Search case sensitively. This overrides --ignore-case and --smart-case.
-
-    -S, --smart-case
-        Search case insensitively if the pattern is all lowercase.
-        Search case sensitively otherwise. This is overridden by
-        either --case-sensitive or --ignore-case.
-
-    -j, --threads ARG
-        The number of threads to use. 0 means use the number of logical CPUs
-        (capped at 6). [default: 0]
-
-    --version
-        Show the version number of ripgrep and exit.
-
-    --vimgrep
-        Show results with every match on its own line, including line
-        numbers and column numbers. (With this option, a line with more
-        than one match of the regex will be printed more than once.)
-
-File type management options:
-    --type-list
-        Show all supported file types and their associated globs.
-
-    --type-add ARG ...
-        Add a new glob for a particular file type. Only one glob can be
-        added at a time. Multiple --type-add flags can be provided.
-        Unless --type-clear is used, globs are added to any existing globs
-        inside of ripgrep. Note that this must be passed to every invocation of
-        rg. Type settings are NOT persisted.
-
-        Example: `rg --type-add 'foo:*.foo' -tfoo PATTERN`
-
-    --type-clear TYPE ...
-        Clear the file type globs previously defined for TYPE. This only clears
-        the default type definitions that are found inside of ripgrep. Note
-        that this must be passed to every invocation of rg.
-";
-
-/// RawArgs are the args as they are parsed from Docopt. They aren't used
-/// directly by the rest of ripgrep.
-#[derive(Debug, RustcDecodable)]
-pub struct RawArgs {
-    arg_pattern: String,
-    arg_path: Vec<String>,
-    flag_after_context: usize,
-    flag_before_context: usize,
-    flag_case_sensitive: bool,
-    flag_color: String,
-    flag_column: bool,
-    flag_context: usize,
-    flag_context_separator: String,
-    flag_count: bool,
-    flag_files_with_matches: bool,
-    flag_debug: bool,
-    flag_file: Option<String>,
-    flag_files: bool,
-    flag_follow: bool,
-    flag_glob: Vec<String>,
-    flag_heading: bool,
-    flag_hidden: bool,
-    flag_ignore_case: bool,
-    flag_ignore_file: Vec<String>,
-    flag_invert_match: bool,
-    flag_line_number: bool,
-    flag_fixed_strings: bool,
-    flag_max_count: Option<usize>,
-    flag_maxdepth: Option<usize>,
-    flag_mmap: bool,
-    flag_no_heading: bool,
-    flag_no_ignore: bool,
-    flag_no_ignore_parent: bool,
-    flag_no_ignore_vcs: bool,
-    flag_no_line_number: bool,
-    flag_no_messages: bool,
-    flag_no_mmap: bool,
-    flag_no_filename: bool,
-    flag_null: bool,
-    flag_pretty: bool,
-    flag_quiet: bool,
-    flag_regexp: Vec<String>,
-    flag_replace: Option<String>,
-    flag_smart_case: bool,
-    flag_text: bool,
-    flag_threads: usize,
-    flag_type: Vec<String>,
-    flag_type_not: Vec<String>,
-    flag_type_list: bool,
-    flag_type_add: Vec<String>,
-    flag_type_clear: Vec<String>,
-    flag_unrestricted: u32,
-    flag_vimgrep: bool,
-    flag_with_filename: bool,
-    flag_word_regexp: bool,
-}
-
-/// Args are transformed/normalized from RawArgs.
+/// Args are transformed/normalized from ArgMatches.
 #[derive(Debug)]
 pub struct Args {
     paths: Vec<PathBuf>,
@@ -308,7 +51,6 @@ pub struct Args {
     grep: Grep,
     heading: bool,
     hidden: bool,
-    ignore_case: bool,
     ignore_files: Vec<PathBuf>,
     invert_match: bool,
     line_number: bool,
@@ -330,222 +72,6 @@ pub struct Args {
     with_filename: bool,
 }
 
-impl RawArgs {
-    /// Convert arguments parsed into a configuration used by ripgrep.
-    fn to_args(&self) -> Result<Args> {
-        let paths =
-            if self.arg_path.is_empty() {
-                if atty::on_stdin()
-                    || self.flag_files
-                    || self.flag_type_list
-                    || !atty::stdin_is_readable() {
-                    vec![Path::new("./").to_path_buf()]
-                } else {
-                    vec![Path::new("-").to_path_buf()]
-                }
-            } else {
-                self.arg_path.iter().map(|p| {
-                    Path::new(p).to_path_buf()
-                }).collect()
-            };
-        let (after_context, before_context) =
-            if self.flag_context > 0 {
-                (self.flag_context, self.flag_context)
-            } else {
-                (self.flag_after_context, self.flag_before_context)
-            };
-        let mmap =
-            if before_context > 0 || after_context > 0 || self.flag_no_mmap {
-                false
-            } else if self.flag_mmap {
-                true
-            } else if cfg!(windows) {
-                // On Windows, memory maps appear faster than read calls. Neat.
-                true
-            } else if cfg!(target_os = "macos") {
-                // On Mac, memory maps appear to suck. Neat.
-                false
-            } else {
-                // If we're only searching a few paths and all of them are
-                // files, then memory maps are probably faster.
-                paths.len() <= 10 && paths.iter().all(|p| p.is_file())
-            };
-        if mmap {
-            debug!("will try to use memory maps");
-        }
-        let glob_overrides =
-            if self.flag_glob.is_empty() {
-                Override::empty()
-            } else {
-                let mut ovr = OverrideBuilder::new(try!(env::current_dir()));
-                for pat in &self.flag_glob {
-                    try!(ovr.add(pat));
-                }
-                try!(ovr.build())
-            };
-        let threads =
-            if self.flag_threads == 0 {
-                cmp::min(12, num_cpus::get())
-            } else {
-                self.flag_threads
-            };
-        let color =
-            if self.flag_color == "always" {
-                true
-            } else if self.flag_vimgrep {
-                false
-            } else if self.flag_color == "auto" {
-                atty::on_stdout() || self.flag_pretty
-            } else {
-                false
-            };
-
-        let mut with_filename = self.flag_with_filename;
-        if !with_filename {
-            with_filename = paths.len() > 1 || paths[0].is_dir();
-        }
-        with_filename = with_filename && !self.flag_no_filename;
-
-        let no_ignore = self.flag_no_ignore || self.flag_unrestricted >= 1;
-        let hidden = self.flag_hidden || self.flag_unrestricted >= 2;
-        let text = self.flag_text || self.flag_unrestricted >= 3;
-        let ignore_files: Vec<_> = self.flag_ignore_file.iter().map(|p| {
-            Path::new(p).to_path_buf()
-        }).collect();
-        let mut args = Args {
-            paths: paths,
-            after_context: after_context,
-            before_context: before_context,
-            color: color,
-            column: self.flag_column,
-            context_separator: unescape(&self.flag_context_separator),
-            count: self.flag_count,
-            files_with_matches: self.flag_files_with_matches,
-            eol: self.eol(),
-            files: self.flag_files,
-            follow: self.flag_follow,
-            glob_overrides: glob_overrides,
-            grep: try!(self.grep()),
-            heading: !self.flag_no_heading && self.flag_heading,
-            hidden: hidden,
-            ignore_case: self.flag_ignore_case,
-            ignore_files: ignore_files,
-            invert_match: self.flag_invert_match,
-            line_number: !self.flag_no_line_number && self.flag_line_number,
-            line_per_match: self.flag_vimgrep,
-            max_count: self.flag_max_count.map(|max| max as u64),
-            maxdepth: self.flag_maxdepth,
-            mmap: mmap,
-            no_ignore: no_ignore,
-            no_ignore_parent:
-                // --no-ignore implies --no-ignore-parent
-                self.flag_no_ignore_parent || no_ignore,
-            no_ignore_vcs:
-                // --no-ignore implies --no-ignore-vcs
-                self.flag_no_ignore_vcs || no_ignore,
-            no_messages: self.flag_no_messages,
-            null: self.flag_null,
-            quiet: self.flag_quiet,
-            replace: self.flag_replace.clone().map(|s| s.into_bytes()),
-            text: text,
-            threads: threads,
-            type_list: self.flag_type_list,
-            types: try!(self.types()),
-            with_filename: with_filename,
-        };
-        // If stdout is a tty, then apply some special default options.
-        if atty::on_stdout() || self.flag_pretty {
-            if !self.flag_no_line_number && !args.count {
-                args.line_number = true;
-            }
-            if !self.flag_no_heading {
-                args.heading = true;
-            }
-        }
-        if self.flag_vimgrep {
-            args.column = true;
-            args.line_number = true;
-        }
-        Ok(args)
-    }
-
-    fn types(&self) -> Result<Types> {
-        let mut btypes = TypesBuilder::new();
-        btypes.add_defaults();
-        for ty in &self.flag_type_clear {
-            btypes.clear(ty);
-        }
-        for def in &self.flag_type_add {
-            try!(btypes.add_def(def));
-        }
-        for ty in &self.flag_type {
-            btypes.select(ty);
-        }
-        for ty in &self.flag_type_not {
-            btypes.negate(ty);
-        }
-        btypes.build().map_err(From::from)
-    }
-
-    fn pattern(&self) -> Result<String> {
-        let patterns: Vec<String> = if !self.flag_regexp.is_empty() {
-            self.flag_regexp.iter().cloned().collect()
-        } else if let Some(ref file) = self.flag_file {
-            if file == "-" {
-                // We need two local variables here to get the lock
-                // lifetimes correct.
-                let stdin = io::stdin();
-                let result = stdin.lock().lines().collect();
-                try!(result)
-            } else {
-                let f = try!(fs::File::open(&Path::new(file)));
-                try!(io::BufReader::new(f).lines().collect())
-            }
-        } else {
-            vec![self.arg_pattern.clone()]
-        };
-
-        if self.flag_fixed_strings {
-            Ok(patterns.into_iter().map(|p| {
-                self.word_pattern(regex::quote(&p))
-            }).collect::<Vec<String>>().join("|"))
-        } else {
-            Ok(patterns.into_iter().map(|p| {
-                self.word_pattern(p)
-            }).collect::<Vec<String>>().join("|"))
-        }
-    }
-
-    fn word_pattern(&self, s: String) -> String {
-        if self.flag_word_regexp {
-            format!(r"\b{}\b", s)
-        } else {
-            s
-        }
-    }
-
-    fn eol(&self) -> u8 {
-        // We might want to make this configurable.
-        b'\n'
-    }
-
-    fn grep(&self) -> Result<Grep> {
-        let smart =
-            self.flag_smart_case
-            && !self.flag_ignore_case
-            && !self.flag_case_sensitive;
-        let casei =
-            self.flag_ignore_case
-            && !self.flag_case_sensitive;
-        GrepBuilder::new(&try!(self.pattern()))
-            .case_smart(smart)
-            .case_insensitive(casei)
-            .line_terminator(self.eol())
-            .build()
-            .map_err(From::from)
-    }
-}
-
 impl Args {
     /// Parse the command line arguments for this process.
     ///
@@ -555,34 +81,24 @@ impl Args {
     ///
     /// Also, initialize a global logger.
     pub fn parse() -> Result<Args> {
-        // Get all of the arguments, being careful to require valid UTF-8.
-        let mut argv = vec![];
-        for arg in env::args_os() {
-            match arg.into_string() {
-                Ok(s) => argv.push(s),
-                Err(s) => {
-                    errored!("Argument '{}' is not valid UTF-8. \
-                              Use hex escape sequences to match arbitrary \
-                              bytes in a pattern (e.g., \\xFF).",
-                              s.to_string_lossy());
-                }
-            }
+        let matches = app::app_short().get_matches();
+        if matches.is_present("help-short") {
+            let _ = ::app::app_short().print_help();
+            let _ = println!("");
+            process::exit(0);
         }
-        let mut raw: RawArgs =
-            Docopt::new(USAGE)
-                .and_then(|d| d.argv(argv).version(Some(version())).decode())
-                .unwrap_or_else(|e| {
-                    match e {
-                        docopt::Error::Version(ref v) => {
-                            println!("ripgrep {}", v);
-                            process::exit(0);
-                        }
-                        e => e.exit(),
-                    }
-                });
+        if matches.is_present("help") {
+            let _ = ::app::app_long().print_help();
+            let _ = println!("");
+            process::exit(0);
+        }
+        if matches.is_present("version") {
+            println!("ripgrep {}", crate_version!());
+            process::exit(0);
+        }
 
         let mut logb = env_logger::LogBuilder::new();
-        if raw.flag_debug {
+        if matches.is_present("debug") {
             logb.filter(None, log::LogLevelFilter::Debug);
         } else {
             logb.filter(None, log::LogLevelFilter::Warn);
@@ -590,15 +106,7 @@ impl Args {
         if let Err(err) = logb.init() {
             errored!("failed to initialize logger: {}", err);
         }
-
-        // *sigh*... If --files is given, then the first path ends up in
-        // pattern.
-        if raw.flag_files {
-            if !raw.arg_pattern.is_empty() {
-                raw.arg_path.insert(0, raw.arg_pattern.clone());
-            }
-        }
-        raw.to_args().map_err(From::from)
+        ArgMatches(matches).to_args()
     }
 
     /// Returns true if ripgrep should print the files it will search and exit
@@ -780,140 +288,436 @@ impl Args {
     }
 }
 
-fn version() -> String {
-    let (maj, min, pat) = (
-        option_env!("CARGO_PKG_VERSION_MAJOR"),
-        option_env!("CARGO_PKG_VERSION_MINOR"),
-        option_env!("CARGO_PKG_VERSION_PATCH"),
-    );
-    match (maj, min, pat) {
-        (Some(maj), Some(min), Some(pat)) =>
-            format!("{}.{}.{}", maj, min, pat),
-        _ => "".to_owned(),
+/// ArgMatches wraps clap::ArgMatches and provides semantic meaning to several
+/// options/flags.
+struct ArgMatches<'a>(clap::ArgMatches<'a>);
+
+impl<'a> ops::Deref for ArgMatches<'a> {
+    type Target = clap::ArgMatches<'a>;
+    fn deref(&self) -> &clap::ArgMatches<'a> { &self.0 }
+}
+
+impl<'a> ArgMatches<'a> {
+    /// Convert the result of parsing CLI arguments into ripgrep's
+    /// configuration.
+    fn to_args(&self) -> Result<Args> {
+        let paths = self.paths();
+        let mmap = try!(self.mmap(&paths));
+        let with_filename = self.with_filename(&paths);
+        let (before_context, after_context) = try!(self.contexts());
+        let args = Args {
+            paths: paths,
+            after_context: after_context,
+            before_context: before_context,
+            color: self.color(),
+            column: self.column(),
+            context_separator: self.context_separator(),
+            count: self.is_present("count"),
+            files_with_matches: self.is_present("files-with-matches"),
+            eol: b'\n',
+            files: self.is_present("files"),
+            follow: self.is_present("follow"),
+            glob_overrides: try!(self.overrides()),
+            grep: try!(self.grep()),
+            heading: self.heading(),
+            hidden: self.hidden(),
+            ignore_files: self.ignore_files(),
+            invert_match: self.is_present("invert-match"),
+            line_number: self.line_number(),
+            line_per_match: self.is_present("vimgrep"),
+            max_count: try!(self.usize_of("max-count")).map(|max| max as u64),
+            maxdepth: try!(self.usize_of("maxdepth")),
+            mmap: mmap,
+            no_ignore: self.no_ignore(),
+            no_ignore_parent: self.no_ignore_parent(),
+            no_ignore_vcs: self.no_ignore_vcs(),
+            no_messages: self.is_present("no-messages"),
+            null: self.is_present("null"),
+            quiet: self.is_present("quiet"),
+            replace: self.replace(),
+            text: self.text(),
+            threads: try!(self.threads()),
+            type_list: self.is_present("type-list"),
+            types: try!(self.types()),
+            with_filename: with_filename,
+        };
+        if args.mmap {
+            debug!("will try to use memory maps");
+        }
+        Ok(args)
     }
-}
 
-/// A single state in the state machine used by `unescape`.
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum State {
-    Escape,
-    HexFirst,
-    HexSecond(char),
-    Literal,
-}
+    /// Return all file paths that ripgrep should search.
+    fn paths(&self) -> Vec<PathBuf> {
+        let mut paths: Vec<PathBuf> = match self.values_of_os("path") {
+            None => vec![],
+            Some(vals) => vals.map(|p| Path::new(p).to_path_buf()).collect(),
+        };
+        // If --file, --files or --regexp is given, then the first path is
+        // always in `pattern`.
+        if self.is_present("file")
+            || self.is_present("files")
+            || self.is_present("regexp") {
+            if let Some(path) = self.value_of_os("pattern") {
+                paths.insert(0, Path::new(path).to_path_buf());
+            }
+        }
+        if paths.is_empty() {
+            paths.push(self.default_path());
+        }
+        paths
+    }
 
-/// Unescapes a string given on the command line. It supports a limited set of
-/// escape sequences:
-///
-/// * \t, \r and \n are mapped to their corresponding ASCII bytes.
-/// * \xZZ hexadecimal escapes are mapped to their byte.
-fn unescape(s: &str) -> Vec<u8> {
-    use self::State::*;
+    /// Return the default path that ripgrep should search.
+    fn default_path(&self) -> PathBuf {
+        let search_cwd = atty::on_stdin()
+            || self.is_present("files")
+            || self.is_present("type-list")
+            || !atty::stdin_is_readable();
+        if search_cwd {
+            Path::new("./").to_path_buf()
+        } else {
+            Path::new("-").to_path_buf()
+        }
+    }
 
-    let mut bytes = vec![];
-    let mut state = Literal;
-    for c in s.chars() {
-        match state {
-            Escape => {
-                match c {
-                    'n' => { bytes.push(b'\n'); state = Literal; }
-                    'r' => { bytes.push(b'\r'); state = Literal; }
-                    't' => { bytes.push(b'\t'); state = Literal; }
-                    'x' => { state = HexFirst; }
-                    c => {
-                        bytes.extend(&format!(r"\{}", c).into_bytes());
-                        state = Literal;
+    /// Return all of the ignore files given on the command line.
+    fn ignore_files(&self) -> Vec<PathBuf> {
+        match self.values_of_os("ignore-file") {
+            None => return vec![],
+            Some(vals) => vals.map(|p| Path::new(p).to_path_buf()).collect(),
+        }
+    }
+
+    /// Return the pattern that should be used for searching.
+    ///
+    /// If multiple -e/--regexp flags are given, then they are all collapsed
+    /// into one pattern.
+    ///
+    /// If any part of the pattern isn't valid UTF-8, then an error is
+    /// returned.
+    fn pattern(&self) -> Result<String> {
+        Ok(try!(self.patterns()).join("|"))
+    }
+
+    /// Get a sequence of all available patterns from the command line.
+    /// This includes reading the -e/--regexp and -f/--file flags.
+    ///
+    /// Note that if -F/--fixed-strings is set, then all patterns will be
+    /// escaped. Similarly, if -w/--word-regexp is set, then all patterns
+    /// are surrounded by `\b`.
+    ///
+    /// If any pattern is invalid UTF-8, then an error is returned.
+    fn patterns(&self) -> Result<Vec<String>> {
+        let mut pats = vec![];
+        match self.values_of_os("regexp") {
+            None => {
+                if self.values_of_os("file").is_none() {
+                    if let Some(os_pat) = self.value_of_os("pattern") {
+                        pats.push(try!(self.os_str_pattern(os_pat)));
                     }
                 }
             }
-            HexFirst => {
-                match c {
-                    '0'...'9' | 'A'...'F' | 'a'...'f' => {
-                        state = HexSecond(c);
-                    }
-                    c => {
-                        bytes.extend(&format!(r"\x{}", c).into_bytes());
-                        state = Literal;
-                    }
-                }
-            }
-            HexSecond(first) => {
-                match c {
-                    '0'...'9' | 'A'...'F' | 'a'...'f' => {
-                        let ordinal = format!("{}{}", first, c);
-                        let byte = u8::from_str_radix(&ordinal, 16).unwrap();
-                        bytes.push(byte);
-                        state = Literal;
-                    }
-                    c => {
-                        let original = format!(r"\x{}{}", first, c);
-                        bytes.extend(&original.into_bytes());
-                        state = Literal;
-                    }
-                }
-            }
-            Literal => {
-                match c {
-                    '\\' => { state = Escape; }
-                    c => { bytes.extend(c.to_string().as_bytes()); }
+            Some(os_pats) => {
+                for os_pat in os_pats {
+                    pats.push(try!(self.os_str_pattern(os_pat)));
                 }
             }
         }
+        if let Some(files) = self.values_of_os("file") {
+            for file in files {
+                if file == "-" {
+                    let stdin = io::stdin();
+                    for line in stdin.lock().lines() {
+                        pats.push(self.str_pattern(&try!(line)));
+                    }
+                } else {
+                    let f = try!(fs::File::open(file));
+                    for line in io::BufReader::new(f).lines() {
+                        pats.push(self.str_pattern(&try!(line)));
+                    }
+                }
+            }
+        }
+        if pats.is_empty() {
+            pats.push(self.empty_pattern())
+        }
+        Ok(pats)
     }
-    match state {
-        Escape => bytes.push(b'\\'),
-        HexFirst => bytes.extend(b"\\x"),
-        HexSecond(c) => bytes.extend(&format!("\\x{}", c).into_bytes()),
-        Literal => {}
+
+    /// Converts an OsStr pattern to a String pattern, including word
+    /// boundaries or escapes if applicable.
+    ///
+    /// If the pattern is not valid UTF-8, then an error is returned.
+    fn os_str_pattern(&self, pat: &OsStr) -> Result<String> {
+        let s = try!(pattern_to_str(pat));
+        Ok(self.str_pattern(s))
     }
-    bytes
+
+    /// Converts a &str pattern to a String pattern, including word
+    /// boundaries or escapes if applicable.
+    fn str_pattern(&self, pat: &str) -> String {
+        let s = self.word_pattern(self.literal_pattern(pat.to_string()));
+        if s.is_empty() {
+            self.empty_pattern()
+        } else {
+            s
+        }
+    }
+
+    /// Returns the given pattern as a literal pattern if the
+    /// -F/--fixed-strings flag is set. Otherwise, the pattern is returned
+    /// unchanged.
+    fn literal_pattern(&self, pat: String) -> String {
+        if self.is_present("fixed-strings") {
+            regex::quote(&pat)
+        } else {
+            pat
+        }
+    }
+
+    /// Returns the given pattern as a word pattern if the -w/--word-regexp
+    /// flag is set. Otherwise, the pattern is returned unchanged.
+    fn word_pattern(&self, pat: String) -> String {
+        if self.is_present("word-regexp") {
+            format!(r"\b{}\b", pat)
+        } else {
+            pat
+        }
+    }
+
+    /// Empty pattern returns a pattern that is guaranteed to produce an empty
+    /// regular expression that is valid in any position.
+    fn empty_pattern(&self) -> String {
+        // This would normally just be an empty string, which works on its
+        // own, but if the patterns are joined in a set of alternations, then
+        // you wind up with `foo|`, which is invalid.
+        self.word_pattern("z{0}".to_string())
+    }
+
+    /// Returns true if and only if file names containing each match should
+    /// be emitted.
+    ///
+    /// `paths` should be a slice of all top-level file paths that ripgrep
+    /// will need to search.
+    fn with_filename(&self, paths: &[PathBuf]) -> bool {
+        if self.is_present("no-filename") {
+            false
+        } else {
+            self.is_present("with-filename")
+            || paths.len() > 1
+            || paths.get(0).map_or(false, |p| p.is_dir())
+        }
+    }
+
+    /// Returns true if and only if memory map searching should be tried.
+    ///
+    /// `paths` should be a slice of all top-level file paths that ripgrep
+    /// will need to search.
+    fn mmap(&self, paths: &[PathBuf]) -> Result<bool> {
+        let (before, after) = try!(self.contexts());
+        Ok(if before > 0 || after > 0 || self.is_present("no-mmap") {
+            false
+        } else if self.is_present("mmap") {
+            true
+        } else if cfg!(windows) {
+            // On Windows, memory maps appear faster than read calls. Neat.
+            true
+        } else if cfg!(target_os = "macos") {
+            // On Mac, memory maps appear to suck. Neat.
+            false
+        } else {
+            // If we're only searching a few paths and all of them are
+            // files, then memory maps are probably faster.
+            paths.len() <= 10 && paths.iter().all(|p| p.is_file())
+        })
+    }
+
+    /// Returns true if and only if line numbers should be shown.
+    fn line_number(&self) -> bool {
+        if self.is_present("no-line-number") || self.is_present("count") {
+            false
+        } else {
+            self.is_present("line-number")
+            || atty::on_stdout()
+            || self.is_present("pretty")
+            || self.is_present("vimgrep")
+        }
+    }
+
+    /// Returns true if and only if column numbers should be shown.
+    fn column(&self) -> bool {
+        self.is_present("column") || self.is_present("vimgrep")
+    }
+
+    /// Returns true if and only if matches should be grouped with file name
+    /// headings.
+    fn heading(&self) -> bool {
+        if self.is_present("no-heading") {
+            false
+        } else {
+            self.is_present("heading")
+            || atty::on_stdout()
+            || self.is_present("pretty")
+        }
+    }
+
+    /// Returns the replacement string as UTF-8 bytes if it exists.
+    fn replace(&self) -> Option<Vec<u8>> {
+        self.value_of_lossy("replace").map(|s| s.into_owned().into_bytes())
+    }
+
+    /// Returns the unescaped context separator in UTF-8 bytes.
+    fn context_separator(&self) -> Vec<u8> {
+        match self.value_of_lossy("context-separator") {
+            None => b"--".to_vec(),
+            Some(sep) => unescape(&sep),
+        }
+    }
+
+    /// Returns the before and after contexts from the command line.
+    ///
+    /// If a context setting was absent, then `0` is returned.
+    ///
+    /// If there was a problem parsing the values from the user as an integer,
+    /// then an error is returned.
+    fn contexts(&self) -> Result<(usize, usize)> {
+        let after = try!(self.usize_of("after-context")).unwrap_or(0);
+        let before = try!(self.usize_of("before-context")).unwrap_or(0);
+        let both = try!(self.usize_of("context")).unwrap_or(0);
+        Ok(if both > 0 {
+            (both, both)
+        } else {
+            (before, after)
+        })
+    }
+
+    /// Returns true if and only if ripgrep should color its output.
+    fn color(&self) -> bool {
+        let preference = match self.0.value_of_lossy("color") {
+            None => "auto".to_string(),
+            Some(v) => v.into_owned(),
+        };
+        if preference == "always" {
+            true
+        } else if self.is_present("vimgrep") {
+            false
+        } else if preference == "auto" {
+            atty::on_stdout() || self.is_present("pretty")
+        } else {
+            false
+        }
+    }
+
+    /// Returns the approximate number of threads that ripgrep should use.
+    fn threads(&self) -> Result<usize> {
+        let threads = try!(self.usize_of("threads")).unwrap_or(0);
+        Ok(if threads == 0 {
+            cmp::min(12, num_cpus::get())
+        } else {
+            threads
+        })
+    }
+
+    /// Builds a grep matcher from the command line flags.
+    ///
+    /// If there was a problem extracting the pattern from the command line
+    /// flags, then an error is returned.
+    fn grep(&self) -> Result<Grep> {
+        let smart =
+            self.is_present("smart-case")
+            && !self.is_present("ignore-case")
+            && !self.is_present("case-sensitive");
+        let casei =
+            self.is_present("ignore-case")
+            && !self.is_present("case-sensitive");
+        GrepBuilder::new(&try!(self.pattern()))
+            .case_smart(smart)
+            .case_insensitive(casei)
+            .line_terminator(b'\n')
+            .build()
+            .map_err(From::from)
+    }
+
+    /// Builds the set of glob overrides from the command line flags.
+    fn overrides(&self) -> Result<Override> {
+        let mut ovr = OverrideBuilder::new(try!(env::current_dir()));
+        for glob in self.values_of_lossy_vec("glob") {
+            try!(ovr.add(&glob));
+        }
+        ovr.build().map_err(From::from)
+    }
+
+    /// Builds a file type matcher from the command line flags.
+    fn types(&self) -> Result<Types> {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_defaults();
+        for ty in self.values_of_lossy_vec("type-clear") {
+            btypes.clear(&ty);
+        }
+        for def in self.values_of_lossy_vec("type-add") {
+            try!(btypes.add_def(&def));
+        }
+        for ty in self.values_of_lossy_vec("type") {
+            btypes.select(&ty);
+        }
+        for ty in self.values_of_lossy_vec("type-not") {
+            btypes.negate(&ty);
+        }
+        btypes.build().map_err(From::from)
+    }
+
+    /// Returns true if ignore files should be ignored.
+    fn no_ignore(&self) -> bool {
+        self.is_present("no-ignore")
+        || self.occurrences_of("unrestricted") >= 1
+    }
+
+    /// Returns true if parent ignore files should be ignored.
+    fn no_ignore_parent(&self) -> bool {
+        self.is_present("no-ignore-parent") || self.no_ignore()
+    }
+
+    /// Returns true if VCS ignore files should be ignored.
+    fn no_ignore_vcs(&self) -> bool {
+        self.is_present("no-ignore-vcs") || self.no_ignore()
+    }
+
+    /// Returns true if and only if hidden files/directories should be
+    /// searched.
+    fn hidden(&self) -> bool {
+        self.is_present("hidden") || self.occurrences_of("unrestricted") >= 2
+    }
+
+    /// Returns true if and only if all files should be treated as if they
+    /// were text, even if ripgrep would detect it as a binary file.
+    fn text(&self) -> bool {
+        self.is_present("text") || self.occurrences_of("unrestricted") >= 3
+    }
+
+    /// Like values_of_lossy, but returns an empty vec if the flag is not
+    /// present.
+    fn values_of_lossy_vec(&self, name: &str) -> Vec<String> {
+        self.values_of_lossy(name).unwrap_or(vec![])
+    }
+
+    /// Safely reads an arg value with the given name, and if it's present,
+    /// tries to parse it as a usize value.
+    fn usize_of(&self, name: &str) -> Result<Option<usize>> {
+        match self.value_of_lossy(name) {
+            None => Ok(None),
+            Some(v) => v.parse().map(Some).map_err(From::from),
+        }
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::unescape;
-
-    fn b(bytes: &'static [u8]) -> Vec<u8> {
-        bytes.to_vec()
-    }
-
-    #[test]
-    fn unescape_nul() {
-        assert_eq!(b(b"\x00"), unescape(r"\x00"));
-    }
-
-    #[test]
-    fn unescape_nl() {
-        assert_eq!(b(b"\n"), unescape(r"\n"));
-    }
-
-    #[test]
-    fn unescape_tab() {
-        assert_eq!(b(b"\t"), unescape(r"\t"));
-    }
-
-    #[test]
-    fn unescape_carriage() {
-        assert_eq!(b(b"\r"), unescape(r"\r"));
-    }
-
-    #[test]
-    fn unescape_nothing_simple() {
-        assert_eq!(b(b"\\a"), unescape(r"\a"));
-    }
-
-    #[test]
-    fn unescape_nothing_hex0() {
-        assert_eq!(b(b"\\x"), unescape(r"\x"));
-    }
-
-    #[test]
-    fn unescape_nothing_hex1() {
-        assert_eq!(b(b"\\xz"), unescape(r"\xz"));
-    }
-
-    #[test]
-    fn unescape_nothing_hex2() {
-        assert_eq!(b(b"\\xzz"), unescape(r"\xzz"));
+fn pattern_to_str(s: &OsStr) -> Result<&str> {
+    match s.to_str() {
+        Some(s) => Ok(s),
+        None => Err(From::from(format!(
+            "Argument '{}' is not valid UTF-8. \
+             Use hex escape sequences to match arbitrary \
+             bytes in a pattern (e.g., \\xFF).",
+             s.to_string_lossy()))),
     }
 }

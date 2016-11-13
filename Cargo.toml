@@ -13,6 +13,7 @@ readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"
 exclude = ["HomebrewFormula"]
+build = "build.rs"
 
 [[bin]]
 bench = false
@@ -25,8 +26,8 @@ path = "tests/tests.rs"
 
 [dependencies]
 bytecount = "0.1.4"
+clap = "2.18"
 ctrlc = "2.0"
-docopt = "0.6"
 env_logger = "0.3"
 grep = { version = "0.1.4", path = "grep" }
 ignore = { version = "0.1.5", path = "ignore" }
@@ -37,12 +38,15 @@ memchr = "0.1"
 memmap = "0.5"
 num_cpus = "1"
 regex = "0.1.77"
-rustc-serialize = "=0.3.19"
 term = "0.4"
 
 [target.'cfg(windows)'.dependencies]
 kernel32-sys = "0.2"
 winapi = "0.2"
+
+[build-dependencies]
+clap = "2.18"
+lazy_static = "0.2"
 
 [features]
 avx-accel = ["bytecount/avx-accel"]

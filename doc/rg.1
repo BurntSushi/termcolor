@@ -7,10 +7,10 @@
 rg \- recursively search current directory for lines matching a pattern
 .SH SYNOPSIS
 .PP
-rg [\f[I]options\f[]] \-e PATTERN ...
-[\f[I]<\f[]path\f[I]> ...\f[]]
-.PP
 rg [\f[I]options\f[]] <\f[I]pattern\f[]> [\f[I]<\f[]path\f[I]> ...\f[]]
+.PP
+rg [\f[I]options\f[]] (\-e PATTERN | \-f FILE) ...
+[\f[I]<\f[]path\f[I]> ...\f[]]
 .PP
 rg [\f[I]options\f[]] \-\-files [\f[I]<\f[]path\f[I]> ...\f[]]
 .PP
@@ -163,6 +163,15 @@ Show debug messages.
 .RS
 .RE
 .TP
+.B \-f, \-\-file FILE ...
+Search for patterns from the given file, with one pattern per line.
+When this flag is used or multiple times or in combination with the
+\-e/\-\-regexp flag, then all patterns provided are searched.
+Empty pattern lines will match all input lines, and the newline is not
+counted as part of the pattern.
+.RS
+.RE
+.TP
 .B \-\-files
 Print each file that would be searched (but don\[aq]t search).
 .RS
@@ -199,6 +208,16 @@ Don\[aq]t show any file name heading.
 .B \-\-hidden
 Search hidden directories and files.
 (Hidden directories and files are skipped by default.)
+.RS
+.RE
+.TP
+.B \-\-ignore\-file FILE ...
+Specify additional ignore files for filtering file paths.
+Ignore files should be in the gitignore format and are matched relative
+to the current working directory.
+These ignore files have lower precedence than all other ignore files.
+When specifying multiple ignore files, earlier files have lower
+precedence than later files.
 .RS
 .RE
 .TP
