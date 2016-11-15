@@ -902,6 +902,29 @@ clean!(regression_228, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/7
+sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
+    wd.create("pat", "Sherlock\nHolmes");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/7
+sherlock!(feature_7_dash, "-f-", ".", |wd: WorkDir, mut cmd: Command| {
+    let output = wd.pipe(&mut cmd, "Sherlock");
+    let lines = String::from_utf8_lossy(&output.stdout);
+    let expected = "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    assert_eq!(lines, expected);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/20
 sherlock!(feature_20_no_filename, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {

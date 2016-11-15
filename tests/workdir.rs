@@ -153,7 +153,41 @@ impl WorkDir {
 
     /// Gets the output of a command. If the command failed, then this panics.
     pub fn output(&self, cmd: &mut process::Command) -> process::Output {
-        let o = cmd.output().unwrap();
+        let output = cmd.output().unwrap();
+        self.expect_success(cmd, output)
+    }
+
+    /// Pipe `input` to a command, and collect the output.
+    pub fn pipe(
+        &self,
+        cmd: &mut process::Command,
+        input: &str
+    ) -> process::Output {
+        cmd.stdin(process::Stdio::piped());
+        cmd.stdout(process::Stdio::piped());
+        cmd.stderr(process::Stdio::piped());
+
+        let mut child = cmd.spawn().unwrap();
+
+        // Pipe input to child process using a separate thread to avoid
+        // risk of deadlock between parent and child process.
+        let mut stdin = child.stdin.take().expect("expected standard input");
+        let input = input.to_owned();
+        let worker = thread::spawn(move || {
+            write!(stdin, "{}", input)
+        });
+
+        let output = self.expect_success(cmd, child.wait_with_output().unwrap());
+        worker.join().unwrap().unwrap();
+        output
+    }
+
+    /// If `o` is not the output of a successful process run
+    fn expect_success(
+        &self,
+        cmd: &process::Command,
+        o: process::Output
+    ) -> process::Output {
         if !o.status.success() {
             let suggest =
                 if o.stderr.is_empty() {
