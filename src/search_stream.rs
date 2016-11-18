@@ -4,14 +4,13 @@ printing matches. In particular, it searches the file in a streaming fashion
 using `read` calls and a (roughly) fixed size buffer.
 */
 
-extern crate bytecount;
-
 use std::cmp;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use bytecount;
 use grep::{Grep, Match};
 use memchr::{memchr, memrchr};
 use term::Terminal;

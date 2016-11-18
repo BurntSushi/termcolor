@@ -1,5 +1,9 @@
+#![allow(dead_code, unused_imports)]
+
+extern crate bytecount;
+#[macro_use]
+extern crate clap;
 extern crate ctrlc;
-extern crate docopt;
 extern crate env_logger;
 extern crate grep;
 extern crate ignore;
@@ -14,7 +18,6 @@ extern crate memchr;
 extern crate memmap;
 extern crate num_cpus;
 extern crate regex;
-extern crate rustc_serialize;
 extern crate term;
 #[cfg(windows)]
 extern crate winapi;
@@ -48,6 +51,7 @@ macro_rules! eprintln {
     }}
 }
 
+mod app;
 mod args;
 mod atty;
 mod out;
@@ -57,6 +61,7 @@ mod search_buffer;
 mod search_stream;
 #[cfg(windows)]
 mod terminal_win;
+mod unescape;
 mod worker;
 
 pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
@@ -285,6 +290,20 @@ fn get_or_log_dir_entry(
                 None
             }
         }
+    }
+}
+
+fn version() -> String {
+    let (maj, min, pat) = (
+        option_env!("CARGO_PKG_VERSION_MAJOR"),
+        option_env!("CARGO_PKG_VERSION_MINOR"),
+        option_env!("CARGO_PKG_VERSION_PATCH"),
+    );
+    match (maj, min, pat) {
+        (Some(maj), Some(min), Some(pat)) => {
+            format!("ripgrep {}.{}.{}", maj, min, pat)
+        }
+        _ => "".to_owned(),
     }
 }
 

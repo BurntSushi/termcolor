@@ -76,8 +76,29 @@ impl WorkDir {
     }
 
     /// Returns the path to the ripgrep executable.
+    #[cfg(not(windows))]
     pub fn bin(&self) -> PathBuf {
-        self.root.join("rg")
+        let path = self.root.join("rg");
+        if !path.is_file() {
+            // Looks like a recent version of Cargo changed the cwd or the
+            // location of the test executable.
+            self.root.join("../rg")
+        } else {
+            path
+        }
+    }
+
+    /// Returns the path to the ripgrep executable.
+    #[cfg(windows)]
+    pub fn bin(&self) -> PathBuf {
+        let path = self.root.join("rg.exe");
+        if !path.is_file() {
+            // Looks like a recent version of Cargo changed the cwd or the
+            // location of the test executable.
+            self.root.join("../rg.exe")
+        } else {
+            path
+        }
     }
 
     /// Returns the path to this directory.
