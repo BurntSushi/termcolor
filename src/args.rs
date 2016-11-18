@@ -370,10 +370,15 @@ impl<'a> ArgMatches<'a> {
 
     /// Return the default path that ripgrep should search.
     fn default_path(&self) -> PathBuf {
+        let file_is_stdin =
+            self.values_of_os("file").map_or(false, |mut files| {
+                files.any(|f| f == "-")
+            });
         let search_cwd = atty::on_stdin()
+            || !atty::stdin_is_readable()
+            || (self.is_present("file") && file_is_stdin)
             || self.is_present("files")
-            || self.is_present("type-list")
-            || !atty::stdin_is_readable();
+            || self.is_present("type-list");
         if search_cwd {
             Path::new("./").to_path_buf()
         } else {
