@@ -75,7 +75,7 @@ struct IgnoreOptions {
 
 impl IgnoreOptions {
     /// Returns true if at least one type of ignore rules should be matched.
-    fn should_ignores(&self) -> bool {
+    fn has_any_ignore_options(&self) -> bool {
         self.ignore || self.git_global || self.git_ignore || self.git_exclude
     }
 }
@@ -285,7 +285,7 @@ impl Ignore {
             }
         }
         let mut whitelisted = Match::None;
-        if self.0.opts.should_ignores() {
+        if self.0.opts.has_any_ignore_options() {
             let mat = self.matched_ignore(path, is_dir);
             if mat.is_ignore() {
                 return mat;
@@ -365,19 +365,8 @@ impl Ignore {
         }
         let m_global = self.0.git_global_matcher.matched(&path, is_dir)
                            .map(IgnoreMatch::gitignore);
-        if !m_ignore.is_none() {
-            m_ignore
-        } else if !m_gi.is_none() {
-            m_gi
-        } else if !m_gi_exclude.is_none() {
-            m_gi_exclude
-        } else if !m_global.is_none() {
-            m_global
-        } else if !m_explicit.is_none() {
-            m_explicit
-        } else {
-            Match::None
-        }
+
+        m_ignore.or(m_gi).or(m_gi_exclude).or(m_global).or(m_explicit)
     }
 
     /// Returns an iterator over parent ignore matchers, including this one.
