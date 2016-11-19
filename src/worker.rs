@@ -31,6 +31,7 @@ struct Options {
     before_context: usize,
     count: bool,
     files_with_matches: bool,
+    files_without_matches: bool,
     eol: u8,
     invert_match: bool,
     line_number: bool,
@@ -48,6 +49,7 @@ impl Default for Options {
             before_context: 0,
             count: false,
             files_with_matches: false,
+            files_without_matches: false,
             eol: b'\n',
             invert_match: false,
             line_number: false,
@@ -109,6 +111,14 @@ impl WorkerBuilder {
     /// Disabled by default.
     pub fn files_with_matches(mut self, yes: bool) -> Self {
         self.opts.files_with_matches = yes;
+        self
+    }
+
+    /// If enabled, searching will print the path of files without any matches.
+    ///
+    /// Disabled by default.
+    pub fn files_without_matches(mut self, yes: bool) -> Self {
+        self.opts.files_without_matches = yes;
         self
     }
 
@@ -230,6 +240,7 @@ impl Worker {
             .before_context(self.opts.before_context)
             .count(self.opts.count)
             .files_with_matches(self.opts.files_with_matches)
+            .files_without_matches(self.opts.files_without_matches)
             .eol(self.opts.eol)
             .line_number(self.opts.line_number)
             .invert_match(self.opts.invert_match)
@@ -260,6 +271,7 @@ impl Worker {
         Ok(searcher
             .count(self.opts.count)
             .files_with_matches(self.opts.files_with_matches)
+            .files_without_matches(self.opts.files_without_matches)
             .eol(self.opts.eol)
             .line_number(self.opts.line_number)
             .invert_match(self.opts.invert_match)

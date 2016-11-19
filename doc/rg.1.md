@@ -119,6 +119,9 @@ Project home page: https://github.com/BurntSushi/ripgrep
 -l, --files-with-matches
 : Only show path of each file with matches.
 
+--files-without-matches
+: Only show path of each file with no matches.
+
 -H, --with-filename
 : Prefix each match with the file name that contains it. This is the
   default when more than one file is searched.

@@ -82,6 +82,7 @@ pub struct Options {
     pub before_context: usize,
     pub count: bool,
     pub files_with_matches: bool,
+    pub files_without_matches: bool,
     pub eol: u8,
     pub invert_match: bool,
     pub line_number: bool,
@@ -97,6 +98,7 @@ impl Default for Options {
             before_context: 0,
             count: false,
             files_with_matches: false,
+            files_without_matches: false,
             eol: b'\n',
             invert_match: false,
             line_number: false,
@@ -109,16 +111,17 @@ impl Default for Options {
 }
 
 impl Options {
-    /// Several options (--quiet, --count, --files-with-matches) imply that
-    /// we shouldn't ever display matches.
+    /// Several options (--quiet, --count, --files-with-matches,
+    /// --files-without-matches) imply that we shouldn't ever display matches.
     pub fn skip_matches(&self) -> bool {
-        self.count || self.files_with_matches || self.quiet
+        self.count || self.files_with_matches || self.files_without_matches
+        || self.quiet
     }
 
-    /// Some options (--quiet, --files-with-matches) imply that we can stop
-    /// searching after the first match.
+    /// Some options (--quiet, --files-with-matches, --files-without-matches)
+    /// imply that we can stop searching after the first match.
     pub fn stop_after_first_match(&self) -> bool {
-        self.files_with_matches || self.quiet
+        self.files_with_matches || self.files_without_matches || self.quiet
     }
 
     /// Returns true if the search should terminate based on the match count.
@@ -196,6 +199,14 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
     /// Disabled by default.
     pub fn files_with_matches(mut self, yes: bool) -> Self {
         self.opts.files_with_matches = yes;
+        self
+    }
+
+    /// If enabled, searching will print the path of files without any matches.
+    ///
+    /// Disabled by default.
+    pub fn files_without_matches(mut self, yes: bool) -> Self {
+        self.opts.files_without_matches = yes;
         self
     }
 
@@ -296,6 +307,8 @@ impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
             } else if self.opts.files_with_matches {
                 self.printer.path(self.path);
             }
+        } else if self.match_count == 0 && self.opts.files_without_matches {
+            self.printer.path(self.path);
         }
         Ok(self.match_count)
     }
@@ -983,6 +996,14 @@ fn main() {
         let (count, out) = search_smallcap(
             "Sherlock", SHERLOCK, |s| s.files_with_matches(true));
         assert_eq!(1, count);
+        assert_eq!(out, "/baz.rs\n");
+    }
+
+    #[test]
+    fn files_without_matches() {
+        let (count, out) = search_smallcap(
+            "zzzz", SHERLOCK, |s| s.files_without_matches(true));
+        assert_eq!(0, count);
         assert_eq!(out, "/baz.rs\n");
     }
 

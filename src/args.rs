@@ -44,6 +44,7 @@ pub struct Args {
     context_separator: Vec<u8>,
     count: bool,
     files_with_matches: bool,
+    files_without_matches: bool,
     eol: u8,
     files: bool,
     follow: bool,
@@ -158,7 +159,7 @@ impl Args {
 
     /// Retrieve the configured file separator.
     pub fn file_separator(&self) -> Option<Vec<u8>> {
-        if self.heading && !self.count && !self.files_with_matches {
+        if self.heading && !self.count && !self.files_with_matches && !self.files_without_matches {
             Some(b"".to_vec())
         } else if self.before_context > 0 || self.after_context > 0 {
             Some(self.context_separator.clone())
@@ -217,6 +218,7 @@ impl Args {
             .before_context(self.before_context)
             .count(self.count)
             .files_with_matches(self.files_with_matches)
+            .files_without_matches(self.files_without_matches)
             .eol(self.eol)
             .line_number(self.line_number)
             .invert_match(self.invert_match)
@@ -314,6 +316,7 @@ impl<'a> ArgMatches<'a> {
             context_separator: self.context_separator(),
             count: self.is_present("count"),
             files_with_matches: self.is_present("files-with-matches"),
+            files_without_matches: self.is_present("files-without-matches"),
             eol: b'\n',
             files: self.is_present("files"),
             follow: self.is_present("follow"),

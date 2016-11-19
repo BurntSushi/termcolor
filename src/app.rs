@@ -124,6 +124,7 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
              .value_name("FILE").takes_value(true)
              .multiple(true).number_of_values(1))
         .arg(flag("files-with-matches").short("l"))
+        .arg(flag("files-without-matches"))
         .arg(flag("with-filename").short("H"))
         .arg(flag("no-filename"))
         .arg(flag("heading"))
@@ -304,6 +305,8 @@ lazy_static! {
               lines, and the newline is not counted as part of the pattern.");
         doc!(h, "files-with-matches",
              "Only show the path of each file with at least one match.");
+        doc!(h, "files-without-matches",
+             "Only show the path of each file that contains zero matches.");
         doc!(h, "with-filename",
              "Show file name for each match.",
              "Prefix each match with the file name that contains it. This is \
