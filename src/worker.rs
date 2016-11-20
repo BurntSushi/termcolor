@@ -156,6 +156,14 @@ impl WorkerBuilder {
         self
     }
 
+    /// If enabled, error messages are suppressed.
+    ///
+    /// This is disabled by default.
+    pub fn no_messages(mut self, yes: bool) -> Self {
+        self.opts.no_messages = yes;
+        self
+    }
+
     /// If enabled, don't show any output and quit searching after the first
     /// match is found.
     pub fn quiet(mut self, yes: bool) -> Self {

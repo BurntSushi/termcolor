@@ -197,6 +197,7 @@ impl Args {
             .invert_match(self.invert_match)
             .max_count(self.max_count)
             .mmap(self.mmap)
+            .no_messages(self.no_messages)
             .quiet(self.quiet)
             .text(self.text)
             .build()
