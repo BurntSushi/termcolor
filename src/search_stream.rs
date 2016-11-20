@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use bytecount;
 use grep::{Grep, Match};
 use memchr::{memchr, memrchr};
-use term::Terminal;
+use termcolor::WriteColor;
 
 use printer::Printer;
 
@@ -136,7 +136,7 @@ impl Options {
     }
 }
 
-impl<'a, R: io::Read, W: Terminal + Send> Searcher<'a, R, W> {
+impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     /// Create a new searcher.
     ///
     /// `inp` is a reusable input buffer that is used as scratch space by this
@@ -763,10 +763,8 @@ mod tests {
     use std::path::Path;
 
     use grep::GrepBuilder;
-    use term::{Terminal, TerminfoTerminal};
-
-    use out::ColoredTerminal;
     use printer::Printer;
+    use termcolor;
 
     use super::{InputBuffer, Searcher, start_of_previous_lines};
 
@@ -806,7 +804,7 @@ fn main() {
     type TestSearcher<'a> = Searcher<
         'a,
         io::Cursor<Vec<u8>>,
-        ColoredTerminal<TerminfoTerminal<Vec<u8>>>,
+        termcolor::NoColor<Vec<u8>>,
     >;
 
     fn search_smallcap<F: FnMut(TestSearcher) -> TestSearcher>(
@@ -815,7 +813,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(1);
-        let outbuf = ColoredTerminal::NoColor(vec![]);
+        let outbuf = termcolor::NoColor::new(vec![]);
         let mut pp = Printer::new(outbuf).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {
@@ -832,7 +830,7 @@ fn main() {
         mut map: F,
     ) -> (u64, String) {
         let mut inp = InputBuffer::with_capacity(4096);
-        let outbuf = ColoredTerminal::NoColor(vec![]);
+        let outbuf = termcolor::NoColor::new(vec![]);
         let mut pp = Printer::new(outbuf).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {

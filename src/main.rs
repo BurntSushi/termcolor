@@ -18,7 +18,7 @@ extern crate memchr;
 extern crate memmap;
 extern crate num_cpus;
 extern crate regex;
-extern crate term;
+extern crate termcolor;
 #[cfg(windows)]
 extern crate winapi;
 
@@ -31,9 +31,8 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::thread;
-use std::cmp;
 
-use term::Terminal;
+use termcolor::WriteColor;
 
 use args::Args;
 use worker::Work;
@@ -54,13 +53,10 @@ macro_rules! eprintln {
 mod app;
 mod args;
 mod atty;
-mod out;
 mod pathutil;
 mod printer;
 mod search_buffer;
 mod search_stream;
-#[cfg(windows)]
-mod terminal_win;
 mod unescape;
 mod worker;
 
@@ -84,16 +80,13 @@ fn run(args: Arc<Args>) -> Result<u64> {
     {
         let args = args.clone();
         ctrlc::set_handler(move || {
-            let stdout = io::stdout();
-            let mut stdout = stdout.lock();
-
-            let _ = args.stdout().reset();
-            let _ = stdout.flush();
-
+            let mut writer = args.stdout();
+            let _ = writer.reset();
+            let _ = writer.flush();
             process::exit(1);
         });
     }
-    let threads = cmp::max(1, args.threads() - 1);
+    let threads = args.threads();
     if args.files() {
         if threads == 1 || args.is_one_path() {
             run_files_one_thread(args)
@@ -110,7 +103,7 @@ fn run(args: Arc<Args>) -> Result<u64> {
 }
 
 fn run_parallel(args: Arc<Args>) -> Result<u64> {
-    let out = Arc::new(Mutex::new(args.out()));
+    let bufwtr = Arc::new(args.buffer_writer());
     let quiet_matched = QuietMatched::new(args.quiet());
     let paths_searched = Arc::new(AtomicUsize::new(0));
     let match_count = Arc::new(AtomicUsize::new(0));
@@ -120,8 +113,8 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
         let quiet_matched = quiet_matched.clone();
         let paths_searched = paths_searched.clone();
         let match_count = match_count.clone();
-        let out = out.clone();
-        let mut outbuf = args.outbuf();
+        let bufwtr = bufwtr.clone();
+        let mut buf = bufwtr.buffer();
         let mut worker = args.worker();
         Box::new(move |result| {
             use ignore::WalkState::*;
@@ -134,11 +127,11 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
                 Some(dent) => dent,
             };
             paths_searched.fetch_add(1, Ordering::SeqCst);
-            outbuf.clear();
+            buf.clear();
             {
                 // This block actually executes the search and prints the
                 // results into outbuf.
-                let mut printer = args.printer(&mut outbuf);
+                let mut printer = args.printer(&mut buf);
                 let count =
                     if dent.is_stdin() {
                         worker.run(&mut printer, Work::Stdin)
@@ -150,17 +143,9 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
                     return Quit;
                 }
             }
-            if !outbuf.get_ref().is_empty() {
-                // This should be the only mutex in all of ripgrep. Since the
-                // common case is to report a small number of matches relative
-                // to the corpus, this really shouldn't matter much.
-                //
-                // Still, it'd be nice to send this on a channel, but then we'd
-                // need to manage a pool of outbufs, which would complicate the
-                // code.
-                let mut out = out.lock().unwrap();
-                out.write(&outbuf);
-            }
+            // BUG(burntsushi): We should handle this error instead of ignoring
+            // it. See: https://github.com/BurntSushi/ripgrep/issues/200
+            let _ = bufwtr.print(&buf);
             Continue
         })
     });
@@ -173,8 +158,9 @@ fn run_parallel(args: Arc<Args>) -> Result<u64> {
 }
 
 fn run_one_thread(args: Arc<Args>) -> Result<u64> {
+    let stdout = args.stdout();
+    let mut stdout = stdout.lock();
     let mut worker = args.worker();
-    let mut term = args.stdout();
     let mut paths_searched: u64 = 0;
     let mut match_count = 0;
     for result in args.walker() {
@@ -182,7 +168,7 @@ fn run_one_thread(args: Arc<Args>) -> Result<u64> {
             None => continue,
             Some(dent) => dent,
         };
-        let mut printer = args.printer(&mut term);
+        let mut printer = args.printer(&mut stdout);
         if match_count > 0 {
             if args.quiet() {
                 break;
@@ -211,8 +197,8 @@ fn run_files_parallel(args: Arc<Args>) -> Result<u64> {
     let print_args = args.clone();
     let (tx, rx) = mpsc::channel::<ignore::DirEntry>();
     let print_thread = thread::spawn(move || {
-        let term = print_args.stdout();
-        let mut printer = print_args.printer(term);
+        let stdout = print_args.stdout();
+        let mut printer = print_args.printer(stdout.lock());
         let mut file_count = 0;
         for dent in rx.iter() {
             printer.path(dent.path());
@@ -234,8 +220,8 @@ fn run_files_parallel(args: Arc<Args>) -> Result<u64> {
 }
 
 fn run_files_one_thread(args: Arc<Args>) -> Result<u64> {
-    let term = args.stdout();
-    let mut printer = args.printer(term);
+    let stdout = args.stdout();
+    let mut printer = args.printer(stdout.lock());
     let mut file_count = 0;
     for result in args.walker() {
         let dent = match get_or_log_dir_entry(result, args.no_messages()) {
@@ -249,8 +235,8 @@ fn run_files_one_thread(args: Arc<Args>) -> Result<u64> {
 }
 
 fn run_types(args: Arc<Args>) -> Result<u64> {
-    let term = args.stdout();
-    let mut printer = args.printer(term);
+    let stdout = args.stdout();
+    let mut printer = args.printer(stdout.lock());
     let mut ty_count = 0;
     for def in args.type_defs() {
         printer.type_def(def);

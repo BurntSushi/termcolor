@@ -1,8 +1,10 @@
+use std::error;
+use std::fmt;
 use std::path::Path;
+use std::str::FromStr;
 
 use regex::bytes::Regex;
-use term::{Attr, Terminal};
-use term::color;
+use termcolor::{Color, ColorSpec, ParseColorError, WriteColor};
 
 use pathutil::strip_prefix;
 use ignore::types::FileTypeDef;
@@ -40,38 +42,12 @@ pub struct Printer<W> {
     replace: Option<Vec<u8>>,
     /// Whether to prefix each match with the corresponding file name.
     with_filename: bool,
-    /// The choice of colors.
-    color_choice: ColorChoice
+    /// The color specifications.
+    colors: ColorSpecs,
 }
 
-struct ColorChoice {
-    matched_line: color::Color,
-    heading: color::Color,
-    line_number: color::Color
-}
-
-impl ColorChoice {
-    #[cfg(unix)]
-    pub fn new() -> ColorChoice {
-        ColorChoice {
-            matched_line: color::RED,
-            heading: color::GREEN,
-            line_number: color::BLUE
-        }
-    }
-
-    #[cfg(not(unix))]
-    pub fn new() -> ColorChoice {
-        ColorChoice {
-            matched_line: color::BRIGHT_RED,
-            heading: color::BRIGHT_GREEN,
-            line_number: color::BRIGHT_BLUE
-        }
-    }
-}
-
-impl<W: Terminal + Send> Printer<W> {
-    /// Create a new printer that writes to wtr.
+impl<W: WriteColor> Printer<W> {
+    /// Create a new printer that writes to wtr with the given color settings.
     pub fn new(wtr: W) -> Printer<W> {
         Printer {
             wtr: wtr,
@@ -85,8 +61,14 @@ impl<W: Terminal + Send> Printer<W> {
             null: false,
             replace: None,
             with_filename: false,
-            color_choice: ColorChoice::new()
+            colors: ColorSpecs::default(),
         }
+    }
+
+    /// Set the color specifications.
+    pub fn colors(mut self, colors: ColorSpecs) -> Printer<W> {
+        self.colors = colors;
+        self
     }
 
     /// When set, column numbers will be printed for the first match on each
@@ -285,8 +267,7 @@ impl<W: Terminal + Send> Printer<W> {
         let mut last_written = 0;
         for (s, e) in re.find_iter(buf) {
             self.write(&buf[last_written..s]);
-            let _ = self.wtr.fg(self.color_choice.matched_line);
-            let _ = self.wtr.attr(Attr::Bold);
+            let _ = self.wtr.set_color(self.colors.matched());
             self.write(&buf[s..e]);
             let _ = self.wtr.reset();
             last_written = e;
@@ -323,30 +304,20 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     fn write_heading<P: AsRef<Path>>(&mut self, path: P) {
-        if self.wtr.supports_color() {
-            let _ = self.wtr.fg(self.color_choice.heading);
-            let _ = self.wtr.attr(Attr::Bold);
-        }
+        let _ = self.wtr.set_color(self.colors.path());
         self.write_path(path.as_ref());
+        let _ = self.wtr.reset();
         if self.null {
             self.write(b"\x00");
         } else {
             self.write_eol();
         }
-        if self.wtr.supports_color() {
-            let _ = self.wtr.reset();
-        }
     }
 
     fn write_non_heading_path<P: AsRef<Path>>(&mut self, path: P) {
-        if self.wtr.supports_color() {
-            let _ = self.wtr.fg(self.color_choice.heading);
-            let _ = self.wtr.attr(Attr::Bold);
-        }
+        let _ = self.wtr.set_color(self.colors.path());
         self.write_path(path.as_ref());
-        if self.wtr.supports_color() {
-            let _ = self.wtr.reset();
-        }
+        let _ = self.wtr.reset();
         if self.null {
             self.write(b"\x00");
         } else {
@@ -355,14 +326,9 @@ impl<W: Terminal + Send> Printer<W> {
     }
 
     fn line_number(&mut self, n: u64, sep: u8) {
-        if self.wtr.supports_color() {
-            let _ = self.wtr.fg(self.color_choice.line_number);
-            let _ = self.wtr.attr(Attr::Bold);
-        }
+        let _ = self.wtr.set_color(self.colors.line());
         self.write(n.to_string().as_bytes());
-        if self.wtr.supports_color() {
-            let _ = self.wtr.reset();
-        }
+        let _ = self.wtr.reset();
         self.write(&[sep]);
     }
 
@@ -395,5 +361,364 @@ impl<W: Terminal + Send> Printer<W> {
             let _ = self.wtr.write_all(sep);
             let _ = self.wtr.write_all(b"\n");
         }
+    }
+}
+
+/// An error that can occur when parsing color specifications.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Error {
+    /// This occurs when an unrecognized output type is used.
+    UnrecognizedOutType(String),
+    /// This occurs when an unrecognized spec type is used.
+    UnrecognizedSpecType(String),
+    /// This occurs when an unrecognized color name is used.
+    UnrecognizedColor(String, String),
+    /// This occurs when an unrecognized style attribute is used.
+    UnrecognizedStyle(String),
+    /// This occurs when the format of a color specification is invalid.
+    InvalidFormat(String),
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::UnrecognizedOutType(_) => "unrecognized output type",
+            Error::UnrecognizedSpecType(_) => "unrecognized spec type",
+            Error::UnrecognizedColor(_, _) => "unrecognized color name",
+            Error::UnrecognizedStyle(_) => "unrecognized style attribute",
+            Error::InvalidFormat(_) => "invalid color spec",
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::UnrecognizedOutType(ref name) => {
+                write!(f, "Unrecognized output type '{}'. Choose from: \
+                           path, line, match.", name)
+            }
+            Error::UnrecognizedSpecType(ref name) => {
+                write!(f, "Unrecognized spec type '{}'. Choose from: \
+                           fg, bg, style, none.", name)
+            }
+            Error::UnrecognizedColor(_, ref msg) => {
+                write!(f, "{}", msg)
+            }
+            Error::UnrecognizedStyle(ref name) => {
+                write!(f, "Unrecognized style attribute '{}'. Choose from: \
+                           nobold, bold.", name)
+            }
+            Error::InvalidFormat(ref original) => {
+                write!(f, "Invalid color speci format: '{}'. Valid format \
+                           is '(path|line|match):(fg|bg|style):(value)'.",
+                           original)
+            }
+        }
+    }
+}
+
+impl From<ParseColorError> for Error {
+    fn from(err: ParseColorError) -> Error {
+        Error::UnrecognizedColor(err.invalid().to_string(), err.to_string())
+    }
+}
+
+/// A merged set of color specifications.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ColorSpecs {
+    path: ColorSpec,
+    line: ColorSpec,
+    matched: ColorSpec,
+}
+
+/// A single color specification provided by the user.
+///
+/// A `ColorSpecs` can be built by merging a sequence of `Spec`s.
+///
+/// ## Example
+///
+/// The only way to build a `Spec` is to parse it from a string. Once multiple
+/// `Spec`s have been constructed, then can be merged into a single
+/// `ColorSpecs` value.
+///
+/// ```rust
+/// use termcolor::{Color, ColorSpecs, Spec};
+///
+/// let spec1: Spec = "path:fg:blue".parse().unwrap();
+/// let spec2: Spec = "match:bg:green".parse().unwrap();
+/// let specs = ColorSpecs::new(&[spec1, spec2]);
+///
+/// assert_eq!(specs.path().fg(), Some(Color::Blue));
+/// assert_eq!(specs.matched().bg(), Some(Color::Green));
+/// ```
+///
+/// ## Format
+///
+/// The format of a `Spec` is a triple: `{type}:{attribute}:{value}`. Each
+/// component is defined as follows:
+///
+/// * `{type}` can be one of `path`, `line` or `match`.
+/// * `{attribute}` can be one of `fg`, `bg` or `style`. `{attribute}` may also
+///   be the special value `none`, in which case, `{value}` can be omitted.
+/// * `{value}` is either a color name (for `fg`/`bg`) or a style instruction.
+///
+/// `{type}` controls which part of the output should be styled and is
+/// application dependent.
+///
+/// When `{attribute}` is `none`, then this should cause any existing color
+/// settings to be cleared.
+///
+/// `{value}` should be a color when `{attribute}` is `fg` or `bg`, or it
+/// should be a style instruction when `{attribute}` is `style`. When
+/// `{attribute}` is `none`, `{value}` must be omitted.
+///
+/// Valid colors are `black`, `blue`, `green`, `red`, `cyan`, `magenta`,
+/// `yellow`, `white`.
+///
+/// Valid style instructions are `nobold` and `bold`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Spec {
+    ty: OutType,
+    value: SpecValue,
+}
+
+/// The actual value given by the specification.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum SpecValue {
+    None,
+    Fg(Color),
+    Bg(Color),
+    Style(Style),
+}
+
+/// The set of configurable portions of ripgrep's output.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum OutType {
+    Path,
+    Line,
+    Match,
+}
+
+/// The specification type.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum SpecType {
+    Fg,
+    Bg,
+    Style,
+    None,
+}
+
+/// The set of available styles for use in the terminal.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Style {
+    Bold,
+    NoBold,
+}
+
+impl ColorSpecs {
+    /// Create color specifications from a list of user supplied
+    /// specifications.
+    pub fn new(user_specs: &[Spec]) -> ColorSpecs {
+        let mut specs = ColorSpecs::default();
+        for user_spec in user_specs {
+            match user_spec.ty {
+                OutType::Path => user_spec.merge_into(&mut specs.path),
+                OutType::Line => user_spec.merge_into(&mut specs.line),
+                OutType::Match => user_spec.merge_into(&mut specs.matched),
+            }
+        }
+        specs
+    }
+
+    /// Return the color specification for coloring file paths.
+    fn path(&self) -> &ColorSpec {
+        &self.path
+    }
+
+    /// Return the color specification for coloring line numbers.
+    fn line(&self) -> &ColorSpec {
+        &self.line
+    }
+
+    /// Return the color specification for coloring matched text.
+    fn matched(&self) -> &ColorSpec {
+        &self.matched
+    }
+}
+
+impl Spec {
+    /// Merge this spec into the given color specification.
+    fn merge_into(&self, cspec: &mut ColorSpec) {
+        self.value.merge_into(cspec);
+    }
+}
+
+impl SpecValue {
+    /// Merge this spec value into the given color specification.
+    fn merge_into(&self, cspec: &mut ColorSpec) {
+        match *self {
+            SpecValue::None => cspec.clear(),
+            SpecValue::Fg(ref color) => { cspec.set_fg(Some(color.clone())); }
+            SpecValue::Bg(ref color) => { cspec.set_bg(Some(color.clone())); }
+            SpecValue::Style(ref style) => {
+                match *style {
+                    Style::Bold => { cspec.set_bold(true); }
+                    Style::NoBold => { cspec.set_bold(false); }
+                }
+            }
+        }
+    }
+}
+
+impl FromStr for Spec {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Spec, Error> {
+        let pieces: Vec<&str> = s.split(":").collect();
+        if pieces.len() <= 1 || pieces.len() > 3 {
+            return Err(Error::InvalidFormat(s.to_string()));
+        }
+        let otype: OutType = try!(pieces[0].parse());
+        match try!(pieces[1].parse()) {
+            SpecType::None => Ok(Spec { ty: otype, value: SpecValue::None }),
+            SpecType::Style => {
+                if pieces.len() < 3 {
+                    return Err(Error::InvalidFormat(s.to_string()));
+                }
+                let style: Style = try!(pieces[2].parse());
+                Ok(Spec { ty: otype, value: SpecValue::Style(style) })
+            }
+            SpecType::Fg => {
+                if pieces.len() < 3 {
+                    return Err(Error::InvalidFormat(s.to_string()));
+                }
+                let color: Color = try!(pieces[2].parse());
+                Ok(Spec { ty: otype, value: SpecValue::Fg(color) })
+            }
+            SpecType::Bg => {
+                if pieces.len() < 3 {
+                    return Err(Error::InvalidFormat(s.to_string()));
+                }
+                let color: Color = try!(pieces[2].parse());
+                Ok(Spec { ty: otype, value: SpecValue::Bg(color) })
+            }
+        }
+    }
+}
+
+impl FromStr for OutType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<OutType, Error> {
+        match &*s.to_lowercase() {
+            "path" => Ok(OutType::Path),
+            "line" => Ok(OutType::Line),
+            "match" => Ok(OutType::Match),
+            _ => Err(Error::UnrecognizedOutType(s.to_string())),
+        }
+    }
+}
+
+impl FromStr for SpecType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<SpecType, Error> {
+        match &*s.to_lowercase() {
+            "fg" => Ok(SpecType::Fg),
+            "bg" => Ok(SpecType::Bg),
+            "style" => Ok(SpecType::Style),
+            "none" => Ok(SpecType::None),
+            _ => Err(Error::UnrecognizedSpecType(s.to_string())),
+        }
+    }
+}
+
+impl FromStr for Style {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Style, Error> {
+        match &*s.to_lowercase() {
+            "bold" => Ok(Style::Bold),
+            "nobold" => Ok(Style::NoBold),
+            _ => Err(Error::UnrecognizedStyle(s.to_string())),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use termcolor::{Color, ColorSpec};
+    use super::{ColorSpecs, Error, OutType, Spec, SpecValue, Style};
+
+    #[test]
+    fn merge() {
+        let user_specs: &[Spec] = &[
+            "match:fg:blue".parse().unwrap(),
+            "match:none".parse().unwrap(),
+            "match:style:bold".parse().unwrap(),
+        ];
+        let mut expect_matched = ColorSpec::new();
+        expect_matched.set_bold(true);
+        assert_eq!(ColorSpecs::new(user_specs), ColorSpecs {
+            path: ColorSpec::default(),
+            line: ColorSpec::default(),
+            matched: expect_matched,
+        });
+    }
+
+    #[test]
+    fn specs() {
+        let spec: Spec = "path:fg:blue".parse().unwrap();
+        assert_eq!(spec, Spec {
+            ty: OutType::Path,
+            value: SpecValue::Fg(Color::Blue),
+        });
+
+        let spec: Spec = "path:bg:red".parse().unwrap();
+        assert_eq!(spec, Spec {
+            ty: OutType::Path,
+            value: SpecValue::Bg(Color::Red),
+        });
+
+        let spec: Spec = "match:style:bold".parse().unwrap();
+        assert_eq!(spec, Spec {
+            ty: OutType::Match,
+            value: SpecValue::Style(Style::Bold),
+        });
+
+        let spec: Spec = "line:none".parse().unwrap();
+        assert_eq!(spec, Spec {
+            ty: OutType::Line,
+            value: SpecValue::None,
+        });
+    }
+
+    #[test]
+    fn spec_errors() {
+        let err = "line:nonee".parse::<Spec>().unwrap_err();
+        assert_eq!(err, Error::UnrecognizedSpecType("nonee".to_string()));
+
+        let err = "".parse::<Spec>().unwrap_err();
+        assert_eq!(err, Error::InvalidFormat("".to_string()));
+
+        let err = "foo".parse::<Spec>().unwrap_err();
+        assert_eq!(err, Error::InvalidFormat("foo".to_string()));
+
+        let err = "line:style:italic".parse::<Spec>().unwrap_err();
+        assert_eq!(err, Error::UnrecognizedStyle("italic".to_string()));
+
+        let err = "line:fg:brown".parse::<Spec>().unwrap_err();
+        match err {
+            Error::UnrecognizedColor(name, _) => assert_eq!(name, "brown"),
+            err => assert!(false, "unexpected error: {:?}", err),
+        }
+
+        let err = "foo:fg:brown".parse::<Spec>().unwrap_err();
+        assert_eq!(err, Error::UnrecognizedOutType("foo".to_string()));
     }
 }

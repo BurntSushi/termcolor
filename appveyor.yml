@@ -31,6 +31,8 @@ test_script:
   - cargo test --verbose --manifest-path grep/Cargo.toml
   - cargo test --verbose --manifest-path globset/Cargo.toml
   - cargo test --verbose --manifest-path ignore/Cargo.toml
+  - cargo test --verbose --manifest-path wincolor/Cargo.toml
+  - cargo test --verbose --manifest-path termcolor/Cargo.toml
 
 before_deploy:
   # Generate artifacts for release

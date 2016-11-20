@@ -10,7 +10,7 @@ use std::cmp;
 use std::path::Path;
 
 use grep::Grep;
-use term::Terminal;
+use termcolor::WriteColor;
 
 use printer::Printer;
 use search_stream::{IterLines, Options, count_lines, is_binary};
@@ -26,7 +26,7 @@ pub struct BufferSearcher<'a, W: 'a> {
     last_line: usize,
 }
 
-impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
+impl<'a, W: WriteColor> BufferSearcher<'a, W> {
     pub fn new(
         printer: &'a mut Printer<W>,
         grep: &'a Grep,
@@ -196,10 +196,9 @@ mod tests {
     use std::path::Path;
 
     use grep::GrepBuilder;
-    use term::{Terminal, TerminfoTerminal};
 
-    use out::ColoredTerminal;
     use printer::Printer;
+    use termcolor;
 
     use super::BufferSearcher;
 
@@ -216,15 +215,14 @@ and exhibited clearly, with a label attached.\
         &Path::new("/baz.rs")
     }
 
-    type TestSearcher<'a> =
-        BufferSearcher<'a, ColoredTerminal<TerminfoTerminal<Vec<u8>>>>;
+    type TestSearcher<'a> = BufferSearcher<'a, termcolor::NoColor<Vec<u8>>>;
 
     fn search<F: FnMut(TestSearcher) -> TestSearcher>(
         pat: &str,
         haystack: &str,
         mut map: F,
     ) -> (u64, String) {
-        let outbuf = ColoredTerminal::NoColor(vec![]);
+        let outbuf = termcolor::NoColor::new(vec![]);
         let mut pp = Printer::new(outbuf).with_filename(true);
         let grep = GrepBuilder::new(pat).build().unwrap();
         let count = {

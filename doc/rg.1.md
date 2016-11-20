@@ -95,6 +95,22 @@ Project home page: https://github.com/BurntSushi/ripgrep
 -C, --context *NUM*
 : Show NUM lines before and after each match.
 
+--colors *SPEC* ...
+: This flag specifies color settings for use in the output. This flag may be
+  provided multiple times. Settings are applied iteratively. Colors are limited
+  to one of eight choices: red, blue, green, cyan, magenta, yellow, white and
+  black. Styles are limited to either nobold or bold.
+
+    The format of the flag is {type}:{attribute}:{value}. {type} should be one
+    of path, line or match. {attribute} can be fg, bg or style. Value is either
+    a color (for fg and bg) or a text style. A special format, {type}:none,
+    will clear all color settings for {type}.
+
+    For example, the following command will change the match color to magenta
+    and the background color for line numbers to yellow:
+
+    rg --colors 'match:fg:magenta' --colors 'line:bg:yellow' foo.
+
 --column
 : Show column numbers (1 based) in output. This only shows the column
   numbers for the first match on each line. Note that this doesn't try
