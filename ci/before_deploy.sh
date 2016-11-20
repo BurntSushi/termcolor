@@ -17,8 +17,6 @@ mk_tarball() {
     local name="${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
     mkdir "$td/$name"
 
-    ls -l --recursive target/
-
     cp target/$TARGET/release/rg "$td/$name/"
     cp {doc/rg.1,README.md,UNLICENSE,COPYING,LICENSE-MIT} "$td/$name/"
     cp target/release/build/ripgrep-*/out/rg.* "$td/$name/"
