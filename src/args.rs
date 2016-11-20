@@ -316,7 +316,7 @@ impl<'a> ArgMatches<'a> {
             context_separator: self.context_separator(),
             count: self.is_present("count"),
             files_with_matches: self.is_present("files-with-matches"),
-            files_without_matches: self.is_present("files-without-matches"),
+            files_without_matches: self.is_present("files-without-match"),
             eol: b'\n',
             files: self.is_present("files"),
             follow: self.is_present("follow"),

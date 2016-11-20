@@ -339,9 +339,10 @@ sherlock!(files_with_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
-sherlock!(files_without_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+sherlock!(files_without_matches, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
     wd.create("file.py", "foo");
-    cmd.arg("--files-without-matches");
+    cmd.arg("--files-without-match");
     let lines: String = wd.stdout(&mut cmd);
     let expected = "file.py\n";
     assert_eq!(lines, expected);
@@ -1070,7 +1071,7 @@ sherlock!(feature_89_files_with_matches, "Sherlock", ".",
 sherlock!(feature_89_files_without_matches, "Sherlock", ".",
 |wd: WorkDir, mut cmd: Command| {
     wd.create("file.py", "foo");
-    cmd.arg("--null").arg("--files-without-matches");
+    cmd.arg("--null").arg("--files-without-match");
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "file.py\x00");

@@ -119,7 +119,7 @@ Project home page: https://github.com/BurntSushi/ripgrep
 -l, --files-with-matches
 : Only show path of each file with matches.
 
---files-without-matches
+--files-without-match
 : Only show path of each file with no matches.
 
 -H, --with-filename

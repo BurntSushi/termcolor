@@ -112,13 +112,13 @@ impl Default for Options {
 
 impl Options {
     /// Several options (--quiet, --count, --files-with-matches,
-    /// --files-without-matches) imply that we shouldn't ever display matches.
+    /// --files-without-match) imply that we shouldn't ever display matches.
     pub fn skip_matches(&self) -> bool {
         self.count || self.files_with_matches || self.files_without_matches
         || self.quiet
     }
 
-    /// Some options (--quiet, --files-with-matches, --files-without-matches)
+    /// Some options (--quiet, --files-with-matches, --files-without-match)
     /// imply that we can stop searching after the first match.
     pub fn stop_after_first_match(&self) -> bool {
         self.files_with_matches || self.files_without_matches || self.quiet
