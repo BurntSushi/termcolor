@@ -17,12 +17,12 @@ mk_tarball() {
     local name="${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
     mkdir "$td/$name"
 
-    ls -l --recursive target/$TARGET/release
+    ls -l --recursive target/
 
     cp target/$TARGET/release/rg "$td/$name/"
     cp {doc/rg.1,README.md,UNLICENSE,COPYING,LICENSE-MIT} "$td/$name/"
-    cp target/$TARGET/release/build/ripgrep-*/out/rg.* "$td/$name/"
-    cp target/$TARGET/release/build/ripgrep-*/out/_rg.* "$td/$name/"
+    cp target/release/build/ripgrep-*/out/rg.* "$td/$name/"
+    cp target/release/build/ripgrep-*/out/_rg.* "$td/$name/"
 
     pushd $td
     tar czf "$out_dir/$name.tar.gz" *
