@@ -339,6 +339,14 @@ sherlock!(files_with_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, expected);
 });
 
+sherlock!(files_without_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("file.py", "foo");
+    cmd.arg("--files-without-matches");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "file.py\n";
+    assert_eq!(lines, expected);
+});
+
 sherlock!(after_context, |wd: WorkDir, mut cmd: Command| {
     cmd.arg("-A").arg("1");
     let lines: String = wd.stdout(&mut cmd);
@@ -1056,6 +1064,16 @@ sherlock!(feature_89_files_with_matches, "Sherlock", ".",
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, "sherlock\x00");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/89
+sherlock!(feature_89_files_without_matches, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    wd.create("file.py", "foo");
+    cmd.arg("--null").arg("--files-without-matches");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "file.py\x00");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/89

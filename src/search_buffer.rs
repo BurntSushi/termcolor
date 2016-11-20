@@ -61,6 +61,15 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
         self
     }
 
+    /// If enabled, searching will print the path of files that *don't* match
+    /// the given pattern.
+    ///
+    /// Disabled by default.
+    pub fn files_without_matches(mut self, yes: bool) -> Self {
+        self.opts.files_without_matches = yes;
+        self
+    }
+
     /// Set the end-of-line byte used by this searcher.
     pub fn eol(mut self, eol: u8) -> Self {
         self.opts.eol = eol;
@@ -131,6 +140,9 @@ impl<'a, W: Send + Terminal> BufferSearcher<'a, W> {
             self.printer.path_count(self.path, self.match_count);
         }
         if self.opts.files_with_matches && self.match_count > 0 {
+            self.printer.path(self.path);
+        }
+        if self.opts.files_without_matches && self.match_count == 0 {
             self.printer.path(self.path);
         }
         self.match_count
@@ -274,6 +286,14 @@ and exhibited clearly, with a label attached.\
         let (count, out) = search(
             "Sherlock", SHERLOCK, |s| s.files_with_matches(true));
         assert_eq!(1, count);
+        assert_eq!(out, "/baz.rs\n");
+    }
+
+    #[test]
+    fn files_without_matches() {
+        let (count, out) = search(
+            "zzzz", SHERLOCK, |s| s.files_without_matches(true));
+        assert_eq!(0, count);
         assert_eq!(out, "/baz.rs\n");
     }
 
