@@ -1,3 +1,68 @@
+0.3.0
+=====
+This is a new minor version release of ripgrep that includes two breaking
+changes with lots of bug fixes and some new features and performance
+improvements. Notably, if you had a problem with colors or piping on Windows
+before, then that should now be fixed in this release.
+
+**BREAKING CHANGES**:
+
+* ripgrep now requires Rust 1.11 to compile. Previously, it could build on
+  Rust 1.9. The cause of this was the move from
+  [Docopt to Clap](https://github.com/BurntSushi/ripgrep/pull/233)
+  for argument parsing.
+* The `-e/--regexp` flag can no longer accept a pattern starting with a `-`.
+  There are two work-arounds: `rg -- -foo` and `rg [-]foo` or `rg -e [-]foo`
+  will all search for the same `-foo` pattern. The cause of this was the move
+  from [Docopt to Clap](https://github.com/BurntSushi/ripgrep/pull/233)
+  for argument parsing.
+  [This may get fixed in the
+  future.](https://github.com/kbknapp/clap-rs/issues/742).
+
+Performance improvements:
+
+* [PERF #33](https://github.com/BurntSushi/ripgrep/issues/33):
+  ripgrep now performs similar to GNU grep on small corpora.
+* [PERF #136](https://github.com/BurntSushi/ripgrep/issues/136):
+  ripgrep no longer slows down because of argument parsing when given a large
+  argument list.
+
+Feature enhancements:
+
+* Added or improved file type filtering for Elixir.
+* [FEATURE #7](https://github.com/BurntSushi/ripgrep/issues/7):
+  Add a `-f/--file` flag that causes ripgrep to read patterns from a file.
+* [FEATURE #51](https://github.com/BurntSushi/ripgrep/issues/51):
+  Add a `--colors` flag that enables one to customize the colors used in
+  ripgrep's output.
+* [FEATURE #138](https://github.com/BurntSushi/ripgrep/issues/138):
+  Add a `--files-without-match` flag that shows only file paths that contain
+  zero matches.
+* [FEATURE #230](https://github.com/BurntSushi/ripgrep/issues/230):
+  Add completion files to the release (Bash, Fish and PowerShell).
+
+Bug fixes:
+
+* [BUG #37](https://github.com/BurntSushi/ripgrep/issues/37):
+  Use correct ANSI escape sequences when `TERM=screen.linux`.
+* [BUG #94](https://github.com/BurntSushi/ripgrep/issues/94):
+  ripgrep now detects stdin on Windows automatically.
+* [BUG #117](https://github.com/BurntSushi/ripgrep/issues/117):
+  Colors should now work correctly and automatically inside mintty.
+* [BUG #182](https://github.com/BurntSushi/ripgrep/issues/182):
+  Colors should now work within Emacs. In particular, `--color=always` will
+  emit colors regardless of the current environment.
+* [BUG #189](https://github.com/BurntSushi/ripgrep/issues/189):
+  Show less content when running `rg -h`. The full help content can be
+  accessed with `rg --help`.
+* [BUG #210](https://github.com/BurntSushi/ripgrep/issues/210):
+  Support non-UTF-8 file names on Unix platforms.
+* [BUG #231](https://github.com/BurntSushi/ripgrep/issues/231):
+  Switch from block buffering to line buffering.
+* [BUG #241](https://github.com/BurntSushi/ripgrep/issues/241):
+  Some error messages weren't suppressed when `--no-messages` was used.
+
+
 0.2.9
 =====
 Bug fixes:
