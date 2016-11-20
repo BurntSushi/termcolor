@@ -504,9 +504,6 @@ impl<'a> ArgMatches<'a> {
             false
         } else if self.is_present("mmap") {
             true
-        } else if cfg!(windows) {
-            // On Windows, memory maps appear faster than read calls. Neat.
-            true
         } else if cfg!(target_os = "macos") {
             // On Mac, memory maps appear to suck. Neat.
             false
