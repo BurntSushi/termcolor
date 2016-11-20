@@ -13,21 +13,14 @@ use grep::{Grep, GrepBuilder};
 use log;
 use num_cpus;
 use regex;
-use term::Terminal;
-#[cfg(not(windows))]
-use term;
-#[cfg(windows)]
-use term::WinConsole;
+use termcolor;
 
-use atty;
 use app;
+use atty;
 use ignore::overrides::{Override, OverrideBuilder};
 use ignore::types::{FileTypeDef, Types, TypesBuilder};
 use ignore;
-use out::{Out, ColoredTerminal};
-use printer::Printer;
-#[cfg(windows)]
-use terminal_win::WindowsBuffer;
+use printer::{ColorSpecs, Printer};
 use unescape::unescape;
 use worker::{Worker, WorkerBuilder};
 
@@ -40,6 +33,8 @@ pub struct Args {
     after_context: usize,
     before_context: usize,
     color: bool,
+    color_choice: termcolor::ColorChoice,
+    colors: ColorSpecs,
     column: bool,
     context_separator: Vec<u8>,
     count: bool,
@@ -132,8 +127,9 @@ impl Args {
 
     /// Create a new printer of individual search results that writes to the
     /// writer given.
-    pub fn printer<W: Terminal + Send>(&self, wtr: W) -> Printer<W> {
+    pub fn printer<W: termcolor::WriteColor>(&self, wtr: W) -> Printer<W> {
         let mut p = Printer::new(wtr)
+            .colors(self.colors.clone())
             .column(self.column)
             .context_separator(self.context_separator.clone())
             .eol(self.eol)
@@ -145,16 +141,6 @@ impl Args {
             p = p.replace(rep.clone());
         }
         p
-    }
-
-    /// Create a new printer of search results for an entire file that writes
-    /// to the writer given.
-    pub fn out(&self) -> Out {
-        let mut out = Out::new(self.color);
-        if let Some(filesep) = self.file_separator() {
-            out = out.file_separator(filesep);
-        }
-        out
     }
 
     /// Retrieve the configured file separator.
@@ -173,30 +159,17 @@ impl Args {
         self.max_count == Some(0)
     }
 
-    /// Create a new buffer for use with searching.
-    #[cfg(not(windows))]
-    pub fn outbuf(&self) -> ColoredTerminal<term::TerminfoTerminal<Vec<u8>>> {
-        ColoredTerminal::new(vec![], self.color)
+    /// Create a new writer for single-threaded searching with color support.
+    pub fn stdout(&self) -> termcolor::Stdout {
+        termcolor::Stdout::new(self.color_choice)
     }
 
-    /// Create a new buffer for use with searching.
-    #[cfg(windows)]
-    pub fn outbuf(&self) -> ColoredTerminal<WindowsBuffer> {
-        ColoredTerminal::new_buffer(self.color)
-    }
-
-    /// Create a new buffer for use with searching.
-    #[cfg(not(windows))]
-    pub fn stdout(
-        &self,
-    ) -> ColoredTerminal<term::TerminfoTerminal<io::BufWriter<io::Stdout>>> {
-        ColoredTerminal::new(io::BufWriter::new(io::stdout()), self.color)
-    }
-
-    /// Create a new buffer for use with searching.
-    #[cfg(windows)]
-    pub fn stdout(&self) -> ColoredTerminal<WinConsole<io::Stdout>> {
-        ColoredTerminal::new_stdout(self.color)
+    /// Create a new buffer writer for multi-threaded searching with color
+    /// support.
+    pub fn buffer_writer(&self) -> termcolor::BufferWriter {
+        let mut wtr = termcolor::BufferWriter::stdout(self.color_choice);
+        wtr.separator(self.file_separator());
+        wtr
     }
 
     /// Return the paths that should be searched.
@@ -312,6 +285,8 @@ impl<'a> ArgMatches<'a> {
             after_context: after_context,
             before_context: before_context,
             color: self.color(),
+            color_choice: self.color_choice(),
+            colors: try!(self.color_specs()),
             column: self.column(),
             context_separator: self.context_separator(),
             count: self.is_present("count"),
@@ -615,6 +590,50 @@ impl<'a> ArgMatches<'a> {
         } else {
             false
         }
+    }
+
+    /// Returns the user's color choice based on command line parameters and
+    /// environment.
+    fn color_choice(&self) -> termcolor::ColorChoice {
+        let preference = match self.0.value_of_lossy("color") {
+            None => "auto".to_string(),
+            Some(v) => v.into_owned(),
+        };
+        if preference == "always" {
+            termcolor::ColorChoice::Always
+        } else if preference == "ansi" {
+            termcolor::ColorChoice::AlwaysAnsi
+        } else if self.is_present("vimgrep") {
+            termcolor::ColorChoice::Never
+        } else if preference == "auto" {
+            if atty::on_stdout() || self.is_present("pretty") {
+                termcolor::ColorChoice::Auto
+            } else {
+                termcolor::ColorChoice::Never
+            }
+        } else {
+            termcolor::ColorChoice::Never
+        }
+    }
+
+    /// Returns the color specifications given by the user on the CLI.
+    ///
+    /// If the was a problem parsing any of the provided specs, then an error
+    /// is returned.
+    fn color_specs(&self) -> Result<ColorSpecs> {
+        // Start with a default set of color specs.
+        let mut specs = vec![
+            "path:fg:green".parse().unwrap(),
+            "path:style:bold".parse().unwrap(),
+            "line:fg:blue".parse().unwrap(),
+            "line:style:bold".parse().unwrap(),
+            "match:fg:red".parse().unwrap(),
+            "match:style:bold".parse().unwrap(),
+        ];
+        for spec_str in self.values_of_lossy_vec("colors") {
+            specs.push(try!(spec_str.parse()));
+        }
+        Ok(ColorSpecs::new(&specs))
     }
 
     /// Returns the approximate number of threads that ripgrep should use.

@@ -5,7 +5,7 @@ use std::path::Path;
 use grep::Grep;
 use ignore::DirEntry;
 use memmap::{Mmap, Protection};
-use term::Terminal;
+use termcolor::WriteColor;
 
 use pathutil::strip_prefix;
 use printer::Printer;
@@ -182,7 +182,7 @@ impl Worker {
     /// Execute the worker with the given printer and work item.
     ///
     /// A work item can either be stdin or a file path.
-    pub fn run<W: Terminal + Send>(
+    pub fn run<W: WriteColor>(
         &mut self,
         printer: &mut Printer<W>,
         work: Work,
@@ -227,7 +227,7 @@ impl Worker {
         }
     }
 
-    fn search<R: io::Read, W: Terminal + Send>(
+    fn search<R: io::Read, W: WriteColor>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,
@@ -251,7 +251,7 @@ impl Worker {
             .map_err(From::from)
     }
 
-    fn search_mmap<W: Terminal + Send>(
+    fn search_mmap<W: WriteColor>(
         &mut self,
         printer: &mut Printer<W>,
         path: &Path,
