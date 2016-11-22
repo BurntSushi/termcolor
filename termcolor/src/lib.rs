@@ -764,7 +764,7 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         if let Some(ref c) = spec.bg_color {
             try!(self.write_color(false, c, spec.bold));
         }
-        if spec.fg_color.is_none() && spec.bg_color.is_none() {
+        if spec.bold && spec.fg_color.is_none() && spec.bg_color.is_none() {
             try!(self.write_str("\x1B[1m"));
         }
         Ok(())
@@ -967,6 +967,11 @@ impl ColorSpec {
     pub fn set_bold(&mut self, yes: bool) -> &mut ColorSpec {
         self.bold = yes;
         self
+    }
+
+    /// Returns true if this color specification has no colors or styles.
+    pub fn is_none(&self) -> bool {
+        self.fg_color.is_none() && self.bg_color.is_none() && !self.bold
     }
 
     /// Clears this color specification so that it has no color/style settings.

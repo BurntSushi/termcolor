@@ -260,7 +260,7 @@ impl<W: WriteColor> Printer<W> {
     }
 
     fn write_matched_line(&mut self, re: &Regex, buf: &[u8]) {
-        if !self.wtr.supports_color() {
+        if !self.wtr.supports_color() || self.colors.matched().is_none() {
             self.write(buf);
             return;
         }
