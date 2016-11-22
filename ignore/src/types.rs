@@ -148,6 +148,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("rst", &["*.rst"]),
     ("ruby", &["*.rb"]),
     ("rust", &["*.rs"]),
+    ("sass", &["*.scss"]),
     ("scala", &["*.scala"]),
     ("sh", &["*.bash", "*.csh", "*.ksh", "*.sh", "*.tcsh"]),
     ("spark", &["*.spark"]),
