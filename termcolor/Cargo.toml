@@ -1,6 +1,6 @@
 [package]
 name = "termcolor"
-version = "0.1.0"  #:version
+version = "0.1.1"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 A simple cross platform library for writing colored text to a terminal.
