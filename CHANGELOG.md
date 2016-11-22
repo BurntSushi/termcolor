@@ -1,3 +1,11 @@
+0.3.1
+=====
+Bug fixes:
+
+* [BUG #242](https://github.com/BurntSushi/ripgrep/issues/242):
+  ripgrep didn't respect `--colors foo:none` correctly. Now it does.
+
+
 0.3.0
 =====
 This is a new minor version release of ripgrep that includes two breaking
