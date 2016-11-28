@@ -147,11 +147,13 @@ Project home page: https://github.com/BurntSushi/ripgrep
   one file is searched.
 
 --heading
-: Show the file name above clusters of matches from each file.
-  This is the default mode at a tty.
+: Show the file name above clusters of matches from each file instead of
+  showing the file name for every match. This is the default mode at a tty.
 
 --no-heading
-: Don't show any file name heading.
+: Don't group matches by each file. If -H/--with-filename is enabled, then
+  file names will be shown for every line matched. This is the default more
+  when not at a tty.
 
 --hidden
 : Search hidden directories and files. (Hidden directories and files are

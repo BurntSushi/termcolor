@@ -338,11 +338,13 @@ lazy_static! {
         doc!(h, "heading",
              "Show matches grouped by each file.",
              "This shows the file name above clusters of matches from each \
-              file. This is the default mode at a tty.");
+              file instead of showing the file name for every match. This is \
+              the default mode at a tty.");
         doc!(h, "no-heading",
              "Don't group matches by each file.",
-             "Don't group matches by each file. This is the default mode \
-              when not at a tty.");
+             "Don't group matches by each file. If -H/--with-filename is \
+              enabled, then file names will be shown for every line matched. \
+              This is the default mode when not at a tty.");
         doc!(h, "hidden",
              "Search hidden files and directories.",
              "Search hidden files and directories. By default, hidden files \
