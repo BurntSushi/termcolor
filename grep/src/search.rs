@@ -318,12 +318,29 @@ impl<'b, 's> Iterator for Iter<'b, 's> {
 
 fn has_uppercase_literal(expr: &Expr) -> bool {
     use syntax::Expr::*;
+    fn byte_is_upper(b: u8) -> bool { b'A' <= b && b <= b'Z' }
     match *expr {
         Literal { ref chars, casei } => {
             casei || chars.iter().any(|c| c.is_uppercase())
         }
         LiteralBytes { ref bytes, casei } => {
-            casei || bytes.iter().any(|&b| b'A' <= b && b <= b'Z')
+            casei || bytes.iter().any(|&b| byte_is_upper(b))
+        }
+        Class(ref ranges) => {
+            for r in ranges {
+                if r.start.is_uppercase() || r.end.is_uppercase() {
+                    return true;
+                }
+            }
+            false
+        }
+        ClassBytes(ref ranges) => {
+            for r in ranges {
+                if byte_is_upper(r.start) || byte_is_upper(r.end) {
+                    return true;
+                }
+            }
+            false
         }
         Group { ref e, .. } => has_uppercase_literal(e),
         Repeat { ref e, .. } => has_uppercase_literal(e),

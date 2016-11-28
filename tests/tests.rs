@@ -929,6 +929,13 @@ clean!(regression_228, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/229
+clean!(regression_229, "[E]conomie", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "economie");
+    cmd.arg("-S");
+    wd.assert_err(&mut cmd);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
     wd.create("pat", "Sherlock\nHolmes");
