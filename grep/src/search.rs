@@ -167,14 +167,13 @@ impl GrepBuilder {
     /// Creates a new regex from the given expression with the current
     /// configuration.
     fn regex(&self, expr: &Expr) -> Result<Regex> {
-        self.regex_build(RegexBuilder::new(&expr.to_string()))
+        self.regex_build(RegexBuilder::new(&expr.to_string()).unicode(true))
     }
 
     /// Builds a new regex from the given builder using the caller's settings.
     fn regex_build(&self, builder: RegexBuilder) -> Result<Regex> {
         builder
             .multi_line(true)
-            .unicode(true)
             .size_limit(self.opts.size_limit)
             .dfa_size_limit(self.opts.dfa_size_limit)
             .compile()

@@ -79,12 +79,12 @@ impl LiteralSets {
             debug!("required literals found: {:?}", req_lits);
             let alts: Vec<String> =
                 req_lits.into_iter().map(|x| bytes_to_regex(x)).collect();
-            Some(RegexBuilder::new(&alts.join("|")))
+            Some(RegexBuilder::new(&alts.join("|")).unicode(false))
         } else if lit.is_empty() {
             None
         } else {
             debug!("required literal found: {:?}", show(lit));
-            Some(RegexBuilder::new(&bytes_to_regex(lit)))
+            Some(RegexBuilder::new(&bytes_to_regex(&lit)).unicode(false))
         }
     }
 }
