@@ -64,7 +64,7 @@ pub type Result<T> = result::Result<T, Box<Error + Send + Sync>>;
 
 fn main() {
     match Args::parse().map(Arc::new).and_then(run) {
-        Ok(count) if count == 0 => process::exit(1),
+        Ok(0) => process::exit(1),
         Ok(_) => process::exit(0),
         Err(err) => {
             eprintln!("{}", err);
