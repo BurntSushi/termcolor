@@ -945,6 +945,29 @@ clean!(regression_251, "привет", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "foo:привет\nfoo:Привет\nfoo:ПрИвЕт\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/256
+#[cfg(not(windows))]
+clean!(regression_256, "test", "foo", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("bar");
+    wd.create("bar/baz", "test");
+    wd.link_dir("bar", "foo");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo/baz:test\n");
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/256
+#[cfg(not(windows))]
+clean!(regression_256_j1, "test", "foo", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("bar");
+    wd.create("bar/baz", "test");
+    wd.link_dir("bar", "foo");
+    cmd.arg("-j1");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo/baz:test\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
     wd.create("pat", "Sherlock\nHolmes");

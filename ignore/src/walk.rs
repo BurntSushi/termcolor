@@ -275,18 +275,6 @@ impl DirEntryRaw {
             depth: depth,
         })
     }
-
-    fn from_path(depth: usize, pb: PathBuf) -> Result<DirEntryRaw, Error> {
-        let md = try!(fs::symlink_metadata(&pb).map_err(|err| {
-            Error::Io(err).with_path(&pb)
-        }));
-        Ok(DirEntryRaw {
-            path: pb,
-            ty: md.file_type(),
-            follow_link: false,
-            depth: depth,
-        })
-    }
 }
 
 /// WalkBuilder builds a recursive directory iterator.
@@ -756,7 +744,7 @@ impl WalkParallel {
                 if path == Path::new("-") {
                     DirEntry::new_stdin()
                 } else {
-                    match DirEntryRaw::from_path(0, path) {
+                    match DirEntryRaw::from_link(0, path) {
                         Ok(dent) => DirEntry::new_raw(dent, None),
                         Err(err) => {
                             if f(Err(err)).is_quit() {
