@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use clap::{App, AppSettings, Arg};
+use clap::{App, AppSettings, Arg, ArgSettings};
 
 const ABOUT: &'static str = "
 ripgrep (rg) recursively searches your current directory for a regex pattern.
@@ -74,6 +74,7 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
         .arg(arg("path").multiple(true))
         .arg(flag("regexp").short("e")
              .takes_value(true).multiple(true).number_of_values(1)
+             .set(ArgSettings::AllowLeadingHyphen)
              .value_name("pattern"))
         .arg(flag("files")
              // This should also conflict with `pattern`, but the first file

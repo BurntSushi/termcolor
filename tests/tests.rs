@@ -1263,6 +1263,18 @@ fn regression_64() {
     assert_eq!(lines, path("foo/abc\n"));
 }
 
+// See: https://github.com/BurntSushi/ripgrep/issues/270
+#[test]
+fn regression_270() {
+    let wd = WorkDir::new("regression_270");
+    wd.create("foo", "-test");
+
+    let mut cmd = wd.command();
+    cmd.arg("-e").arg("-test");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, path("foo:-test\n"));
+}
+
 #[test]
 fn type_list() {
     let wd = WorkDir::new("type_list");
