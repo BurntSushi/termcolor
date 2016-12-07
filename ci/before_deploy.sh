@@ -16,11 +16,11 @@ mk_tarball() {
     local out_dir=$(pwd)
     local name="${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}"
     mkdir "$td/$name"
+    mkdir "$td/$name/complete"
 
     cp target/$TARGET/release/rg "$td/$name/"
     cp {doc/rg.1,README.md,UNLICENSE,COPYING,LICENSE-MIT} "$td/$name/"
-    cp target/release/build/ripgrep-*/out/rg.* "$td/$name/"
-    cp target/release/build/ripgrep-*/out/_rg.* "$td/$name/"
+    cp target/release/build/ripgrep-*/out/{_rg,rg.bash-completion,rg.fish,_rg.ps1} "$td/$name/complete/"
 
     pushd $td
     tar czf "$out_dir/$name.tar.gz" *
