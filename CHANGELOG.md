@@ -1,3 +1,28 @@
+0.3.2
+=====
+Feature enhancements:
+
+* Added or improved file type filtering for Less, Sass, stylus, Zsh
+
+Bug fixes:
+
+* [BUG #229](https://github.com/BurntSushi/ripgrep/issues/229):
+  Make smart case slightly less conservative.
+* [BUG #247](https://github.com/BurntSushi/ripgrep/issues/247):
+  Clarify use of --heading/--no-heading.
+* [BUG #251](https://github.com/BurntSushi/ripgrep/issues/251),
+  [BUG #264](https://github.com/BurntSushi/ripgrep/issues/264),
+  [BUG #267](https://github.com/BurntSushi/ripgrep/issues/267):
+  Fix matching bug caused by literal optimizations.
+* [BUG #256](https://github.com/BurntSushi/ripgrep/issues/256):
+  Fix bug that caused `rg foo` and `rg foo/` to have different behavior
+  when `foo` was a symlink.
+* [BUG #270](https://github.com/BurntSushi/ripgrep/issues/270):
+  Fix bug where patterns starting with a `-` couldn't be used with the
+  `-e/--regexp` flag. (This resolves a regression that was introduced in
+  ripgrep 0.3.0.)
+
+
 0.3.1
 =====
 Bug fixes:
