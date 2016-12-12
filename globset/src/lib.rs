@@ -14,8 +14,6 @@ src/**/foo.rs
 and a path `src/bar/baz/foo.rs`, then the set would report the first and third
 globs as matching.
 
-Single glob matching is also provided and is done by converting globs to
-
 # Example: one glob
 
 This example shows how to match a single glob against a single file path.
