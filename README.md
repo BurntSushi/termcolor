@@ -1,9 +1,15 @@
 ripgrep (rg)
 ------------
-`ripgrep` is a command line search tool that combines the usability of The
-Silver Searcher (an `ack` clone) with the raw speed of GNU grep. `ripgrep` has
-first class support on Windows, Mac and Linux, with binary downloads available
-for [every release](https://github.com/BurntSushi/ripgrep/releases).
+`ripgrep` is a line oriented search tool that combines the usability of The
+Silver Searcher (an `ack` clone) with the raw speed of GNU grep. `ripgrep`
+works by recursively searching your current directory for a regex pattern.
+`ripgrep` has first class support on Windows, Mac and Linux, with binary
+downloads available for
+[every release](https://github.com/BurntSushi/ripgrep/releases).
+
+ripgrep's regex engine uses finite automata and guarantees linear time
+searching. Because of this, features like backreferences and arbitrary
+lookaround are not supported.
 
 [![Linux build status](https://travis-ci.org/BurntSushi/ripgrep.svg?branch=master)](https://travis-ci.org/BurntSushi/ripgrep)
 [![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)

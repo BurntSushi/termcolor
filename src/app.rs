@@ -5,6 +5,10 @@ use clap::{App, AppSettings, Arg, ArgSettings};
 const ABOUT: &'static str = "
 ripgrep (rg) recursively searches your current directory for a regex pattern.
 
+ripgrep's regex engine uses finite automata and guarantees linear time
+searching. Because of this, features like backreferences and arbitrary
+lookaround are not supported.
+
 Project home page: https://github.com/BurntSushi/ripgrep
 
 Use -h for short descriptions and --help for more details.";

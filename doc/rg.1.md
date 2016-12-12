@@ -21,6 +21,10 @@ rg [*options*] --version
 ripgrep (rg) combines the usability of The Silver Searcher (an ack clone) with
 the raw speed of grep.
 
+ripgrep's regex engine uses finite automata and guarantees linear time
+searching. Because of this, features like backreferences and arbitrary
+lookaround are not supported.
+
 Project home page: https://github.com/BurntSushi/ripgrep
 
 # COMMON OPTIONS
