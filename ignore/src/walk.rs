@@ -767,12 +767,13 @@ impl WalkParallel {
         // Create the workers and then wait for them to finish.
         let num_waiting = Arc::new(AtomicUsize::new(0));
         let num_quitting = Arc::new(AtomicUsize::new(0));
+        let quit_now = Arc::new(AtomicBool::new(false));
         let mut handles = vec![];
         for _ in 0..threads {
             let worker = Worker {
                 f: mkf(),
                 queue: queue.clone(),
-                quit_now: Arc::new(AtomicBool::new(false)),
+                quit_now: quit_now.clone(),
                 is_waiting: false,
                 is_quitting: false,
                 num_waiting: num_waiting.clone(),

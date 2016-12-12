@@ -968,6 +968,15 @@ clean!(regression_256_j1, "test", "foo", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "foo/baz:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/279
+clean!(regression_279, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "test");
+    cmd.arg("-q");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
     wd.create("pat", "Sherlock\nHolmes");
