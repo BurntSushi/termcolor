@@ -142,6 +142,7 @@ impl TextAttributes {
 }
 
 /// Whether to use intense colors or not.
+#[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Intense {
     Yes,
@@ -174,6 +175,7 @@ impl Intense {
 }
 
 /// The set of available colors for use with a Windows console.
+#[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Color {
     Black,
