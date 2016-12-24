@@ -26,10 +26,10 @@ SUBTITLES_DIR = 'subtitles'
 SUBTITLES_EN_NAME = 'OpenSubtitles2016.raw.en'
 SUBTITLES_EN_NAME_SAMPLE = 'OpenSubtitles2016.raw.sample.en'
 SUBTITLES_EN_NAME_GZ = '%s.gz' % SUBTITLES_EN_NAME
-SUBTITLES_EN_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz'
+SUBTITLES_EN_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.en.gz'  # noqa
 SUBTITLES_RU_NAME = 'OpenSubtitles2016.raw.ru'
 SUBTITLES_RU_NAME_GZ = '%s.gz' % SUBTITLES_RU_NAME
-SUBTITLES_RU_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.ru.gz'
+SUBTITLES_RU_URL = 'http://opus.lingfil.uu.se/OpenSubtitles2016/mono/OpenSubtitles2016.raw.ru.gz'  # noqa
 
 LINUX_DIR = 'linux'
 LINUX_CLONE = 'git://github.com/BurntSushi/linux'
@@ -755,7 +755,8 @@ class Benchmark(object):
 
     def __init__(self, name=None, pattern=None, commands=None,
                  warmup_count=1, count=3, line_count=True,
-                 allow_missing_commands=False):
+                 allow_missing_commands=False,
+                 disabled_cmds=None):
         '''
         Create a single benchmark.
 
@@ -786,6 +787,11 @@ class Benchmark(object):
         :param bool line_count:
             When set, the lines of each search are counted and included
             in the samples produced.
+        :param bool allow_missing_commands:
+            When set, if a command is missing, then the benchmark
+            will simply skip it.
+        :param list(str) disabled_cmds:
+            A list of commands to skip.
         '''
         self.name = name
         self.pattern = pattern
@@ -794,6 +800,7 @@ class Benchmark(object):
         self.count = count
         self.line_count = line_count
         self.allow_missing_commands = allow_missing_commands
+        self.disabled_cmds = set(disabled_cmds or [])
 
     def raise_if_missing(self):
         '''
@@ -804,8 +811,11 @@ class Benchmark(object):
         least one command in this benchmark could not be found on this
         system.
         '''
-        missing_commands = \
-            [c.binary_name for c in self.commands if not c.exists()]
+        missing_commands = []
+        for c in self.commands:
+            if c.binary_name in self.disabled_cmds or c.exists():
+                continue
+            missing_commands.append(c.binary_name)
         if not self.allow_missing_commands and len(missing_commands) > 0:
             raise MissingCommands(missing_commands)
 
@@ -821,6 +831,8 @@ class Benchmark(object):
         self.raise_if_missing()
         result = Result(self)
         for cmd in self.commands:
+            if cmd.binary_name in self.disabled_cmds:
+                continue
             if self.allow_missing_commands and not cmd.exists():
                 # Skip this command if we're OK with it.
                 continue
@@ -849,7 +861,7 @@ class Benchmark(object):
         :rtype: int
         '''
         if not cmd.exists():
-            raise MissingCommand(cmd.cmd[0])
+            raise MissingCommands([cmd.cmd[0]])
         cmd.kwargs['stderr'] = subprocess.DEVNULL
         if self.line_count:
             cmd.kwargs['stdout'] = subprocess.PIPE
@@ -936,8 +948,9 @@ class Result(object):
             A dictionary from command name to a set of line
             counts recorded.
         '''
-        return {s['line_count'] for s in self.samples_for(cmd)
-                                if s['line_count'] is not None}
+        return {s['line_count']
+                for s in self.samples_for(cmd)
+                if s['line_count'] is not None}
 
     def distribution_for(self, cmd):
         '''
@@ -1135,6 +1148,7 @@ def download(suite_dir, choices):
 
 def collect_benchmarks(suite_dir, filter_pat=None,
                        allow_missing_commands=False,
+                       disabled_cmds=None,
                        warmup_iter=1, bench_iter=3):
     '''
     Return an iterable of all runnable benchmarks.
@@ -1161,6 +1175,7 @@ def collect_benchmarks(suite_dir, filter_pat=None,
             benchmark.warmup_count = warmup_iter
             benchmark.count = bench_iter
             benchmark.allow_missing_commands = allow_missing_commands
+            benchmark.disabled_cmds = disabled_cmds
             benchmark.raise_if_missing()
         except MissingDependencies as e:
             eprint(
@@ -1196,6 +1211,8 @@ def main():
         '--allow-missing', action='store_true',
         help='Permit benchmarks to run even if some commands are missing.')
     p.add_argument(
+        '--disabled', help='A list of comma separated commands to skip.')
+    p.add_argument(
         '-f', '--force', action='store_true',
         help='Overwrite existing files if there is a conflict.')
     p.add_argument(
@@ -1222,6 +1239,7 @@ def main():
         benchmarks = collect_benchmarks(
             args.dir, filter_pat=args.bench,
             allow_missing_commands=args.allow_missing,
+            disabled_cmds=args.disabled.split(','),
             warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
         for b in benchmarks:
             print(b.name)
@@ -1248,6 +1266,7 @@ def main():
     benchmarks = collect_benchmarks(
         args.dir, filter_pat=args.bench,
         allow_missing_commands=args.allow_missing,
+        disabled_cmds=args.disabled.split(','),
         warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
     for i, b in enumerate(benchmarks):
         result = b.run()
@@ -1265,8 +1284,6 @@ def main():
             if mean is None:
                 # If we couldn't get a distribution for this command then
                 # it was skipped.
-                print('{name:{pad}} SKIPPED'.format(
-                    name=name, pad=max_name_len + 2))
                 continue
             line_counts = result.line_counts_for(cmd)
             show_fast_cmd, show_line_counts = '', ''
