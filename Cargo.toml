@@ -27,7 +27,6 @@ path = "tests/tests.rs"
 [dependencies]
 bytecount = "0.1.4"
 clap = "2.19.0"
-ctrlc = "2.0"
 env_logger = "0.3"
 grep = { version = "0.1.4", path = "grep" }
 ignore = { version = "0.1.5", path = "ignore" }

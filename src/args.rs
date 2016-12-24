@@ -6,6 +6,8 @@ use std::io::{self, BufRead};
 use std::ops;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use clap;
 use env_logger;
@@ -60,6 +62,7 @@ pub struct Args {
     no_messages: bool,
     null: bool,
     quiet: bool,
+    quiet_matched: QuietMatched,
     replace: Option<Vec<u8>>,
     text: bool,
     threads: usize,
@@ -125,6 +128,15 @@ impl Args {
         self.quiet
     }
 
+    /// Returns a thread safe boolean for determining whether to quit a search
+    /// early when quiet mode is enabled.
+    ///
+    /// If quiet mode is disabled, then QuietMatched.has_match always returns
+    /// false.
+    pub fn quiet_matched(&self) -> QuietMatched {
+        self.quiet_matched.clone()
+    }
+
     /// Create a new printer of individual search results that writes to the
     /// writer given.
     pub fn printer<W: termcolor::WriteColor>(&self, wtr: W) -> Printer<W> {
@@ -145,7 +157,12 @@ impl Args {
 
     /// Retrieve the configured file separator.
     pub fn file_separator(&self) -> Option<Vec<u8>> {
-        if self.heading && !self.count && !self.files_with_matches && !self.files_without_matches {
+        let use_heading_sep =
+            self.heading
+            && !self.count
+            && !self.files_with_matches
+            && !self.files_without_matches;
+        if use_heading_sep {
             Some(b"".to_vec())
         } else if self.before_context > 0 || self.after_context > 0 {
             Some(self.context_separator.clone())
@@ -264,8 +281,8 @@ impl Args {
     }
 }
 
-/// `ArgMatches` wraps `clap::ArgMatches` and provides semantic meaning to several
-/// options/flags.
+/// `ArgMatches` wraps `clap::ArgMatches` and provides semantic meaning to
+/// several options/flags.
 struct ArgMatches<'a>(clap::ArgMatches<'a>);
 
 impl<'a> ops::Deref for ArgMatches<'a> {
@@ -281,6 +298,7 @@ impl<'a> ArgMatches<'a> {
         let mmap = try!(self.mmap(&paths));
         let with_filename = self.with_filename(&paths);
         let (before_context, after_context) = try!(self.contexts());
+        let quiet = self.is_present("quiet");
         let args = Args {
             paths: paths,
             after_context: after_context,
@@ -312,7 +330,8 @@ impl<'a> ArgMatches<'a> {
             no_ignore_vcs: self.no_ignore_vcs(),
             no_messages: self.is_present("no-messages"),
             null: self.is_present("null"),
-            quiet: self.is_present("quiet"),
+            quiet: quiet,
+            quiet_matched: QuietMatched::new(quiet),
             replace: self.replace(),
             text: self.text(),
             threads: try!(self.threads()),
@@ -744,5 +763,44 @@ fn pattern_to_str(s: &OsStr) -> Result<&str> {
              Use hex escape sequences to match arbitrary \
              bytes in a pattern (e.g., \\xFF).",
              s.to_string_lossy()))),
+    }
+}
+
+/// A simple thread safe abstraction for determining whether a search should
+/// stop if the user has requested quiet mode.
+#[derive(Clone, Debug)]
+pub struct QuietMatched(Arc<Option<AtomicBool>>);
+
+impl QuietMatched {
+    /// Create a new QuietMatched value.
+    ///
+    /// If quiet is true, then set_match and has_match will reflect whether
+    /// a search should quit or not because it found a match.
+    ///
+    /// If quiet is false, then set_match is always a no-op and has_match
+    /// always returns false.
+    fn new(quiet: bool) -> QuietMatched {
+        let atomic = if quiet { Some(AtomicBool::new(false)) } else { None };
+        QuietMatched(Arc::new(atomic))
+    }
+
+    /// Returns true if and only if quiet mode is enabled and a match has
+    /// occurred.
+    pub fn has_match(&self) -> bool {
+        match *self.0 {
+            None => false,
+            Some(ref matched) => matched.load(Ordering::SeqCst),
+        }
+    }
+
+    /// Sets whether a match has occurred or not.
+    ///
+    /// If quiet mode is disabled, then this is a no-op.
+    pub fn set_match(&self, yes: bool) -> bool {
+        match *self.0 {
+            None => false,
+            Some(_) if !yes => false,
+            Some(ref m) => { m.store(true, Ordering::SeqCst); true }
+        }
     }
 }

@@ -1,7 +1,6 @@
 extern crate bytecount;
 #[macro_use]
 extern crate clap;
-extern crate ctrlc;
 extern crate env_logger;
 extern crate grep;
 extern crate ignore;
@@ -21,15 +20,12 @@ extern crate termcolor;
 extern crate winapi;
 
 use std::error::Error;
-use std::io::Write;
 use std::process;
 use std::result;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::thread;
-
-use termcolor::WriteColor;
 
 use args::Args;
 use worker::Work;
@@ -74,15 +70,6 @@ fn run(args: Arc<Args>) -> Result<u64> {
     if args.never_match() {
         return Ok(0);
     }
-    {
-        let args = args.clone();
-        ctrlc::set_handler(move || {
-            let mut writer = args.stdout();
-            let _ = writer.reset();
-            let _ = writer.flush();
-            process::exit(1);
-        });
-    }
     let threads = args.threads();
     if args.files() {
         if threads == 1 || args.is_one_path() {
@@ -101,7 +88,7 @@ fn run(args: Arc<Args>) -> Result<u64> {
 
 fn run_parallel(args: Arc<Args>) -> Result<u64> {
     let bufwtr = Arc::new(args.buffer_writer());
-    let quiet_matched = QuietMatched::new(args.quiet());
+    let quiet_matched = args.quiet_matched();
     let paths_searched = Arc::new(AtomicUsize::new(0));
     let match_count = Arc::new(AtomicUsize::new(0));
 
@@ -280,43 +267,4 @@ fn eprint_nothing_searched() {
     eprintln!("No files were searched, which means ripgrep probably \
                applied a filter you didn't expect. \
                Try running again with --debug.");
-}
-
-/// A simple thread safe abstraction for determining whether a search should
-/// stop if the user has requested quiet mode.
-#[derive(Clone, Debug)]
-pub struct QuietMatched(Arc<Option<AtomicBool>>);
-
-impl QuietMatched {
-    /// Create a new QuietMatched value.
-    ///
-    /// If quiet is true, then set_match and has_match will reflect whether
-    /// a search should quit or not because it found a match.
-    ///
-    /// If quiet is false, then set_match is always a no-op and has_match
-    /// always returns false.
-    pub fn new(quiet: bool) -> QuietMatched {
-        let atomic = if quiet { Some(AtomicBool::new(false)) } else { None };
-        QuietMatched(Arc::new(atomic))
-    }
-
-    /// Returns true if and only if quiet mode is enabled and a match has
-    /// occurred.
-    pub fn has_match(&self) -> bool {
-        match *self.0 {
-            None => false,
-            Some(ref matched) => matched.load(Ordering::SeqCst),
-        }
-    }
-
-    /// Sets whether a match has occurred or not.
-    ///
-    /// If quiet mode is disabled, then this is a no-op.
-    pub fn set_match(&self, yes: bool) -> bool {
-        match *self.0 {
-            None => false,
-            Some(_) if !yes => false,
-            Some(ref m) => { m.store(true, Ordering::SeqCst); true }
-        }
-    }
 }
