@@ -24,7 +24,7 @@ use printer::{ColorSpecs, Printer};
 use unescape::unescape;
 use worker::{Worker, WorkerBuilder};
 
-use {Result, version};
+use Result;
 
 /// `Args` are transformed/normalized from `ArgMatches`.
 #[derive(Debug)]

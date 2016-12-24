@@ -67,6 +67,7 @@ try!(bufwtr.print(&buffer));
 # Ok(()) }
 ```
 */
+
 #![deny(missing_docs)]
 
 #[cfg(windows)]

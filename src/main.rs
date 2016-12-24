@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_imports)]
-
 extern crate bytecount;
 #[macro_use]
 extern crate clap;
@@ -23,11 +21,10 @@ extern crate termcolor;
 extern crate winapi;
 
 use std::error::Error;
-use std::io;
 use std::io::Write;
 use std::process;
 use std::result;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::thread;
@@ -276,20 +273,6 @@ fn get_or_log_dir_entry(
                 None
             }
         }
-    }
-}
-
-fn version() -> String {
-    let (maj, min, pat) = (
-        option_env!("CARGO_PKG_VERSION_MAJOR"),
-        option_env!("CARGO_PKG_VERSION_MINOR"),
-        option_env!("CARGO_PKG_VERSION_PATCH"),
-    );
-    match (maj, min, pat) {
-        (Some(maj), Some(min), Some(pat)) => {
-            format!("ripgrep {}.{}.{}", maj, min, pat)
-        }
-        _ => "".to_owned(),
     }
 }
 

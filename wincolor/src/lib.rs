@@ -17,6 +17,9 @@ con.reset().unwrap();
 println!("This text will be normal.");
 ```
 */
+
+#![deny(missing_docs)]
+
 #[cfg(windows)]
 extern crate kernel32;
 #[cfg(windows)]

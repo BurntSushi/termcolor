@@ -44,6 +44,8 @@ for result in WalkBuilder::new("./").hidden(false).build() {
 See the documentation for `WalkBuilder` for many other options.
 */
 
+#![deny(missing_docs)]
+
 extern crate crossbeam;
 extern crate globset;
 #[macro_use]
@@ -78,15 +80,35 @@ pub enum Error {
     /// file partially succeeded.
     Partial(Vec<Error>),
     /// An error associated with a specific line number.
-    WithLineNumber { line: u64, err: Box<Error> },
+    WithLineNumber {
+        /// The line number.
+        line: u64,
+        /// The underlying error.
+        err: Box<Error>,
+    },
     /// An error associated with a particular file path.
-    WithPath { path: PathBuf, err: Box<Error> },
+    WithPath {
+        /// The file path.
+        path: PathBuf,
+        /// The underlying error.
+        err: Box<Error>,
+    },
     /// An error associated with a particular directory depth when recursively
     /// walking a directory.
-    WithDepth { depth: usize, err: Box<Error> },
+    WithDepth {
+        /// The directory depth.
+        depth: usize,
+        /// The underlying error.
+        err: Box<Error>,
+    },
     /// An error that occurs when a file loop is detected when traversing
     /// symbolic links.
-    Loop { ancestor: PathBuf, child: PathBuf },
+    Loop {
+        /// The ancestor file path in the loop.
+        ancestor: PathBuf,
+        /// The child file path in the loop.
+        child: PathBuf,
+    },
     /// An error that occurs when doing I/O, such as reading an ignore file.
     Io(io::Error),
     /// An error that occurs when trying to parse a glob.
