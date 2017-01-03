@@ -19,7 +19,7 @@ name = "globset"
 bench = false
 
 [dependencies]
-aho-corasick = "0.5.3"
+aho-corasick = "0.6.0"
 fnv = "1.0"
 lazy_static = "0.2"
 log = "0.3"
