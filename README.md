@@ -302,6 +302,16 @@ extensions.
 The syntax supported is
 [documented as part of Rust's regex library](https://doc.rust-lang.org/regex/regex/index.html#syntax).
 
+### Shell completions
+
+Shell completion files are included in the release tarball for Bash, Fish, Zsh
+and PowerShell.
+
+For **bash**, move `rg.bash-completion` to `$XDG_CONFIG_HOME/bash_completion`
+or `/etc/bash_completion.d/`.
+
+For **fish**, move `rg.fish` to `$HOME/.config/fish/completions`.
+
 ### Building
 
 `ripgrep` is written in Rust, so you'll need to grab a

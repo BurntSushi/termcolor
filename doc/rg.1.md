@@ -273,3 +273,13 @@ Project home page: https://github.com/BurntSushi/ripgrep
 : Clear the file type globs previously defined for TYPE. This only clears
   the default type definitions that are found inside of ripgrep. Note
   that this must be passed to every invocation of rg.
+
+# SHELL COMPLETION
+
+Shell completion files are included in the release tarball for Bash, Fish, Zsh
+and PowerShell.
+
+For **bash**, move `rg.bash-completion` to `$XDG_CONFIG_HOME/bash_completion`
+or `/etc/bash_completion.d/`.
+
+For **fish**, move `rg.fish` to `$HOME/.config/fish/completions`.
