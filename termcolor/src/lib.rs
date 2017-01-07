@@ -760,12 +760,12 @@ impl<W: io::Write> WriteColor for Ansi<W> {
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         try!(self.reset());
         if let Some(ref c) = spec.fg_color {
-            try!(self.write_color(true, c, spec.bold));
+            try!(self.write_color(true, c, spec.intense));
         }
         if let Some(ref c) = spec.bg_color {
-            try!(self.write_color(false, c, spec.bold));
+            try!(self.write_color(false, c, spec.intense));
         }
-        if spec.bold && spec.fg_color.is_none() && spec.bg_color.is_none() {
+        if spec.bold {
             try!(self.write_str("\x1B[1m"));
         }
         Ok(())
@@ -785,11 +785,8 @@ impl<W: io::Write> Ansi<W> {
         &mut self,
         fg: bool,
         c: &Color,
-        bold: bool,
+        intense: bool,
     ) -> io::Result<()> {
-        // *sigh*... The termion crate doesn't compile on Windows, and we
-        // need to be able to write ANSI escape sequences on Windows, so I
-        // guess we have to roll this ourselves.
         macro_rules! w {
             ($selfie:expr, $fg:expr, $clr:expr) => {
                 if $fg {
@@ -799,7 +796,7 @@ impl<W: io::Write> Ansi<W> {
                 }
             }
         }
-        if bold {
+        if intense {
             match *c {
                 Color::Black => w!(self, fg, "8"),
                 Color::Blue => w!(self, fg, "12"),
@@ -935,12 +932,13 @@ pub struct ColorSpec {
     fg_color: Option<Color>,
     bg_color: Option<Color>,
     bold: bool,
+    intense: bool,
 }
 
 impl ColorSpec {
     /// Create a new color specification that has no colors or styles.
     pub fn new() -> ColorSpec {
-        ColorSpec { fg_color: None, bg_color: None, bold: false }
+        ColorSpec::default()
     }
 
     /// Get the foreground color.
@@ -962,11 +960,24 @@ impl ColorSpec {
     }
 
     /// Get whether this is bold or not.
+    ///
+    /// Note that the bold setting has no effect in a Windows console.
     pub fn bold(&self) -> bool { self.bold }
 
     /// Set whether the text is bolded or not.
+    ///
+    /// Note that the bold setting has no effect in a Windows console.
     pub fn set_bold(&mut self, yes: bool) -> &mut ColorSpec {
         self.bold = yes;
+        self
+    }
+
+    /// Get whether this is intense or not.
+    pub fn intense(&self) -> bool { self.intense }
+
+    /// Set whether the text is intense or not.
+    pub fn set_intense(&mut self, yes: bool) -> &mut ColorSpec {
+        self.intense = yes;
         self
     }
 
@@ -990,7 +1001,7 @@ impl ColorSpec {
     ) -> io::Result<()> {
         use wincolor::Intense;
 
-        let intense = if self.bold { Intense::Yes } else { Intense::No };
+        let intense = if self.intense { Intense::Yes } else { Intense::No };
         if let Some(color) = self.fg_color.as_ref().map(|c| c.to_windows()) {
             try!(console.fg(intense, color));
         }

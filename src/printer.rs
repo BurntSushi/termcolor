@@ -523,6 +523,8 @@ enum SpecType {
 enum Style {
     Bold,
     NoBold,
+    Intense,
+    NoIntense,
 }
 
 impl ColorSpecs {
@@ -574,6 +576,8 @@ impl SpecValue {
                 match *style {
                     Style::Bold => { cspec.set_bold(true); }
                     Style::NoBold => { cspec.set_bold(false); }
+                    Style::Intense => { cspec.set_intense(true); }
+                    Style::NoIntense => { cspec.set_intense(false); }
                 }
             }
         }
@@ -650,6 +654,8 @@ impl FromStr for Style {
         match &*s.to_lowercase() {
             "bold" => Ok(Style::Bold),
             "nobold" => Ok(Style::NoBold),
+            "intense" => Ok(Style::Intense),
+            "nointense" => Ok(Style::NoIntense),
             _ => Err(Error::UnrecognizedStyle(s.to_string())),
         }
     }
@@ -694,6 +700,12 @@ mod tests {
         assert_eq!(spec, Spec {
             ty: OutType::Match,
             value: SpecValue::Style(Style::Bold),
+        });
+
+        let spec: Spec = "match:style:intense".parse().unwrap();
+        assert_eq!(spec, Spec {
+            ty: OutType::Match,
+            value: SpecValue::Style(Style::Intense),
         });
 
         let spec: Spec = "line:none".parse().unwrap();

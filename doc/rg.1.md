@@ -111,7 +111,7 @@ Project home page: https://github.com/BurntSushi/ripgrep
 : This flag specifies color settings for use in the output. This flag may be
   provided multiple times. Settings are applied iteratively. Colors are limited
   to one of eight choices: red, blue, green, cyan, magenta, yellow, white and
-  black. Styles are limited to either nobold or bold.
+  black. Styles are limited to nobold, bold, nointense or intense.
 
     The format of the flag is {type}:{attribute}:{value}. {type} should be one
     of path, line or match. {attribute} can be fg, bg or style. Value is either

@@ -640,11 +640,10 @@ impl<'a> ArgMatches<'a> {
     fn color_specs(&self) -> Result<ColorSpecs> {
         // Start with a default set of color specs.
         let mut specs = vec![
-            "path:fg:green".parse().unwrap(),
-            "path:style:bold".parse().unwrap(),
-            "line:fg:blue".parse().unwrap(),
-            "line:style:bold".parse().unwrap(),
+            "path:fg:magenta".parse().unwrap(),
+            "line:fg:green".parse().unwrap(),
             "match:fg:red".parse().unwrap(),
+            "match:style:intense".parse().unwrap(),
             "match:style:bold".parse().unwrap(),
         ];
         for spec_str in self.values_of_lossy_vec("colors") {

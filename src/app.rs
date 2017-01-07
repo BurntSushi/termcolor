@@ -237,14 +237,14 @@ lazy_static! {
               This flag may be provided multiple times. Settings are applied \
               iteratively. Colors are limited to one of eight choices: \
               red, blue, green, cyan, magenta, yellow, white and black. \
-              Styles are limited to either nobold or bold.\n\nThe format \
-              of the flag is {type}:{attribute}:{value}. {type} should be \
-              one of path, line or match. {attribute} can be fg, bg or style. \
-              {value} is either a color (for fg and bg) or a text style. \
-              A special format, {type}:none, will clear all color settings \
-              for {type}.\n\nFor example, the following command will change \
-              the match color to magenta and the background color for line \
-              numbers to yellow:\n\n\
+              Styles are limited to nobold, bold, nointense or intense.\n\n
+              The format of the flag is {type}:{attribute}:{value}. {type} \
+              should be one of path, line or match. {attribute} can be fg, bg \
+              or style. {value} is either a color (for fg and bg) or a text \
+              style. A special format, {type}:none, will clear all color \
+              settings for {type}.\n\nFor example, the following command will \
+              change the match color to magenta and the background color for \
+              line numbers to yellow:\n\n\
               rg --colors 'match:fg:magenta' --colors 'line:bg:yellow' foo.");
         doc!(h, "fixed-strings",
              "Treat the pattern as a literal string.",
