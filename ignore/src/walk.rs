@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
+use std::time::Duration;
 use std::vec;
 
 use crossbeam::sync::MsQueue;
@@ -907,10 +908,9 @@ impl Worker {
     /// skipped by the ignore matcher.
     fn run(mut self) {
         while let Some(mut work) = self.get_work() {
-            let depth = work.dent.depth();
-            // If this is an explicitly given path and is not a directory,
-            // then execute the caller's callback and move on.
-            if depth == 0 && !work.is_dir() {
+            // If the work is not a directory, then we can just execute the
+            // caller's callback immediately and move on.
+            if !work.is_dir() {
                 if (self.f)(Ok(work.dent)).is_quit() {
                     self.quit_now();
                     return;
@@ -935,6 +935,7 @@ impl Worker {
                     continue;
                 }
             };
+            let depth = work.dent.depth();
             match (self.f)(Ok(work.dent)) {
                 WalkState::Continue => {}
                 WalkState::Skip => continue,
@@ -958,9 +959,8 @@ impl Worker {
     /// Runs the worker on a single entry from a directory iterator.
     ///
     /// If the entry is a path that should be ignored, then this is a no-op.
-    /// Otherwise, if the entry is a directory, then it is pushed on to the
-    /// queue. If the entry isn't a directory, the caller's callback is
-    /// applied.
+    /// Otherwise, the entry is pushed on to the queue. (The actual execution
+    /// of the callback happens in `run`.)
     ///
     /// If an error occurs while reading the entry, then it is sent to the
     /// caller's callback.
@@ -1002,17 +1002,13 @@ impl Worker {
             }
         }
         let is_dir = dent.file_type().map_or(false, |ft| ft.is_dir());
-        if skip_path(ig, dent.path(), is_dir) {
-            WalkState::Continue
-        } else if !is_dir {
-            (self.f)(Ok(dent))
-        } else {
+        if !skip_path(ig, dent.path(), is_dir) {
             self.queue.push(Message::Work(Work {
                 dent: dent,
                 ignore: ig.clone(),
             }));
-            WalkState::Continue
         }
+        WalkState::Continue
     }
 
     /// Returns the next directory to descend into.
@@ -1060,8 +1056,6 @@ impl Worker {
                         }
                         // Otherwise, spin.
                     }
-                    // If we're here, then we've aborted our quit attempt.
-                    continue;
                 }
                 None => {
                     self.waiting(true);
@@ -1070,8 +1064,16 @@ impl Worker {
                         for _ in 0..self.threads {
                             self.queue.push(Message::Quit);
                         }
+                    } else {
+                        // You're right to consider this suspicious, but it's
+                        // a useful heuristic to permit producers to catch up
+                        // to consumers without burning the CPU. It is also
+                        // useful as a means to prevent burning the CPU if only
+                        // one worker is left doing actual work. It's not
+                        // perfect and it doesn't leave the CPU completely
+                        // idle, but it's not clear what else we can do. :-/
+                        thread::sleep(Duration::from_millis(1));
                     }
-                    continue;
                 }
             }
         }
