@@ -64,6 +64,7 @@ pub struct Args {
     quiet: bool,
     quiet_matched: QuietMatched,
     replace: Option<Vec<u8>>,
+    sort_files: bool,
     text: bool,
     threads: usize,
     type_list: bool,
@@ -277,6 +278,9 @@ impl Args {
         wd.ignore(!self.no_ignore);
         wd.parents(!self.no_ignore_parent);
         wd.threads(self.threads());
+        if self.sort_files {
+            wd.sort_by(|a, b| a.cmp(b));
+        }
         wd
     }
 }
@@ -333,6 +337,7 @@ impl<'a> ArgMatches<'a> {
             quiet: quiet,
             quiet_matched: QuietMatched::new(quiet),
             replace: self.replace(),
+            sort_files: self.is_present("sort-files"),
             text: self.text(),
             threads: try!(self.threads()),
             type_list: self.is_present("type-list"),
@@ -654,6 +659,9 @@ impl<'a> ArgMatches<'a> {
 
     /// Returns the approximate number of threads that ripgrep should use.
     fn threads(&self) -> Result<usize> {
+        if self.is_present("sort-files") {
+            return Ok(1);
+        }
         let threads = try!(self.usize_of("threads")).unwrap_or(0);
         Ok(if threads == 0 {
             cmp::min(12, num_cpus::get())

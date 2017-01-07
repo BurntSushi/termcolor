@@ -1203,6 +1203,18 @@ clean!(feature_159_zero_max, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.assert_err(&mut cmd);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/263
+clean!(feature_263_sort_files, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "test");
+    wd.create("abc", "test");
+    wd.create("zoo", "test");
+    wd.create("bar", "test");
+    cmd.arg("--sort-files");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "abc:test\nbar:test\nfoo:test\nzoo:test\n");
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

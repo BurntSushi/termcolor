@@ -158,6 +158,7 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
         .arg(flag("replace").short("r").value_name("ARG").takes_value(true))
         .arg(flag("case-sensitive").short("s"))
         .arg(flag("smart-case").short("S"))
+        .arg(flag("sort-files"))
         .arg(flag("threads")
              .short("j").value_name("ARG").takes_value(true)
              .validator(validate_number))
@@ -426,6 +427,10 @@ lazy_static! {
              "Searches case insensitively if the pattern is all lowercase. \
               Search case sensitively otherwise. This is overridden by \
               either -s/--case-sensitive or -i/--ignore-case.");
+        doc!(h, "sort-files",
+             "Sort results by file path. Implies --threads=1.",
+             "Sort results by file path. Note that this currently \
+              disables all parallelism and runs search in a single thread.");
         doc!(h, "threads",
              "The approximate number of threads to use.",
              "The approximate number of threads to use. A value of 0 (which \

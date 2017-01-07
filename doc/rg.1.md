@@ -239,6 +239,10 @@ Project home page: https://github.com/BurntSushi/ripgrep
   Search case sensitively otherwise. This is overridden by either
   --case-sensitive or --ignore-case.
 
+--sort-files
+: Sort results by file path. Note that this currently
+  disables all parallelism and runs search in a single thread.
+
 -j, --threads *ARG*
 : The number of threads to use. 0 means use the number of logical CPUs
   (capped at 6). [default: 0]

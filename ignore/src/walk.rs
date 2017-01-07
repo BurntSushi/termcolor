@@ -1,4 +1,5 @@
-use std::ffi::OsStr;
+use std::cmp;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, FileType, Metadata};
 use std::io;
@@ -324,14 +325,28 @@ impl DirEntryRaw {
 /// path is skipped.
 /// * Sixth, if the path has made it this far then it is yielded in the
 /// iterator.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct WalkBuilder {
     paths: Vec<PathBuf>,
     ig_builder: IgnoreBuilder,
     parents: bool,
     max_depth: Option<usize>,
     follow_links: bool,
+    sorter: Option<Arc<Fn(&OsString, &OsString) -> cmp::Ordering + 'static>>,
     threads: usize,
+}
+
+impl fmt::Debug for WalkBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("WalkBuilder")
+            .field("paths", &self.paths)
+            .field("ig_builder", &self.ig_builder)
+            .field("parents", &self.parents)
+            .field("max_depth", &self.max_depth)
+            .field("follow_links", &self.follow_links)
+            .field("threads", &self.threads)
+            .finish()
+    }
 }
 
 impl WalkBuilder {
@@ -348,6 +363,7 @@ impl WalkBuilder {
             parents: true,
             max_depth: None,
             follow_links: false,
+            sorter: None,
             threads: 0,
         }
     }
@@ -356,6 +372,7 @@ impl WalkBuilder {
     pub fn build(&self) -> Walk {
         let follow_links = self.follow_links;
         let max_depth = self.max_depth;
+        let cmp = self.sorter.clone();
         let its = self.paths.iter().map(move |p| {
             if p == Path::new("-") {
                 (p.to_path_buf(), None)
@@ -364,6 +381,10 @@ impl WalkBuilder {
                 wd = wd.follow_links(follow_links || p.is_file());
                 if let Some(max_depth) = max_depth {
                     wd = wd.max_depth(max_depth);
+                }
+                if let Some(ref cmp) = cmp {
+                    let cmp = cmp.clone();
+                    wd = wd.sort_by(move |a, b| cmp(a, b));
                 }
                 (p.to_path_buf(), Some(WalkEventIter::from(wd)))
             }
@@ -531,6 +552,20 @@ impl WalkBuilder {
     /// This is enabled by default.
     pub fn git_exclude(&mut self, yes: bool) -> &mut WalkBuilder {
         self.ig_builder.git_exclude(yes);
+        self
+    }
+
+    /// Set a function for sorting directory entries.
+    ///
+    /// If a compare function is set, the resulting iterator will return all
+    /// paths in sorted order. The compare function will be called to compare
+    /// names from entries from the same directory using only the name of the
+    /// entry.
+    ///
+    /// Note that this is not used in the parallel iterator.
+    pub fn sort_by<F>(&mut self, cmp: F) -> &mut WalkBuilder
+            where F: Fn(&OsString, &OsString) -> cmp::Ordering + 'static {
+        self.sorter = Some(Arc::new(cmp));
         self
     }
 }
