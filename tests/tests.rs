@@ -316,7 +316,7 @@ sherlock!(file_type_add_compose, "Sherlock", ".", |wd: WorkDir, mut cmd: Command
     cmd.arg("--type-add").arg("combo:include:wat,py").arg("-t").arg("combo");
     let lines: String = wd.stdout(&mut cmd);
     println!("{}", lines);
-    assert_eq!(lines, "file.py:Sherlock\nfile.wat:Sherlock\n");
+    assert_eq!(sort_lines(&lines), "file.py:Sherlock\nfile.wat:Sherlock\n");
 });
 
 sherlock!(glob, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
