@@ -339,7 +339,7 @@ For **fish**, move `rg.fish` to `$HOME/.config/fish/completions`.
 
 `ripgrep` is written in Rust, so you'll need to grab a
 [Rust installation](https://www.rust-lang.org/) in order to compile it.
-`ripgrep` compiles with Rust 1.9 (stable) or newer. Building is easy:
+`ripgrep` compiles with Rust 1.12 (stable) or newer. Building is easy:
 
 ```
 $ git clone https://github.com/BurntSushi/ripgrep
