@@ -7,10 +7,6 @@ works by recursively searching your current directory for a regex pattern.
 downloads available for
 [every release](https://github.com/BurntSushi/ripgrep/releases).
 
-ripgrep's regex engine uses finite automata and guarantees linear time
-searching. Because of this, features like backreferences and arbitrary
-lookaround are not supported.
-
 [![Linux build status](https://travis-ci.org/BurntSushi/ripgrep.svg?branch=master)](https://travis-ci.org/BurntSushi/ripgrep)
 [![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)
 [![](https://img.shields.io/crates/v/ripgrep.svg)](https://crates.io/crates/ripgrep)
@@ -88,8 +84,36 @@ increases the times to `3.081s` for ripgrep and `11.403s` for GNU grep.
   color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
   supporting Unicode (which is always on).
 
-In other words, use `ripgrep` if you like speed, sane defaults, fewer bugs and
-Unicode.
+In other words, use `ripgrep` if you like speed, filtering by default, fewer
+bugs and Unicode support.
+
+### Why shouldn't I use `ripgrep`?
+
+I'd like to try to convince you why you *shouldn't* use `ripgrep`. This should
+give you a glimpse at some important downsides or missing features of
+`ripgrep`.
+
+* `ripgrep` uses a regex engine based on finite automata, so if you want fancy
+  regex features such as backreferences or look around, `ripgrep` won't give
+  them to you. `ripgrep` does support lots of things though, including, but not
+  limited to: lazy quantification (e.g., `a+?`), repetitions (e.g., `a{2,5}`),
+  begin/end assertions (e.g., `^\w+$`), word boundaries (e.g., `\bfoo\b`), and
+  support for Unicode categories (e.g., `\p{Sc}` to match currency symbols or
+  `\p{Lu}` to match any uppercase letter). (Fancier regexes will never be
+  supported.)
+* If you need to search files with text encodings other than UTF-8 (like
+  UTF-16), then `ripgrep` won't work. `ripgrep` will still work on ASCII
+  compatible encodings like latin1 or otherwise partially valid UTF-8.
+  `ripgrep` may grow support for additional text encodings over time.
+  `ripgrep` *can* search for arbitrary bytes though, which might work in
+  a pinch. (Likely to be supported in the future.)
+* `ripgrep` doesn't yet support searching compressed files. (Likely to be
+  supported in the future.)
+* `ripgrep` doesn't have multiline search. (Unlikely to ever be supported.)
+
+In other words, if you like fancy regexes, non-UTF-8 character encodings,
+searching compressed files or multiline search, then `ripgrep` may not quite
+meet your needs (yet).
 
 ### Is it really faster than everything else?
 
