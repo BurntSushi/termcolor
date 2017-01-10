@@ -44,6 +44,8 @@ pub struct Printer<W> {
     with_filename: bool,
     /// The color specifications.
     colors: ColorSpecs,
+    /// The separator to use for file paths. If empty, this is ignored.
+    path_separator: Option<u8>,
 }
 
 impl<W: WriteColor> Printer<W> {
@@ -62,6 +64,7 @@ impl<W: WriteColor> Printer<W> {
             replace: None,
             with_filename: false,
             colors: ColorSpecs::default(),
+            path_separator: None,
         }
     }
 
@@ -115,6 +118,13 @@ impl<W: WriteColor> Printer<W> {
     /// visual separators (like `:`, `-` and `\n`).
     pub fn null(mut self, yes: bool) -> Printer<W> {
         self.null = yes;
+        self
+    }
+
+    /// A separator to use when printing file paths. When empty, use the
+    /// default separator for the current platform. (/ on Unix, \ on Windows.)
+    pub fn path_separator(mut self, sep: Option<u8>) -> Printer<W> {
+        self.path_separator = sep;
         self
     }
 
@@ -342,12 +352,29 @@ impl<W: WriteColor> Printer<W> {
         use std::os::unix::ffi::OsStrExt;
 
         let path = path.as_ref().as_os_str().as_bytes();
-        self.write(path);
+        match self.path_separator {
+            None => self.write(path),
+            Some(sep) => self.write_path_with_sep(path, sep),
+        }
     }
 
     #[cfg(not(unix))]
     fn write_path<P: AsRef<Path>>(&mut self, path: P) {
-        self.write(path.as_ref().to_string_lossy().as_bytes());
+        let path = path.as_ref().to_string_lossy();
+        match self.path_separator {
+            None => self.write(path.as_bytes()),
+            Some(sep) => self.write_path_with_sep(path.as_bytes(), sep),
+        }
+    }
+
+    fn write_path_with_sep(&mut self, path: &[u8], sep: u8) {
+        let mut path = path.to_vec();
+        for b in &mut path {
+            if *b == b'/' || (cfg!(windows) && *b == b'\\') {
+                *b = sep;
+            }
+        }
+        self.write(&path);
     }
 
     fn write(&mut self, buf: &[u8]) {

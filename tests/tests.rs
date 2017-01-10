@@ -1226,6 +1226,16 @@ clean!(feature_263_sort_files, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "abc:test\nbar:test\nfoo:test\nzoo:test\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/275
+clean!(feature_275_pathsep, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("foo");
+    wd.create("foo/bar", "test");
+    cmd.arg("--path-separator").arg("Z");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "fooZbar:test\n");
+});
+
 #[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");

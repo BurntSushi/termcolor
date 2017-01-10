@@ -62,6 +62,7 @@ pub struct Args {
     no_ignore_vcs: bool,
     no_messages: bool,
     null: bool,
+    path_separator: Option<u8>,
     quiet: bool,
     quiet_matched: QuietMatched,
     replace: Option<Vec<u8>>,
@@ -151,6 +152,7 @@ impl Args {
             .heading(self.heading)
             .line_per_match(self.line_per_match)
             .null(self.null)
+            .path_separator(self.path_separator)
             .with_filename(self.with_filename);
         if let Some(ref rep) = self.replace {
             p = p.replace(rep.clone());
@@ -347,6 +349,7 @@ impl<'a> ArgMatches<'a> {
             no_ignore_vcs: self.no_ignore_vcs(),
             no_messages: self.is_present("no-messages"),
             null: self.is_present("null"),
+            path_separator: try!(self.path_separator()),
             quiet: quiet,
             quiet_matched: QuietMatched::new(quiet),
             replace: self.replace(),
@@ -613,6 +616,25 @@ impl<'a> ArgMatches<'a> {
         match self.value_of_lossy("context-separator") {
             None => b"--".to_vec(),
             Some(sep) => unescape(&sep),
+        }
+    }
+
+    /// Returns the unescaped path separator in UTF-8 bytes.
+    fn path_separator(&self) -> Result<Option<u8>> {
+        match self.value_of_lossy("path-separator") {
+            None => Ok(None),
+            Some(sep) => {
+                let sep = unescape(&sep);
+                if sep.is_empty() {
+                    Ok(None)
+                } else if sep.len() > 1 {
+                    Err(From::from(format!(
+                        "A path separator must be exactly one byte, but \
+                         the given separator is {} bytes.", sep.len())))
+                } else {
+                    Ok(Some(sep[0]))
+                }
+            }
         }
     }
 

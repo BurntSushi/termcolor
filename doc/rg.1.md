@@ -128,7 +128,7 @@ Project home page: https://github.com/BurntSushi/ripgrep
   numbers for the first match on each line. Note that this doesn't try
   to account for Unicode. One byte is equal to one column.
 
---context-separator *ARG*
+--context-separator *SEPARATOR*
 : The string to use when separating non-continuous context lines. Escape
   sequences may be used. [default: --]
 
@@ -220,6 +220,12 @@ Project home page: https://github.com/BurntSushi/ripgrep
   This includes printing filenames before matches, and when printing
   a list of matching files such as with --count, --files-with-matches
   and --files.
+
+--path-separator *SEPARATOR*
+: The path separator to use when printing file paths. This defaults to your
+  platform's path separator, which is / on Unix and \\ on Windows. This flag is
+  intended for overriding the default when the environment demands it (e.g.,
+  cygwin). A path separator is limited to a single byte.
 
 -p, --pretty
 : Alias for --color=always --heading -n.

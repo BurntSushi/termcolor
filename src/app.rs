@@ -125,7 +125,8 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
              .value_name("NUM").takes_value(true)
              .validator(validate_number))
         .arg(flag("column"))
-        .arg(flag("context-separator").value_name("ARG").takes_value(true))
+        .arg(flag("context-separator")
+             .value_name("SEPARATOR").takes_value(true))
         .arg(flag("debug"))
         .arg(flag("file").short("f")
              .value_name("FILE").takes_value(true)
@@ -154,6 +155,7 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
         .arg(flag("no-ignore-parent"))
         .arg(flag("no-ignore-vcs"))
         .arg(flag("null"))
+        .arg(flag("path-separator").value_name("SEPARATOR").takes_value(true))
         .arg(flag("pretty").short("p"))
         .arg(flag("replace").short("r").value_name("ARG").takes_value(true))
         .arg(flag("case-sensitive").short("s"))
@@ -410,6 +412,13 @@ lazy_static! {
               printing a list of matching files such as with --count, \
               --files-with-matches and --files. This option is useful for use \
               with xargs.");
+        doc!(h, "path-separator",
+             "Path separator to use when printing file paths.",
+             "The path separator to use when printing file paths. This \
+              defaults to your platform's path separator, which is / on Unix \
+              and \\ on Windows. This flag is intended for overriding the \
+              default when the environment demands it (e.g., cygwin). A path \
+              separator is limited to a single byte.");
         doc!(h, "pretty",
              "Alias for --color always --heading -n.");
         doc!(h, "replace",
