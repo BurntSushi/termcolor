@@ -340,6 +340,17 @@ Neither this flag nor any other flag will modify your files.
 .PP
 Capture group indices (e.g., $5) and names (e.g., $foo) are supported in
 the replacement string.
+.PP
+Note that the replacement by default replaces each match, and NOT the
+entire line.
+To replace the entire line, you should match the entire line.
+For example, to emit only the first phone numbers in each line:
+.IP
+.nf
+\f[C]
+rg\ \[aq]^.*([0\-9]{3}\-[0\-9]{3}\-[0\-9]{4}).*$\[aq]\ \-\-replace\ \[aq]$1\[aq]
+\f[]
+.fi
 .RE
 .TP
 .B \-s, \-\-case\-sensitive

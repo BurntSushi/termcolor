@@ -417,7 +417,10 @@ lazy_static! {
              "Replace every match with the string given when printing \
               results. Neither this flag nor any other flag will modify your \
               files.\n\nCapture group indices (e.g., $5) and names \
-              (e.g., $foo) are supported in the replacement string.");
+              (e.g., $foo) are supported in the replacement string.\n\n\
+              Note that the replacement by default replaces each match, and \
+              NOT the entire line. To replace the entire line, you should \
+              match the entire line.");
         doc!(h, "case-sensitive",
              "Search case sensitively.",
              "Search case sensitively. This overrides -i/--ignore-case and \

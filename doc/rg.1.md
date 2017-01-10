@@ -231,6 +231,12 @@ Project home page: https://github.com/BurntSushi/ripgrep
     Capture group indices (e.g., $5) and names (e.g., $foo) are supported
     in the replacement string.
 
+    Note that the replacement by default replaces each match, and NOT the
+    entire line. To replace the entire line, you should match the entire line.
+    For example, to emit only the first phone numbers in each line:
+
+        rg '^.*([0-9]{3}-[0-9]{3}-[0-9]{4}).*$' --replace '$1'
+
 -s, --case-sensitive
 : Search case sensitively. This overrides --ignore-case and --smart-case.
 
