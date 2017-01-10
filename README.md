@@ -104,7 +104,6 @@ give you a glimpse at some important downsides or missing features of
 * If you need to search files with text encodings other than UTF-8 (like
   UTF-16), then `ripgrep` won't work. `ripgrep` will still work on ASCII
   compatible encodings like latin1 or otherwise partially valid UTF-8.
-  `ripgrep` may grow support for additional text encodings over time.
   `ripgrep` *can* search for arbitrary bytes though, which might work in
   a pinch. (Likely to be supported in the future.)
 * `ripgrep` doesn't yet support searching compressed files. (Likely to be
