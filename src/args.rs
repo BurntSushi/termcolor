@@ -583,6 +583,7 @@ impl<'a> ArgMatches<'a> {
             false
         } else {
             self.is_present("line-number")
+            || self.is_present("column")
             || atty::on_stdout()
             || self.is_present("pretty")
             || self.is_present("vimgrep")

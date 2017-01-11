@@ -126,7 +126,8 @@ Project home page: https://github.com/BurntSushi/ripgrep
 --column
 : Show column numbers (1 based) in output. This only shows the column
   numbers for the first match on each line. Note that this doesn't try
-  to account for Unicode. One byte is equal to one column.
+  to account for Unicode. One byte is equal to one column. This implies
+  --line-number.
 
 --context-separator *SEPARATOR*
 : The string to use when separating non-continuous context lines. Escape

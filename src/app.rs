@@ -315,7 +315,8 @@ lazy_static! {
              "Show column numbers",
              "Show column numbers (1-based). This only shows the column \
               numbers for the first match on each line. This does not try \
-              to account for Unicode. One byte is equal to one column.");
+              to account for Unicode. One byte is equal to one column. This \
+              implies --line-number.");
         doc!(h, "context-separator",
              "Set the context separator string. [default: --]",
              "The string used to separate non-contiguous context lines in the \

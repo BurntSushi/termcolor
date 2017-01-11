@@ -107,8 +107,8 @@ sherlock!(columns, |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--column");
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
-57:For the Doctor Watsons of this world, as opposed to the Sherlock
-49:be, to a very large extent, the result of luck. Sherlock Holmes
+1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
+3:49:be, to a very large extent, the result of luck. Sherlock Holmes
 ";
     assert_eq!(lines, expected);
 });
@@ -781,7 +781,7 @@ clean!(regression_105_part2, "test", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--column");
 
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "foo:3:zztest\n");
+    assert_eq!(lines, "foo:1:3:zztest\n");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/127
@@ -1212,6 +1212,15 @@ clean!(feature_159_zero_max, "test", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create("foo", "test\ntest");
     cmd.arg("-m0");
     wd.assert_err(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/243
+clean!(feature_243_column_line, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create("foo", "test");
+    cmd.arg("--column");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo:1:1:test\n");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/263
