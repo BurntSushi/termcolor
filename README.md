@@ -201,7 +201,8 @@ $ nix-env --install ripgrep
 $ # (Or using the attribute name, which is also `ripgrep`.)
 ```
 
-If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
+If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`. Note
+that this requires you to have **Rust 1.12 or newer** installed.
 
 ```
 $ cargo install ripgrep
