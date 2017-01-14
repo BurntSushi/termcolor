@@ -15,7 +15,7 @@ dependencies = [
  "memmap 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "same-file 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "same-file 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "termcolor 0.1.1",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -196,7 +196,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "same-file"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -288,7 +288,7 @@ version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "same-file 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "same-file 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -329,7 +329,7 @@ dependencies = [
 "checksum num_cpus 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a225d1e2717567599c24f88e49f00856c6e825a12125181ee42c4257e3688d39"
 "checksum regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4278c17d0f6d62dfef0ab00028feb45bd7d2102843f80763474eeb1be8a10c01"
 "checksum regex-syntax 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2f9191b1f57603095f105d317e375d19b1c9c5c3185ea9633a99a6dcbed04457"
-"checksum same-file 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05f5dc7680f4bdc74fa0df5f32fcbaf1174a92e65bf3d69e0288248604306875"
+"checksum same-file 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c722bde68d432ad7982a6431b13264cc558af1707c0f321820e238c5671856ea"
 "checksum simd 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "63b5847c2d766ca7ce7227672850955802fabd779ba616aeabead4c2c3877023"
 "checksum strsim 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "67f84c44fbb2f91db7fef94554e6b2ac05909c9c0b0bc23bb98d3a1aebfe7f7c"
 "checksum term_size 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3f7f5f3f71b0040cecc71af239414c23fd3c73570f5ff54cf50e03cef637f2a0"
