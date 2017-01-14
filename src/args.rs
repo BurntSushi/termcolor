@@ -707,7 +707,6 @@ impl<'a> ArgMatches<'a> {
             "path:fg:magenta".parse().unwrap(),
             "line:fg:green".parse().unwrap(),
             "match:fg:red".parse().unwrap(),
-            "match:style:intense".parse().unwrap(),
             "match:style:bold".parse().unwrap(),
         ];
         for spec_str in self.values_of_lossy_vec("colors") {

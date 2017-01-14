@@ -787,37 +787,46 @@ impl<W: io::Write> Ansi<W> {
         c: &Color,
         intense: bool,
     ) -> io::Result<()> {
-        macro_rules! w {
-            ($selfie:expr, $fg:expr, $clr:expr) => {
-                if $fg {
-                    $selfie.write_str(concat!("\x1B[38;5;", $clr, "m"))
+        macro_rules! write_intense {
+            ($clr:expr) => {
+                if fg {
+                    self.write_str(concat!("\x1B[38;5;", $clr, "m"))
                 } else {
-                    $selfie.write_str(concat!("\x1B[48;5;", $clr, "m"))
+                    self.write_str(concat!("\x1B[48;5;", $clr, "m"))
+                }
+            }
+        }
+        macro_rules! write_normal {
+            ($clr:expr) => {
+                if fg {
+                    self.write_str(concat!("\x1B[3", $clr, "m"))
+                } else {
+                    self.write_str(concat!("\x1B[4", $clr, "m"))
                 }
             }
         }
         if intense {
             match *c {
-                Color::Black => w!(self, fg, "8"),
-                Color::Blue => w!(self, fg, "12"),
-                Color::Green => w!(self, fg, "10"),
-                Color::Red => w!(self, fg, "9"),
-                Color::Cyan => w!(self, fg, "14"),
-                Color::Magenta => w!(self, fg, "13"),
-                Color::Yellow => w!(self, fg, "11"),
-                Color::White => w!(self, fg, "15"),
+                Color::Black => write_intense!("8"),
+                Color::Blue => write_intense!("12"),
+                Color::Green => write_intense!("10"),
+                Color::Red => write_intense!("9"),
+                Color::Cyan => write_intense!("14"),
+                Color::Magenta => write_intense!("13"),
+                Color::Yellow => write_intense!("11"),
+                Color::White => write_intense!("15"),
                 Color::__Nonexhaustive => unreachable!(),
             }
         } else {
             match *c {
-                Color::Black => w!(self, fg, "0"),
-                Color::Blue => w!(self, fg, "4"),
-                Color::Green => w!(self, fg, "2"),
-                Color::Red => w!(self, fg, "1"),
-                Color::Cyan => w!(self, fg, "6"),
-                Color::Magenta => w!(self, fg, "5"),
-                Color::Yellow => w!(self, fg, "3"),
-                Color::White => w!(self, fg, "7"),
+                Color::Black => write_normal!("0"),
+                Color::Blue => write_normal!("4"),
+                Color::Green => write_normal!("2"),
+                Color::Red => write_normal!("1"),
+                Color::Cyan => write_normal!("6"),
+                Color::Magenta => write_normal!("5"),
+                Color::Yellow => write_normal!("3"),
+                Color::White => write_normal!("7"),
                 Color::__Nonexhaustive => unreachable!(),
             }
         }
