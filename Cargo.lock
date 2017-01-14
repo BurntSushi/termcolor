@@ -1,12 +1,12 @@
 [root]
 name = "ripgrep"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "bytecount 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.19.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "grep 0.1.4",
- "ignore 0.1.6",
+ "grep 0.1.5",
+ "ignore 0.1.7",
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -16,7 +16,7 @@ dependencies = [
  "num_cpus 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "same-file 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "termcolor 0.1.1",
+ "termcolor 0.2.0",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -91,7 +91,7 @@ dependencies = [
 
 [[package]]
 name = "globset"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "aho-corasick 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "grep"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -113,10 +113,10 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "globset 0.1.2",
+ "globset 0.1.3",
  "lazy_static 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -226,9 +226,9 @@ dependencies = [
 
 [[package]]
 name = "termcolor"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
- "wincolor 0.1.0",
+ "wincolor 0.1.1",
 ]
 
 [[package]]
@@ -304,7 +304,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "wincolor"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
