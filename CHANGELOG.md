@@ -1,3 +1,70 @@
+0.4.0
+=====
+This is a new minor version release of ripgrep that includes a couple very
+minor breaking changes, a few new features and lots of bug fixes.
+
+This version of ripgrep upgrades its `regex` dependency from `0.1` to `0.2`,
+which includes a few minor syntax changes:
+
+* POSIX character classes now require double bracketing. Previously, the regex
+  `[:upper:]` would parse as the `upper` POSIX character class. Now it parses
+  as the character class containing the characters `:upper:`. The fix to this
+  change is to use `[[:upper:]]` instead. Note that variants like
+  `[[:upper:][:blank:]]` continue to work.
+* The character `[` must always be escaped inside a character class.
+* The characters `&`, `-` and `~` must be escaped if any one of them are
+  repeated consecutively. For example, `[&]`, `[\&]`, `[\&\&]`, `[&-&]` are all
+  equivalent while `[&&]` is illegal. (The motivation for this and the prior
+  change is to provide a backwards compatible path for adding character class
+  set notation.)
+
+Feature enhancements:
+
+* Added or improved file type filtering for Crystal, Kotlin, Perl, PowerShell,
+  Ruby, Swig
+* [FEATURE #83](https://github.com/BurntSushi/ripgrep/issues/83):
+  Type definitions can now include other type definitions.
+* [FEATURE #243](https://github.com/BurntSushi/ripgrep/issues/243):
+  **BREAKING CHANGE**: The `--column` flag now implies `--line-number`.
+* [FEATURE #263](https://github.com/BurntSushi/ripgrep/issues/263):
+  Add a new `--sort-files` flag.
+* [FEATURE #275](https://github.com/BurntSushi/ripgrep/issues/275):
+  Add a new `--path-separator` flag. Useful in cygwin.
+
+Bug fixes:
+
+* [BUG #182](https://github.com/BurntSushi/ripgrep/issues/182):
+  Redux: use more portable ANSI color escape sequences when possible.
+* [BUG #258](https://github.com/BurntSushi/ripgrep/issues/258):
+  Fix bug that caused ripgrep's parallel iterator to spin and burn CPU.
+* [BUG #262](https://github.com/BurntSushi/ripgrep/issues/262):
+  Document how to install shell completion files.
+* [BUG #268](https://github.com/BurntSushi/ripgrep/issues/268):
+  Make lack of backreference support more explicit.
+* [BUG #271](https://github.com/BurntSushi/ripgrep/issues/271):
+  Remove `~` dependency on clap.
+* [BUG #277](https://github.com/BurntSushi/ripgrep/issues/277):
+  Fix cosmetic issue in `globset` crate docs.
+* [BUG #279](https://github.com/BurntSushi/ripgrep/issues/279):
+  ripgrep did not terminate when `-q/--quiet` was given.
+* [BUG #281](https://github.com/BurntSushi/ripgrep/issues/281):
+  **BREAKING CHANGE**: Completely remove `^C` handling from ripgrep.
+* [BUG #284](https://github.com/BurntSushi/ripgrep/issues/284):
+  Make docs for `-g/--glob` clearer.
+* [BUG #286](https://github.com/BurntSushi/ripgrep/pull/286):
+  When stdout is redirected to a file, don't search that file.
+* [BUG #287](https://github.com/BurntSushi/ripgrep/pull/287):
+  Fix ZSH completions.
+* [BUG #295](https://github.com/BurntSushi/ripgrep/pull/295):
+  Remove superfluous `memmap` dependency in `grep` crate.
+* [BUG #308](https://github.com/BurntSushi/ripgrep/pull/308):
+  Improve docs for `-r/--replace`.
+* [BUG #313](https://github.com/BurntSushi/ripgrep/pull/313):
+  Update bytecount dep to latest version.
+* [BUG #318](https://github.com/BurntSushi/ripgrep/pull/318):
+  Fix invalid UTF-8 output bug in Windows consoles.
+
+
 0.3.2
 =====
 Feature enhancements:
