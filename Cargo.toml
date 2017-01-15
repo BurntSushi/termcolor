@@ -25,6 +25,7 @@ name = "integration"
 path = "tests/tests.rs"
 
 [dependencies]
+atty = "0.2.2"
 bytecount = "0.1.4"
 clap = "2.19.0"
 env_logger = { version = "0.3", default-features = false }

@@ -394,8 +394,8 @@ impl<'a> ArgMatches<'a> {
             self.values_of_os("file").map_or(false, |mut files| {
                 files.any(|f| f == "-")
             });
-        let search_cwd = atty::on_stdin()
-            || !atty::stdin_is_readable()
+        let search_cwd = atty::is(atty::Stream::Stdin)
+            || !stdin_is_readable()
             || (self.is_present("file") && file_is_stdin)
             || self.is_present("files")
             || self.is_present("type-list");
@@ -584,7 +584,7 @@ impl<'a> ArgMatches<'a> {
         } else {
             self.is_present("line-number")
             || self.is_present("column")
-            || atty::on_stdout()
+            || atty::is(atty::Stream::Stdout)
             || self.is_present("pretty")
             || self.is_present("vimgrep")
         }
@@ -602,7 +602,7 @@ impl<'a> ArgMatches<'a> {
             false
         } else {
             self.is_present("heading")
-            || atty::on_stdout()
+            || atty::is(atty::Stream::Stdout)
             || self.is_present("pretty")
         }
     }
@@ -667,7 +667,7 @@ impl<'a> ArgMatches<'a> {
         } else if self.is_present("vimgrep") {
             false
         } else if preference == "auto" {
-            atty::on_stdout() || self.is_present("pretty")
+            atty::is(atty::Stream::Stdout) || self.is_present("pretty")
         } else {
             false
         }
@@ -687,7 +687,7 @@ impl<'a> ArgMatches<'a> {
         } else if self.is_present("vimgrep") {
             termcolor::ColorChoice::Never
         } else if preference == "auto" {
-            if atty::on_stdout() || self.is_present("pretty") {
+            if atty::is(atty::Stream::Stdout) || self.is_present("pretty") {
                 termcolor::ColorChoice::Auto
             } else {
                 termcolor::ColorChoice::Never
@@ -868,4 +868,25 @@ impl QuietMatched {
             Some(ref m) => { m.store(true, Ordering::SeqCst); true }
         }
     }
+}
+
+/// Returns true if and only if stdin is deemed searchable.
+#[cfg(unix)]
+fn stdin_is_readable() -> bool {
+    use std::os::unix::fs::FileTypeExt;
+    use same_file::Handle;
+
+    let ft = match Handle::stdin().and_then(|h| h.as_file().metadata()) {
+        Err(_) => return false,
+        Ok(md) => md.file_type(),
+    };
+    ft.is_file() || ft.is_fifo()
+}
+
+/// Returns true if and only if stdin is deemed searchable.
+#[cfg(windows)]
+fn stdin_is_readable() -> bool {
+    // On Windows, it's not clear what the possibilities are to me, so just
+    // always return true.
+    true
 }

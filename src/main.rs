@@ -1,3 +1,4 @@
+extern crate atty;
 extern crate bytecount;
 #[macro_use]
 extern crate clap;
@@ -46,7 +47,6 @@ macro_rules! eprintln {
 
 mod app;
 mod args;
-mod atty;
 mod pathutil;
 mod printer;
 mod search_buffer;
