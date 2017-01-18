@@ -39,6 +39,9 @@ Bug fixes:
   Fix bug that caused ripgrep's parallel iterator to spin and burn CPU.
 * [BUG #262](https://github.com/BurntSushi/ripgrep/issues/262):
   Document how to install shell completion files.
+* [BUG #266](https://github.com/BurntSushi/ripgrep/issues/266),
+  [BUG #293](https://github.com/BurntSushi/ripgrep/issues/293):
+  Fix handling of bold styling and change the default colors.
 * [BUG #268](https://github.com/BurntSushi/ripgrep/issues/268):
   Make lack of backreference support more explicit.
 * [BUG #271](https://github.com/BurntSushi/ripgrep/issues/271):
