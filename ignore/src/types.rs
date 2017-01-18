@@ -120,7 +120,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("dart", &["*.dart"]),
     ("d", &["*.d"]),
     ("elisp", &["*.el"]),
-    ("elixir", &["*.ex", "*.exs"]),
+    ("elixir", &["*.ex", "*.eex", "*.exs"]),
     ("erlang", &["*.erl", "*.hrl"]),
     ("fish", &["*.fish"]),
     ("fortran", &[
