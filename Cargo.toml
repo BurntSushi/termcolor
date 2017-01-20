@@ -11,6 +11,7 @@ homepage = "https://github.com/BurntSushi/ripgrep"
 repository = "https://github.com/BurntSushi/ripgrep"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
+categories = ["command-line-utilities"]
 license = "Unlicense/MIT"
 exclude = ["HomebrewFormula"]
 build = "build.rs"
