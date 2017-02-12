@@ -101,8 +101,6 @@ or to enable case insensitive matching.
 extern crate aho_corasick;
 extern crate fnv;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate log;
 extern crate memchr;
 extern crate regex;
