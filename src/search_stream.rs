@@ -248,6 +248,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     /// If enabled, search binary files as if they were text.
     pub fn text(mut self, yes: bool) -> Self {
         self.opts.text = yes;
+        self.inp.text(yes);
         self
     }
 
@@ -264,9 +265,6 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
             let upto = self.inp.lastnl;
             self.print_after_context(upto);
             if !try!(self.fill()) {
-                break;
-            }
-            if !self.opts.text && self.inp.is_binary {
                 break;
             }
             while !self.terminate() && self.inp.pos < self.inp.lastnl {
@@ -501,10 +499,8 @@ pub struct InputBuffer {
     end: usize,
     /// Set to true if and only if no reads have occurred yet.
     first: bool,
-    /// Set to true if and only if the contents of buf are determined to be
-    /// "binary" (i.e., not searchable text). Note that its value may be
-    /// falsely negative *or* falsely positive. It is only a heuristic.
-    is_binary: bool,
+    /// Set to true if all binary data should be treated as if it were text.
+    text: bool,
 }
 
 impl InputBuffer {
@@ -532,13 +528,23 @@ impl InputBuffer {
             lastnl: 0,
             end: 0,
             first: true,
-            is_binary: false,
+            text: false,
         }
     }
 
     /// Set the end-of-line terminator used by this input buffer.
-    pub fn eol(&mut self, eol: u8) {
+    pub fn eol(&mut self, eol: u8) -> &mut Self {
         self.eol = eol;
+        self
+    }
+
+    /// If enabled, search binary files as if they were text.
+    ///
+    /// Note that this may cause the buffer to load the entire contents of a
+    /// file into memory.
+    pub fn text(&mut self, yes: bool) -> &mut Self {
+        self.text = yes;
+        self
     }
 
     /// Resets this buffer so that it may be reused with a new reader.
@@ -547,7 +553,6 @@ impl InputBuffer {
         self.lastnl = 0;
         self.end = 0;
         self.first = true;
-        self.is_binary = false;
     }
 
     /// Fill the contents of this buffer with the reader given. The reader
@@ -582,8 +587,10 @@ impl InputBuffer {
             }
             let n = try!(rdr.read(
                 &mut self.buf[self.end..self.end + self.read_size]));
-            if self.first && is_binary(&self.buf[self.end..self.end + n]) {
-                self.is_binary = true;
+            if !self.text {
+                if is_binary(&self.buf[self.end..self.end + n], self.first) {
+                    return Ok(false);
+                }
             }
             self.first = false;
             // We assume that reading 0 bytes means we've hit EOF.
@@ -613,11 +620,11 @@ impl InputBuffer {
 ///
 /// Note that this may return both false positives and false negatives.
 #[inline(always)]
-pub fn is_binary(buf: &[u8]) -> bool {
-    if buf.len() >= 4 && &buf[0..4] == b"%PDF" {
+pub fn is_binary(buf: &[u8], first: bool) -> bool {
+    if first && buf.len() >= 4 && &buf[0..4] == b"%PDF" {
         return true;
     }
-    memchr(b'\x00', &buf[0..cmp::min(1024, buf.len())]).is_some()
+    memchr(b'\x00', buf).is_some()
 }
 
 /// Count the number of lines in the given buffer.

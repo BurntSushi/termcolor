@@ -113,8 +113,8 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
 
     #[inline(never)]
     pub fn run(mut self) -> u64 {
-        let binary_upto = cmp::min(4096, self.buf.len());
-        if !self.opts.text && is_binary(&self.buf[..binary_upto]) {
+        let binary_upto = cmp::min(10240, self.buf.len());
+        if !self.opts.text && is_binary(&self.buf[..binary_upto], true) {
             return 0;
         }
 
