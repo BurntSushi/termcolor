@@ -434,6 +434,9 @@ impl<'a> ArgMatches<'a> {
     ///
     /// If any pattern is invalid UTF-8, then an error is returned.
     fn patterns(&self) -> Result<Vec<String>> {
+        if self.is_present("files") || self.is_present("type-list") {
+            return Ok(vec![self.empty_pattern()]);
+        }
         let mut pats = vec![];
         match self.values_of_os("regexp") {
             None => {
