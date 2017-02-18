@@ -42,10 +42,6 @@ regex = "0.2.1"
 same-file = "0.1.1"
 termcolor = { version = "0.2.0", path = "termcolor" }
 
-[target.'cfg(windows)'.dependencies]
-kernel32-sys = "0.2.2"
-winapi = "0.2.8"
-
 [build-dependencies]
 clap = "2.18"
 lazy_static = "0.2"

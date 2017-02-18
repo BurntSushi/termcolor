@@ -5,8 +5,6 @@ extern crate clap;
 extern crate env_logger;
 extern crate grep;
 extern crate ignore;
-#[cfg(windows)]
-extern crate kernel32;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
@@ -18,8 +16,6 @@ extern crate num_cpus;
 extern crate regex;
 extern crate same_file;
 extern crate termcolor;
-#[cfg(windows)]
-extern crate winapi;
 
 use std::error::Error;
 use std::process;
