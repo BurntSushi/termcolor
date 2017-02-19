@@ -6,9 +6,6 @@ by interacting with the Windows console. Several convenient abstractions
 are provided for use in single-threaded or multi-threaded command line
 applications.
 
-[![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)
-[![](https://img.shields.io/crates/v/wincolor.svg)](https://crates.io/crates/wincolor)
-
 [![Linux build status](https://api.travis-ci.org/BurntSushi/ripgrep.png)](https://travis-ci.org/BurntSushi/ripgrep)
 [![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/ripgrep?svg=true)](https://ci.appveyor.com/project/BurntSushi/ripgrep)
 [![](https://img.shields.io/crates/v/termcolor.svg)](https://crates.io/crates/termcolor)
