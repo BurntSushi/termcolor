@@ -25,7 +25,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-termcolor = "0.1"
+termcolor = "0.3"
 ```
 
 and this to your crate root:
