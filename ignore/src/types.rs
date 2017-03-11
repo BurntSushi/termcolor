@@ -178,6 +178,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("stylus", &["*.styl"]),
     ("sql", &["*.sql"]),
     ("sv", &["*.v", "*.vg", "*.sv", "*.svh", "*.h"]),
+    ("svg", &["*.svg"]),
     ("swift", &["*.swift"]),
     ("swig", &["*.def", "*.i"]),
     ("taskpaper", &["*.taskpaper"]),
