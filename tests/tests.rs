@@ -1054,7 +1054,7 @@ clean!(regression_405, "test", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("-g").arg("!/foo/**");
 
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "bar/foo/file2.txt:test\n");
+    assert_eq!(lines, format!("{}:test\n", path("bar/foo/file2.txt")));
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/7
