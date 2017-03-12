@@ -116,7 +116,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("crystal", &["Projectfile", "*.cr"]),
     ("cs", &["*.cs"]),
     ("csharp", &["*.cs"]),
-    ("css", &["*.css"]),
+    ("css", &["*.css", "*.scss"]),
     ("cython", &["*.pyx"]),
     ("dart", &["*.dart"]),
     ("d", &["*.d"]),
@@ -134,7 +134,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("h", &["*.h", "*.hpp"]),
     ("hbs", &["*.hbs"]),
     ("haskell", &["*.hs", "*.lhs"]),
-    ("html", &["*.htm", "*.html"]),
+    ("html", &["*.htm", "*.html", "*.ejs"]),
     ("java", &["*.java"]),
     ("jinja", &["*.jinja", "*.jinja2"]),
     ("js", &[
