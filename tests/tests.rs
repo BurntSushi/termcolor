@@ -1045,6 +1045,18 @@ clean!(regression_279, "test", ".", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, "");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/405
+clean!(regression_405, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create_dir("foo/bar");
+    wd.create_dir("bar/foo");
+    wd.create("foo/bar/file1.txt", "test");
+    wd.create("bar/foo/file2.txt", "test");
+    cmd.arg("-g").arg("!/foo/**");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "bar/foo/file2.txt:test\n");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
     wd.create("pat", "Sherlock\nHolmes");

@@ -214,4 +214,10 @@ mod tests {
         assert!(ov.matched("src/foo", false).is_ignore());
         assert!(ov.matched("src/foo", true).is_none());
     }
+
+    #[test]
+    fn absolute_path() {
+        let ov = ov(&["!/bar"]);
+        assert!(ov.matched("./foo/bar", false).is_none());
+    }
 }

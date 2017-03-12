@@ -368,9 +368,10 @@ impl GitignoreBuilder {
         };
         let mut literal_separator = false;
         let has_slash = line.chars().any(|c| c == '/');
-        let is_absolute = line.chars().nth(0).unwrap() == '/';
+        let mut is_absolute = false;
         if line.starts_with("\\!") || line.starts_with("\\#") {
             line = &line[1..];
+            is_absolute = line.chars().nth(0) == Some('/');
         } else {
             if line.starts_with("!") {
                 glob.is_whitelist = true;
@@ -383,6 +384,7 @@ impl GitignoreBuilder {
                 // simply banning wildcards from matching /.
                 literal_separator = true;
                 line = &line[1..];
+                is_absolute = true;
             }
         }
         // If it ends with a slash, then this should only match directories,
@@ -570,6 +572,7 @@ mod tests {
     not_ignored!(
         ignot14, "./third_party/protobuf", "m4/ltoptions.m4",
         "./third_party/protobuf/csharp/src/packages/repositories.config");
+    not_ignored!(ignot15, ROOT, "!/bar", "foo/bar");
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
