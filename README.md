@@ -13,6 +13,10 @@ downloads available for
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
+### CHANGELOG
+
+Please see the [CHANGELOG](blob/master/CHANGELOG.md) for a release history.
+
 ### Screenshot of search results
 
 [![A screenshot of a sample search with ripgrep](http://burntsushi.net/stuff/ripgrep1.png)](http://burntsushi.net/stuff/ripgrep1.png)

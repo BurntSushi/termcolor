@@ -1,3 +1,65 @@
+0.5.0
+=====
+This is a new minor version release of ripgrep that includes one minor breaking
+change, bug fixes and several new features including support for text encodings
+other than UTF-8.
+
+A notable accomplishment with respect to Rust is that ripgrep proper now only
+contains a single `unsafe` use (for accessing the contents of a memory map).
+
+The **breaking change** is:
+
+* [FEATURE #380](https://github.com/BurntSushi/ripgrep/issues/380):
+  Line numbers are now hidden by default when ripgrep is printing to a tty
+  **and** the only thing searched is stdin.
+
+Feature enhancements:
+
+* Added or improved file type filtering for Ceylon, CSS, Elixir, HTML, log,
+  SASS, SVG, Twig
+* [FEATURE #1](https://github.com/BurntSushi/ripgrep/issues/1):
+  Add support for additional text encodings, including automatic detection for
+  UTF-16 via BOM sniffing. Explicit text encoding support with the
+  `-E/--encoding` flag was also added for latin-1, GBK, EUC-JP
+  and Shift_JIS, among others. The full list can be found here:
+  https://encoding.spec.whatwg.org/#concept-encoding-get
+* [FEATURE #129](https://github.com/BurntSushi/ripgrep/issues/129):
+  Add a new `-M/--max-columns` flag that omits lines longer than the given
+  number of bytes. (Disabled by default!)
+* [FEATURE #369](https://github.com/BurntSushi/ripgrep/issues/369):
+  A new flag, `--max-filesize`, was added for limiting searches to files with
+  a maximum file size.
+
+Bug fixes:
+
+* [BUG #52](https://github.com/BurntSushi/ripgrep/issues/52),
+  [BUG #311](https://github.com/BurntSushi/ripgrep/issues/311):
+  Tweak how binary files are detected and handled. (We are slightly less
+  conservative and will no longer use memory without bound.)
+* [BUG #326](https://github.com/BurntSushi/ripgrep/issues/326):
+  When --files flag is given, we should never attempt to parse positional
+  arguments as regexes.
+* [BUG #327](https://github.com/BurntSushi/ripgrep/issues/327):
+  Permit the --heading flag to override the --no-heading flag.
+* [BUG #340](https://github.com/BurntSushi/ripgrep/pull/340):
+  Clarify that the `-u/--unrestricted` flags are aliases.
+* [BUG #343](https://github.com/BurntSushi/ripgrep/pull/343):
+  Global git ignore config should use `$HOME/.config/git/ignore` and not
+  `$HOME/git/ignore`.
+* [BUG #345](https://github.com/BurntSushi/ripgrep/pull/345):
+  Clarify docs for `-g/--glob` flag.
+* [BUG #381](https://github.com/BurntSushi/ripgrep/issues/381):
+  Add license files to each sub-crate.
+* [BUG #383](https://github.com/BurntSushi/ripgrep/issues/383):
+  Use latest version of clap (for argv parsing).
+* [BUG #392](https://github.com/BurntSushi/ripgrep/issues/391):
+  Fix translation of set globs (e.g., `{foo,bar,quux}`) to regexes.
+* [BUG #401](https://github.com/BurntSushi/ripgrep/pull/401):
+  Add PowerShell completion file to Windows release.
+* [BUG #405](https://github.com/BurntSushi/ripgrep/issues/405):
+  Fix bug when excluding absolute paths with the `-g/--glob` flag.
+
+
 0.4.0
 =====
 This is a new minor version release of ripgrep that includes a couple very
