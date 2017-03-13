@@ -9,13 +9,13 @@ matrix:
     # (All *nix releases are done on the nightly channel to take advantage
     # of the regex library's multiple pattern SIMD search.)
     - os: linux
-      rust: nightly
+      rust: nightly-2017-03-13
       env: TARGET=i686-unknown-linux-musl
     - os: linux
-      rust: nightly
+      rust: nightly-2017-03-13
       env: TARGET=x86_64-unknown-linux-musl
     - os: osx
-      rust: nightly
+      rust: nightly-2017-03-13
       env: TARGET=x86_64-apple-darwin
     # Beta channel.
     - os: linux
@@ -57,7 +57,7 @@ deploy:
     # channel to use to produce the release artifacts
     # NOTE make sure you only release *once* per target
     # TODO you may want to pick a different channel
-    condition: $TRAVIS_RUST_VERSION = nightly
+    condition: $TRAVIS_RUST_VERSION = nightly-2017-03-13
     tags: true
 
 branches:
