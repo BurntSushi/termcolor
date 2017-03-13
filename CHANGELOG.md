@@ -1,5 +1,5 @@
-0.5.0
-=====
+0.5.0 (2017-03-12)
+==================
 This is a new minor version release of ripgrep that includes one minor breaking
 change, bug fixes and several new features including support for text encodings
 other than UTF-8.
