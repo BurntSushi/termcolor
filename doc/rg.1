@@ -64,20 +64,29 @@ Treat the pattern as a literal string instead of a regular expression.
 .TP
 .B \-g, \-\-glob \f[I]GLOB\f[] ...
 Include or exclude files for searching that match the given glob.
-This always overrides any other ignore logic.
+This always overrides any other ignore logic if there is a conflict, but
+is otherwise applied in addition to ignore files (e.g., .gitignore or
+\&.ignore).
 Multiple glob flags may be used.
 Globbing rules match .gitignore globs.
 Precede a glob with a \[aq]!\[aq] to exclude it.
 .RS
-.PP
-Values given to \-g must be quoted or your shell will expand them and
-result in unexpected behavior.
-.PP
-Combine with the \-\-files flag to return matched filenames (i.e., to
-replicate ack/ag\[aq]s \-g flag).
-.PP
-For example: rg \-g \[aq]<glob>\[aq] \-\-files
 .RE
+.PP
+The \-\-glob flag subsumes the functionality of both the \-\-include and
+\-\-exclude flags commonly found in other tools.
+.IP
+.nf
+\f[C]
+Values\ given\ to\ \-g\ must\ be\ quoted\ or\ your\ shell\ will\ expand\ them\ and\ result
+in\ unexpected\ behavior.
+
+Combine\ with\ the\ \-\-files\ flag\ to\ return\ matched\ filenames
+(i.e.,\ to\ replicate\ ack/ag\[aq]s\ \-g\ flag).
+
+For\ example:\ rg\ \-g\ \[aq]\\<glob\\>\[aq]\ \-\-files
+\f[]
+.fi
 .TP
 .B \-h, \-\-help
 Show this usage message.

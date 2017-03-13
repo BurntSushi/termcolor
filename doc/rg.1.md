@@ -49,8 +49,13 @@ Project home page: https://github.com/BurntSushi/ripgrep
 
 -g, --glob *GLOB* ...
 : Include or exclude files for searching that match the given glob. This always
-  overrides any other ignore logic. Multiple glob flags may be used. Globbing
-  rules match .gitignore globs. Precede a glob with a '!' to exclude it.
+  overrides any other ignore logic if there is a conflict, but is otherwise
+  applied in addition to ignore files (e.g., .gitignore or .ignore). Multiple
+  glob flags may be used. Globbing rules match .gitignore globs. Precede a
+  glob with a '!' to exclude it.
+
+  The --glob flag subsumes the functionality of both the --include and
+  --exclude flags commonly found in other tools.
 
     Values given to -g must be quoted or your shell will expand them and result
     in unexpected behavior.
