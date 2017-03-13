@@ -15,7 +15,7 @@ Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
 
 ### CHANGELOG
 
-Please see the [CHANGELOG](blob/master/CHANGELOG.md) for a release history.
+Please see the [CHANGELOG](CHANGELOG.md) for a release history.
 
 ### Screenshot of search results
 
