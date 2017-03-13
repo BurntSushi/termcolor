@@ -251,6 +251,7 @@ impl<R: io::Read, B: AsMut<[u8]>> DecodeReader<R, B> {
         Ok(nwrite)
     }
 
+    #[inline(never)] // impacts perf...
     fn detect(&mut self) -> io::Result<()> {
         let bom = try!(self.rdr.peek_bom());
         self.decoder = bom.decoder();
