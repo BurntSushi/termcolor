@@ -89,6 +89,10 @@ Project home page: https://github.com/BurntSushi/ripgrep
   -u flags will search binary files. -uu is equivalent to grep -r, and -uuu is
   equivalent to grep -a -r.
 
+    Note that the -u flags are convenient aliases for other combinations of
+    flags. -u aliases '--no-ignore'. -uu aliases '--no-ignore --hidden'.
+    -uuu aliases '--no-ignore --hidden --text'.
+
 -v, --invert-match
 : Invert matching.
 

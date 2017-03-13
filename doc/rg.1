@@ -127,6 +127,12 @@ Two \-u flags will search hidden files and directories.
 Three \-u flags will search binary files.
 \-uu is equivalent to grep \-r, and \-uuu is equivalent to grep \-a \-r.
 .RS
+.PP
+Note that the \-u flags are convenient aliases for other combinations of
+flags.
+\-u aliases \[aq]\-\-no\-ignore\[aq].
+\-uu aliases \[aq]\-\-no\-ignore \-\-hidden\[aq].
+\-uuu aliases \[aq]\-\-no\-ignore \-\-hidden \-\-text\[aq].
 .RE
 .TP
 .B \-v, \-\-invert\-match
@@ -196,6 +202,15 @@ Escape sequences may be used.
 .TP
 .B \-\-debug
 Show debug messages.
+.RS
+.RE
+.TP
+.B \-E, \-\-encoding \f[I]ENCODING\f[]
+Specify the text encoding that ripgrep will use on all files searched.
+The default value is \[aq]auto\[aq], which will cause ripgrep to do a
+best effort automatic detection of encoding on a per\-file basis.
+Other supported values can be found in the list of labels here:
+https://encoding.spec.whatwg.org/#concept\-encoding\-get
 .RS
 .RE
 .TP
