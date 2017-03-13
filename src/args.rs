@@ -319,6 +319,7 @@ impl<'a> ArgMatches<'a> {
     /// configuration.
     fn to_args(&self) -> Result<Args> {
         let paths = self.paths();
+        let line_number = self.line_number(&paths);
         let mmap = try!(self.mmap(&paths));
         let with_filename = self.with_filename(&paths);
         let (before_context, after_context) = try!(self.contexts());
@@ -345,7 +346,7 @@ impl<'a> ArgMatches<'a> {
             hidden: self.hidden(),
             ignore_files: self.ignore_files(),
             invert_match: self.is_present("invert-match"),
-            line_number: self.line_number(),
+            line_number: line_number,
             line_per_match: self.is_present("vimgrep"),
             max_count: try!(self.usize_of("max-count")).map(|max| max as u64),
             max_filesize: try!(self.max_filesize()),
@@ -593,13 +594,14 @@ impl<'a> ArgMatches<'a> {
     }
 
     /// Returns true if and only if line numbers should be shown.
-    fn line_number(&self) -> bool {
+    fn line_number(&self, paths: &[PathBuf]) -> bool {
         if self.is_present("no-line-number") || self.is_present("count") {
             false
         } else {
+            let only_stdin = paths == &[Path::new("-")];
             self.is_present("line-number")
             || self.is_present("column")
-            || atty::is(atty::Stream::Stdout)
+            || (atty::is(atty::Stream::Stdout) && !only_stdin)
             || self.is_present("pretty")
             || self.is_present("vimgrep")
         }
