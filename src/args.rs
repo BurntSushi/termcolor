@@ -88,18 +88,23 @@ impl Args {
     ///
     /// Also, initialize a global logger.
     pub fn parse() -> Result<Args> {
-        let matches = app::app_short().get_matches();
+        use clap::ErrorKind::*;
+
+        let matches = match app::app_short().get_matches_safe() {
+            Ok(matches) => matches,
+            Err(clap::Error { kind: HelpDisplayed, .. }) => {
+                let _ = ::app::app_long().print_help();
+                println!("");
+                process::exit(0);
+            }
+            Err(err) => err.exit(),
+        };
         if matches.is_present("help-short") {
             let _ = ::app::app_short().print_help();
             println!("");
             process::exit(0);
         }
-        if matches.is_present("help") {
-            let _ = ::app::app_long().print_help();
-            println!("");
-            process::exit(0);
-        }
-        if matches.is_present("version") {
+        if matches.is_present("ripgrep-version") {
             println!("ripgrep {}", crate_version!());
             process::exit(0);
         }

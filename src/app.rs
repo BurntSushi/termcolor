@@ -68,12 +68,12 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
         // consistent with short/long views.
         .arg(arg("help-short").short("h"))
         .arg(flag("help"))
-        .arg(flag("version").short("V"))
+        .arg(arg("ripgrep-version").long("version").short("V"))
         // First, set up primary positional/flag arguments.
         .arg(arg("pattern")
              .required_unless_one(&[
                 "file", "files", "help-short", "help", "regexp", "type-list",
-                "version",
+                "ripgrep-version",
              ]))
         .arg(arg("path").multiple(true))
         .arg(flag("regexp").short("e")
@@ -206,7 +206,7 @@ lazy_static! {
         doc!(h, "help",
              "Show verbose help output.",
              "When given, more details about flags are provided.");
-        doc!(h, "version",
+        doc!(h, "ripgrep-version",
              "Prints version information.");
 
         doc!(h, "pattern",
