@@ -230,11 +230,10 @@ colorize your output and show line numbers, just like The Silver Searcher.
 Coloring works on Windows too! Colors can be controlled more granularly with
 the `--color` flag.
 
-One last thing before we get started: `ripgrep` assumes UTF-8 *everywhere*. It
-can still search files that are invalid UTF-8 (like, say, latin-1), but it will
-simply not work on UTF-16 encoded files or other more exotic encodings.
-[Support for other encodings may
-happen.](https://github.com/BurntSushi/ripgrep/issues/1)
+One last thing before we get started: generally speaking, `ripgrep` assumes the
+input is reading is UTF-8. However, if ripgrep notices a file is encoded as
+UTF-16, then it will know how to search it. For other encodings, you'll need to
+explicitly specify them with the `-E/--encoding` flag.
 
 To recursively search the current directory, while respecting all `.gitignore`
 files, ignore hidden files and directories and skip binary files:
