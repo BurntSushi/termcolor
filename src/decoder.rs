@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::cmp;
 use std::io::{self, Read};
 
@@ -289,10 +287,6 @@ mod tests {
     use encoding_rs::Encoding;
 
     use super::{Bom, BomPeeker, DecodeReader};
-
-    fn utf8(bytes: &[u8]) -> &str {
-        ::std::str::from_utf8(bytes).unwrap()
-    }
 
     fn read_to_string<R: Read>(mut rdr: R) -> String {
         let mut s = String::new();
