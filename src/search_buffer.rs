@@ -3,8 +3,8 @@ The `search_buffer` module is responsible for searching a single file all in a
 single buffer. Typically, the source of the buffer is a memory map. This can
 be useful for when memory maps are faster than streaming search.
 
-Note that this module doesn't quite support everything that `search_stream` does.
-Notably, showing contexts.
+Note that this module doesn't quite support everything that `search_stream`
+Notdoes. ably, showing contexts.
 */
 use std::cmp;
 use std::path::Path;

@@ -388,10 +388,11 @@ lazy_static! {
              "Limit the number of matching lines per file searched to NUM.");
         doc!(h, "max-filesize",
              "Ignore files larger than NUM in size.",
-             "Ignore files larger than NUM in size. Does not ignore directories. \
+             "Ignore files larger than NUM in size. Does not ignore \
+              directories. \
               \n\nThe input format accepts suffixes of K, M or G which \
-              correspond to kilobytes, megabytes and gigabytes. If no suffix is \
-              provided the input is treated as bytes. \
+              correspond to kilobytes, megabytes and gigabytes. If no suffix \
+              is provided the input is treated as bytes. \
               \n\nExample: --max-filesize 50K or --max-filesize 80M");
         doc!(h, "maxdepth",
              "Descend at most NUM directories.",
@@ -496,8 +497,8 @@ lazy_static! {
               permits specifying one or more other type names (separated by a \
               comma) that have been defined and its rules will automatically \
               be imported into the type specified. For example, to create a \
-              type called src that matches C++, Python and Markdown files, one \
-              can use:\n\n\
+              type called src that matches C++, Python and Markdown files, \
+              one can use:\n\n\
               --type-add 'src:include:cpp,py,md'\n\n\
               Additional glob rules can still be added to the src type by \
               using the --type-add flag again:\n\n\

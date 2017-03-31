@@ -153,9 +153,6 @@ impl<W: WriteColor> Printer<W> {
 
     /// Replace every match in each matching line with the replacement string
     /// given.
-    ///
-    /// The replacement string syntax is documented here:
-    /// https://doc.rust-lang.org/regex/regex/bytes/struct.Captures.html#method.expand
     pub fn replace(mut self, replacement: Vec<u8>) -> Printer<W> {
         self.replace = Some(replacement);
         self
@@ -290,7 +287,8 @@ impl<W: WriteColor> Printer<W> {
                 re.replace_all(&buf[start..end], replacer)
             };
             if self.max_columns.map_or(false, |m| line.len() > m) {
-                let msg = format!("[Omitted long line with {} replacements]", count);
+                let msg = format!(
+                    "[Omitted long line with {} replacements]", count);
                 self.write_colored(msg.as_bytes(), |colors| colors.matched());
                 self.write_eol();
                 return;
@@ -319,7 +317,8 @@ impl<W: WriteColor> Printer<W> {
             let mut last_written = 0;
             for m in re.find_iter(buf) {
                 self.write(&buf[last_written..m.start()]);
-                self.write_colored(&buf[m.start()..m.end()], |colors| colors.matched());
+                self.write_colored(
+                    &buf[m.start()..m.end()], |colors| colors.matched());
                 last_written = m.end();
             }
             self.write(&buf[last_written..]);

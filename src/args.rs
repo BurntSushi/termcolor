@@ -837,7 +837,7 @@ impl<'a> ArgMatches<'a> {
         let caps = try!(re.captures(&max_filesize)
                           .ok_or("invalid format for max-filesize argument"));
 
-        let value = try!(caps[1].parse::<u64>().map_err(|err| err.to_string()));
+        let value = try!(caps[1].parse::<u64>().map_err(|err|err.to_string()));
         let suffix = caps.get(2).map(|x| x.as_str());
 
         match suffix {
