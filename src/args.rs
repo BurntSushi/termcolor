@@ -5,7 +5,6 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::ops;
 use std::path::{Path, PathBuf};
-use std::process;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -88,26 +87,7 @@ impl Args {
     ///
     /// Also, initialize a global logger.
     pub fn parse() -> Result<Args> {
-        use clap::ErrorKind::*;
-
-        let matches = match app::app_short().get_matches_safe() {
-            Ok(matches) => matches,
-            Err(clap::Error { kind: HelpDisplayed, .. }) => {
-                let _ = ::app::app_long().print_help();
-                println!("");
-                process::exit(0);
-            }
-            Err(err) => err.exit(),
-        };
-        if matches.is_present("help-short") {
-            let _ = ::app::app_short().print_help();
-            println!("");
-            process::exit(0);
-        }
-        if matches.is_present("ripgrep-version") {
-            println!("ripgrep {}", crate_version!());
-            process::exit(0);
-        }
+        let matches = app::app().get_matches();
 
         let mut logb = env_logger::LogBuilder::new();
         if matches.is_present("debug") {

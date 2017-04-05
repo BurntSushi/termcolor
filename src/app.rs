@@ -32,16 +32,6 @@ ARGS:
 OPTIONS:
 {unified}";
 
-/// Build a clap application with short help strings.
-pub fn app_short() -> App<'static, 'static> {
-    app(false, |k| USAGES[k].short)
-}
-
-/// Build a clap application with long help strings.
-pub fn app_long() -> App<'static, 'static> {
-    app(true, |k| USAGES[k].long)
-}
-
 /// Build a clap application parameterized by usage strings.
 ///
 /// The function given should take a clap argument name and return a help
@@ -49,10 +39,9 @@ pub fn app_long() -> App<'static, 'static> {
 ///
 /// This is an intentionally stand-alone module so that it can be used easily
 /// in a `build.rs` script to build shell completion files.
-fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
-        where F: Fn(&'static str) -> &'static str {
+pub fn app() -> App<'static, 'static> {
     let arg = |name| {
-        Arg::with_name(name).help(doc(name)).next_line_help(next_line_help)
+        Arg::with_name(name).help(USAGES[name].short).long_help(USAGES[name].long)
     };
     let flag = |name| arg(name).long(name);
 
@@ -64,11 +53,7 @@ fn app<F>(next_line_help: bool, doc: F) -> App<'static, 'static>
         .setting(AppSettings::UnifiedHelpMessage)
         .usage(USAGE)
         .template(TEMPLATE)
-        // Handle help/version manually to make their output formatting
-        // consistent with short/long views.
-        .arg(arg("help-short").short("h"))
-        .arg(flag("help"))
-        .arg(arg("ripgrep-version").long("version").short("V"))
+	.help_message("Prints help information. Use --help for more details.")
         // First, set up primary positional/flag arguments.
         .arg(arg("pattern")
              .required_unless_one(&[

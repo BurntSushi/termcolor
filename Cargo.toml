@@ -28,7 +28,7 @@ path = "tests/tests.rs"
 [dependencies]
 atty = "0.2.2"
 bytecount = "0.1.4"
-clap = "2.20.5"
+clap = "2.23.1"
 encoding_rs = "0.5.0"
 env_logger = { version = "0.4", default-features = false }
 grep = { version = "0.1.5", path = "grep" }
@@ -44,7 +44,7 @@ same-file = "0.1.1"
 termcolor = { version = "0.3.0", path = "termcolor" }
 
 [build-dependencies]
-clap = "2.18"
+clap = "2.23.1"
 lazy_static = "0.2"
 
 [features]

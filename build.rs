@@ -19,7 +19,7 @@ fn main() {
     };
     fs::create_dir_all(&outdir).unwrap();
 
-    let mut app = app::app_short();
+    let mut app = app::app();
     app.gen_completions("rg", Shell::Bash, &outdir);
     app.gen_completions("rg", Shell::Fish, &outdir);
     app.gen_completions("rg", Shell::Zsh, &outdir);
