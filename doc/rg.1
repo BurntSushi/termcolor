@@ -299,6 +299,13 @@ Follow symlinks.
 .RS
 .RE
 .TP
+.B \-M, \-\-max\-columns \f[I]NUM\f[]
+Don\[aq]t print lines longer than this limit in bytes.
+Longer lines are omitted, and only the number of matches in that line is
+printed.
+.RS
+.RE
+.TP
 .B \-m, \-\-max\-count \f[I]NUM\f[]
 Limit the number of matching lines per file searched to NUM.
 .RS
@@ -355,11 +362,17 @@ Note that .ignore files will continue to be respected.
 .RS
 .RE
 .TP
-.B \-\-null
+.B \-0, \-\-null
 Whenever a file name is printed, follow it with a NUL byte.
 This includes printing filenames before matches, and when printing a
 list of matching files such as with \-\-count, \-\-files\-with\-matches
 and \-\-files.
+.RS
+.RE
+.TP
+.B \-o, \-\-only\-matching
+Print only the matched (non\-empty) parts of a matching line, with each
+such part on a separate output line.
 .RS
 .RE
 .TP
