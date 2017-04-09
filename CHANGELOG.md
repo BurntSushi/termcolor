@@ -1,3 +1,26 @@
+0.5.1 (2017-04-09)
+==================
+Feature enhancements:
+
+* Added or improved file type filtering for vim.
+* [FEATURE #34](https://github.com/BurntSushi/ripgrep/issues/34):
+  Add a `-o/--only-matching` flag.
+* [FEATURE #377](https://github.com/BurntSushi/ripgrep/issues/377):
+  Column numbers can now be customized with a color. (The default is
+  no color.)
+* [FEATURE #419](https://github.com/BurntSushi/ripgrep/issues/419):
+  Added `-0` short flag option for `--null`.
+
+Bug fixes:
+
+* [BUG #381](https://github.com/BurntSushi/ripgrep/issues/381):
+  Include license text in all subcrates.
+* [BUG #418](https://github.com/BurntSushi/ripgrep/issues/418),
+  [BUG #426](https://github.com/BurntSushi/ripgrep/issues/426),
+  [BUG #439](https://github.com/BurntSushi/ripgrep/issues/439):
+  Fix a few bugs with `-h/--help` output.
+
+
 0.5.0 (2017-03-12)
 ==================
 This is a new minor version release of ripgrep that includes one minor breaking
