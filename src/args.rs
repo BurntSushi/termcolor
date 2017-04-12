@@ -737,7 +737,7 @@ impl<'a> ArgMatches<'a> {
                 if label == "auto" {
                     return Ok(None);
                 }
-                match Encoding::for_label(label.as_bytes()) {
+                match Encoding::for_label_no_replacement(label.as_bytes()) {
                     Some(enc) => Ok(Some(enc)),
                     None => Err(From::from(
                         format!("unsupported encoding: {}", label))),

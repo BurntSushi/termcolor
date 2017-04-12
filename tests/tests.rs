@@ -1137,6 +1137,21 @@ clean!(feature_1_eucjp, "Шерлок Холмс", ".",
     assert_eq!(lines, "foo:Шерлок Холмс\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1
+sherlock!(feature_1_unknown_encoding, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("-Efoobar");
+    wd.assert_non_empty_stderr(&mut cmd);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1
+// Specific: https://github.com/BurntSushi/ripgrep/pull/398/files#r111109265
+sherlock!(feature_1_replacement_encoding, "Sherlock", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("-Ecsiso2022kr");
+    wd.assert_non_empty_stderr(&mut cmd);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/7
 sherlock!(feature_7, "-fpat", "sherlock", |wd: WorkDir, mut cmd: Command| {
     wd.create("pat", "Sherlock\nHolmes");

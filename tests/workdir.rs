@@ -256,6 +256,23 @@ impl WorkDir {
                    String::from_utf8_lossy(&o.stderr));
         }
     }
+
+    /// Runs the given command and asserts that something was printed to
+    /// stderr.
+    pub fn assert_non_empty_stderr(&self, cmd: &mut process::Command) {
+        let o = cmd.output().unwrap();
+        if o.status.success() || o.stderr.is_empty() {
+            panic!("\n\n===== {:?} =====\n\
+                    command succeeded but expected failure!\
+                    \n\ncwd: {}\
+                    \n\nstatus: {}\
+                    \n\nstdout: {}\n\nstderr: {}\
+                    \n\n=====\n",
+                   cmd, self.dir.display(), o.status,
+                   String::from_utf8_lossy(&o.stdout),
+                   String::from_utf8_lossy(&o.stderr));
+        }
+    }
 }
 
 fn nice_err<P: AsRef<Path>, T, E: error::Error>(
