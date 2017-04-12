@@ -128,7 +128,16 @@ mod pathutil;
 
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Error {
+pub struct Error {
+    /// The original glob provided by the caller.
+    glob: Option<String>,
+    /// The kind of error.
+    kind: ErrorKind,
+}
+
+/// The kind of error that can occur when parsing a glob pattern.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ErrorKind {
     /// Occurs when a use of `**` is invalid. Namely, `**` can only appear
     /// adjacent to a path separator, or the beginning/end of a glob.
     InvalidRecursive,
@@ -151,44 +160,73 @@ pub enum Error {
 
 impl StdError for Error {
     fn description(&self) -> &str {
+        self.kind.description()
+    }
+}
+
+impl Error {
+    /// Return the glob that caused this error, if one exists.
+    pub fn glob(&self) -> Option<&str> {
+        self.glob.as_ref().map(|s| &**s)
+    }
+
+    /// Return the kind of this error.
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
+}
+
+impl ErrorKind {
+    fn description(&self) -> &str {
         match *self {
-            Error::InvalidRecursive => {
+            ErrorKind::InvalidRecursive => {
                 "invalid use of **; must be one path component"
             }
-            Error::UnclosedClass => {
+            ErrorKind::UnclosedClass => {
                 "unclosed character class; missing ']'"
             }
-            Error::InvalidRange(_, _) => {
+            ErrorKind::InvalidRange(_, _) => {
                 "invalid character range"
             }
-            Error::UnopenedAlternates => {
+            ErrorKind::UnopenedAlternates => {
                 "unopened alternate group; missing '{' \
                 (maybe escape '}' with '[}]'?)"
             }
-            Error::UnclosedAlternates => {
+            ErrorKind::UnclosedAlternates => {
                 "unclosed alternate group; missing '}' \
                 (maybe escape '{' with '[{]'?)"
             }
-            Error::NestedAlternates => {
+            ErrorKind::NestedAlternates => {
                 "nested alternate groups are not allowed"
             }
-            Error::Regex(ref err) => err,
+            ErrorKind::Regex(ref err) => err,
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.glob {
+            None => self.kind.fmt(f),
+            Some(ref glob) => {
+                write!(f, "error parsing glob '{}': {}", glob, self.kind)
+            }
+        }
+    }
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::InvalidRecursive
-            | Error::UnclosedClass
-            | Error::UnopenedAlternates
-            | Error::UnclosedAlternates
-            | Error::NestedAlternates
-            | Error::Regex(_) => {
+            ErrorKind::InvalidRecursive
+            | ErrorKind::UnclosedClass
+            | ErrorKind::UnopenedAlternates
+            | ErrorKind::UnclosedAlternates
+            | ErrorKind::NestedAlternates
+            | ErrorKind::Regex(_) => {
                 write!(f, "{}", self.description())
             }
-            Error::InvalidRange(s, e) => {
+            ErrorKind::InvalidRange(s, e) => {
                 write!(f, "invalid range; '{}' > '{}'", s, e)
             }
         }
@@ -201,12 +239,22 @@ fn new_regex(pat: &str) -> Result<Regex, Error> {
         .size_limit(10 * (1 << 20))
         .dfa_size_limit(10 * (1 << 20))
         .build()
-        .map_err(|err| Error::Regex(err.to_string()))
+        .map_err(|err| {
+            Error {
+                glob: Some(pat.to_string()),
+                kind: ErrorKind::Regex(err.to_string()),
+            }
+        })
 }
 
 fn new_regex_set<I, S>(pats: I) -> Result<RegexSet, Error>
         where S: AsRef<str>, I: IntoIterator<Item=S> {
-    RegexSet::new(pats).map_err(|err| Error::Regex(err.to_string()))
+    RegexSet::new(pats).map_err(|err| {
+        Error {
+            glob: None,
+            kind: ErrorKind::Regex(err.to_string()),
+        }
+    })
 }
 
 type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;

@@ -279,7 +279,12 @@ impl GitignoreBuilder {
         let nignore = self.globs.iter().filter(|g| !g.is_whitelist()).count();
         let nwhite = self.globs.iter().filter(|g| g.is_whitelist()).count();
         let set = try!(
-            self.builder.build().map_err(|err| Error::Glob(err.to_string())));
+            self.builder.build().map_err(|err| {
+                Error::Glob {
+                    glob: None,
+                    err: err.to_string(),
+                }
+            }));
         Ok(Gitignore {
             set: set,
             root: self.root.clone(),
@@ -420,7 +425,12 @@ impl GitignoreBuilder {
             GlobBuilder::new(&glob.actual)
                 .literal_separator(literal_separator)
                 .build()
-                .map_err(|err| Error::Glob(err.to_string())));
+                .map_err(|err| {
+                    Error::Glob {
+                        glob: Some(glob.original.clone()),
+                        err: err.kind().to_string(),
+                    }
+                }));
         self.builder.add(parsed);
         self.globs.push(glob);
         Ok(self)
