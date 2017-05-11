@@ -1,3 +1,21 @@
+0.5.2 (2017-05-11)
+==================
+Feature enhancements:
+
+* Added or improved file type filtering for Nix.
+* [FEATURE #362](https://github.com/BurntSushi/ripgrep/issues/362):
+  Add `--regex-size-limit` and `--dfa-size-limit` flags.
+* [FEATURE #444](https://github.com/BurntSushi/ripgrep/issues/444):
+  Improve error messages for invalid globs.
+
+Bug fixes:
+
+* [BUG #442](https://github.com/BurntSushi/ripgrep/issues/442):
+  Fix line wrapping in `--help` output.
+* [BUG #451](https://github.com/BurntSushi/ripgrep/issues/451):
+  Fix bug with duplicate output when using `-o/--only-matching` flag.
+
+
 0.5.1 (2017-04-09)
 ==================
 Feature enhancements:
