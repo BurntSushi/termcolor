@@ -3,7 +3,7 @@ use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
 
-use regex::bytes::{Regex, Replacer, Captures};
+use regex::bytes::{Captures, Regex, Replacer};
 use termcolor::{Color, ColorSpec, ParseColorError, WriteColor};
 
 use pathutil::strip_prefix;
@@ -242,15 +242,17 @@ impl<W: WriteColor> Printer<W> {
         line_number: Option<u64>,
     ) {
         if !self.line_per_match && !self.only_matching {
-            let column = re.find(&buf[start..end])
-                           .map(|m| m.start()).unwrap_or(0);
+            let mat = re
+                .find(&buf[start..end])
+                .map(|m| (m.start(), m.end()))
+                .unwrap_or((0, 0));
             return self.write_match(
-                re, path, buf, start, end, line_number, column);
+                re, path, buf, start, end, line_number, mat.0, mat.1);
         }
         for m in re.find_iter(&buf[start..end]) {
-            let column = m.start();
             self.write_match(
-                re, path.as_ref(), buf, start, end, line_number, column);
+                re, path.as_ref(), buf, start, end,
+                line_number, m.start(), m.end());
         }
     }
 
@@ -262,7 +264,8 @@ impl<W: WriteColor> Printer<W> {
         start: usize,
         end: usize,
         line_number: Option<u64>,
-        column: usize,
+        match_start: usize,
+        match_end: usize,
     ) {
         if self.heading && self.with_filename && !self.has_printed {
             self.write_file_sep();
@@ -276,7 +279,7 @@ impl<W: WriteColor> Printer<W> {
             self.line_number(line_number, b':');
         }
         if self.column {
-            self.column_number(column as u64 + 1, b':');
+            self.column_number(match_start as u64 + 1, b':');
         }
         if self.replace.is_some() {
             let mut count = 0;
@@ -297,19 +300,21 @@ impl<W: WriteColor> Printer<W> {
                 self.write_eol();
             }
         } else {
-            let line_buf = if self.only_matching {
-                let start_offset = start + column;
-                let m = re.find(&buf[start_offset..end]).unwrap();
-                &buf[start_offset + m.start()..start_offset + m.end()]
+            if self.only_matching {
+                let buf = &buf[start + match_start..start + match_end];
+                self.write_matched_line(re, buf, true);
             } else {
-                &buf[start..end]
-            };
-            self.write_matched_line(re, line_buf);
-            // write_matched_line guarantees to write a newline.
+                self.write_matched_line(re, &buf[start..end], false);
+            }
         }
     }
 
-    fn write_matched_line(&mut self, re: &Regex, buf: &[u8]) {
+    fn write_matched_line(
+        &mut self,
+        re: &Regex,
+        buf: &[u8],
+        only_match: bool,
+    ) {
         if self.max_columns.map_or(false, |m| buf.len() > m) {
             let count = re.find_iter(buf).count();
             let msg = format!("[Omitted long line with {} matches]", count);
@@ -319,6 +324,8 @@ impl<W: WriteColor> Printer<W> {
         }
         if !self.wtr.supports_color() || self.colors.matched().is_none() {
             self.write(buf);
+        } else if only_match {
+            self.write_colored(buf, |colors| colors.matched());
         } else {
             let mut last_written = 0;
             for m in re.find_iter(buf) {

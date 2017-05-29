@@ -1079,7 +1079,8 @@ clean!(regression_428_color_context_path, "foo", ".", |wd: WorkDir, mut cmd: Com
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/428
-clean!(regression_428_unrecognized_style, "Sherlok", ".", |wd: WorkDir, mut cmd: Command| {
+clean!(regression_428_unrecognized_style, "Sherlok", ".",
+|wd: WorkDir, mut cmd: Command| {
     cmd.arg("--colors=match:style:");
     wd.assert_err(&mut cmd);
 
@@ -1089,6 +1090,15 @@ clean!(regression_428_unrecognized_style, "Sherlok", ".", |wd: WorkDir, mut cmd:
 Unrecognized style attribute ''. Choose from: nobold, bold, nointense, intense.
 ";
     assert_eq!(err, expected);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/493
+clean!(regression_493, " 're ", "input.txt", |wd: WorkDir, mut cmd: Command| {
+    wd.create("input.txt", "peshwaship 're seminomata");
+    cmd.arg("-o").arg("-w");
+
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, " 're \n");
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1
