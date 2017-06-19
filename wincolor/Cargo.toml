@@ -1,6 +1,6 @@
 [package]
 name = "wincolor"
-version = "0.1.3"  #:version
+version = "0.1.4"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 A simple Windows specific API for controlling text color in a Windows console.
