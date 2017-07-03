@@ -51,7 +51,7 @@ common_options=(
   '(1)*'{-e,--regexp=}'[specify pattern]:pattern'
   '(-E --encoding)'{-E,--encoding=}'[specify text encoding of files to search]: :->encoding'
   '(-F --fixed-strings)'{-F,--fixed-strings}'[treat pattern as literal string instead of regular expression]'
-  '*'{-g,--glob=}'[include or exclude files for searching that match the given glob]:glob'
+  '*'{-g,--glob=}'[include or exclude files for searching that match the specified glob]:glob'
   '(-h --help)'{-h,--help}'[display help information]'
   '(-i -s -S --ignore-case --case-sensitive --smart-case)'{-i,--ignore-case}'[search case-insensitively]'
   '(-n -N --line-number --no-line-number)'{-n,--line-number}'[show line numbers]'
@@ -85,6 +85,7 @@ less_common_options=(
   '(-p --no-heading --pretty --vimgrep)--heading[show matches grouped by file name]'
   "(-p --heading --pretty --vimgrep)--no-heading[don't group matches by file name]"
   '--hidden[search hidden files and directories]'
+  '*--iglob=[include or exclude files for searching that match the specified case-insensitive glob]:glob'
   '(-L --follow)'{-L,--follow}'[follow symlinks]'
   '(-M --max-columns)'{-M,--max-columns=}'[specify max length of lines to print]:number of bytes'
   '(-m --max-count)'{-m,--max-count=}'[specify max number of matches per file]:number of matches'
