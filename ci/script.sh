@@ -28,6 +28,8 @@ run_test_suite() {
     cargo build --target $TARGET --verbose --manifest-path termcolor/Cargo.toml
     cargo test --target $TARGET --verbose --manifest-path termcolor/Cargo.toml
 
+    "$( dirname "${0}" )/test_complete.sh"
+
     # sanity check the file type
     file target/$TARGET/debug/rg
 }
