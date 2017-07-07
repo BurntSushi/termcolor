@@ -1,6 +1,10 @@
 #!/bin/sh
 
+##
 # Compares options in `rg --help` output to options in zsh completion function
+#
+# @todo If we could rely on zsh being installed we could change all of this to
+# simply source the completion-function file and pull the rg_args array out...
 
 set -e
 
@@ -32,7 +36,8 @@ main() {
         # 'Parse' options out of the completion-function file. To prevent false
         # negatives, we:
         #
-        # * Exclude lines that look like comments
+        # * Exclude lines that don't start with punctuation expected of option
+        #   definitions
         # * Exclude lines that don't appear to have a bracketed description
         #   suitable for `_arguments`
         # * Exclude those bracketed descriptions so we don't match options
@@ -48,8 +53,11 @@ main() {
         #   variables or command substitutions. Brace expansion is OK as long as
         #   each component of the expression is a complete option flag — in
         #   other words, `{--foo,--bar}` is valid, but `--{foo,bar}` is not
-        "${rg}" -v -- '^\s*#' "${_rg}" |
-        "${rg}" --replace '$1' -- '^.*?(?:\(.+?\).*?)?(-.+)\[.+\].*' |
+        # * Bracketed descriptions must contain at least two characters and must
+        #   not begin with `!`, `@`, or `^` (in order to avoid confusion with
+        #   shell syntax)
+        "${rg}" -- "^\s*[\"':({*-]" "${_rg}" |
+        "${rg}" --replace '$1' -- '^.*?(?:\(.+?\).*?)?(-.+)\[[^!@^].+\].*' |
         tr -d "\t (){}*=+:'\"" |
         tr ',' '\n' |
         sort -u > "${compTemp}"
