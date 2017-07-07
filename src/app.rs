@@ -50,6 +50,7 @@ pub fn app() -> App<'static, 'static> {
     App::new("ripgrep")
         .author(crate_authors!())
         .version(crate_version!())
+        .long_version(LONG_VERSION.as_str())
         .about(ABOUT)
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
@@ -194,6 +195,24 @@ macro_rules! doc {
 }
 
 lazy_static! {
+    static ref LONG_VERSION: String = {
+        let mut features: Vec<&str> = vec![];
+
+        if cfg!(feature = "avx-accel") {
+            features.push("+avx-accel");
+        } else {
+            features.push("-avx-accel");
+        }
+
+        if cfg!(feature = "simd-accel") {
+            features.push("+simd-accel");
+        } else {
+            features.push("-simd-accel");
+        }
+
+        format!("{}, with features (+/-): {}", crate_version!(), features.join(" "))
+    };
+
     static ref USAGES: HashMap<&'static str, Usage> = {
         let mut h = HashMap::new();
         doc!(h, "help-short",
