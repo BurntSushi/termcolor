@@ -1267,7 +1267,7 @@ def main():
     benchmarks = collect_benchmarks(
         args.dir, filter_pat=args.bench,
         allow_missing_commands=args.allow_missing,
-        disabled_cmds=args.disabled.split(','),
+        disabled_cmds=(args.disabled or '').split(','),
         warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
     for i, b in enumerate(benchmarks):
         result = b.run()
