@@ -4,6 +4,13 @@ env:
   global:
     - PROJECT_NAME=ripgrep
     - RUST_BACKTRACE: full
+
+addons:
+  apt:
+    packages:
+      # Needed for completion-function test
+      - zsh
+
 matrix:
   include:
     # Nightly channel.
