@@ -11,32 +11,32 @@
 # Based on code from the zsh-users project — see copyright notice below.
 
 _rg() {
-  local state_descr ret curcontext="${curcontext}"
+  local state_descr ret curcontext="${curcontext:-}"
   local -a context line state
   local -A opt_args val_args
   local -a rg_args
 
   # Sort by long option name to match `rg --help`
   rg_args=(
-    '(-A -C --after-context --context)'{-A,--after-context=}'[specify lines to show after each match]:number of lines'
-    '(-B -C --before-context --context)'{-B,--before-context=}'[specify lines to show before each match]:number of lines'
+    '(-A -C --after-context --context)'{-A+,--after-context=}'[specify lines to show after each match]:number of lines'
+    '(-B -C --before-context --context)'{-B+,--before-context=}'[specify lines to show before each match]:number of lines'
     '(-i -s -S --ignore-case --case-sensitive --smart-case)'{-s,--case-sensitive}'[search case-sensitively]'
     '--color=[specify when to use colors in output]:when:( never auto always ansi )'
     '*--colors=[specify color settings and styles]: :->colorspec'
     '--column[show column numbers]'
-    '(-A -B -C --after-context --before-context --context)'{-C,--context=}'[specify lines to show before and after each match]:number of lines'
+    '(-A -B -C --after-context --before-context --context)'{-C+,--context=}'[specify lines to show before and after each match]:number of lines'
     '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
     '(-c --count)'{-c,--count}'[only show count of matches for each file]'
     '--debug[show debug messages]'
     '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size'
-    '(-E --encoding)'{-E,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
-    '*'{-f,--file=}'[specify file containing patterns to search for]:file:_files'
+    '(-E --encoding)'{-E+,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
+    '*'{-f+,--file=}'[specify file containing patterns to search for]:file:_files'
     "(1)--files[show each file that would be searched (but don't search)]"
     '(-l --files-with-matches --files-without-match)'{-l,--files-with-matches}'[only show names of files with matches]'
     '(-l --files-with-matches --files-without-match)--files-without-match[only show names of files without matches]'
     '(-F --fixed-strings)'{-F,--fixed-strings}'[treat pattern as literal string instead of regular expression]'
     '(-L --follow)'{-L,--follow}'[follow symlinks]'
-    '*'{-g,--glob=}'[include or exclude files for searching that match the specified glob]:glob'
+    '*'{-g+,--glob=}'[include or exclude files for searching that match the specified glob]:glob'
     '(: -)'{-h,--help}'[display help information]'
     '(-p --no-heading --pretty --vimgrep)--heading[show matches grouped by file name]'
     '--hidden[search hidden files and directories]'
@@ -45,8 +45,8 @@ _rg() {
     '--ignore-file=[specify additional ignore file]:file:_files'
     '(-v --invert-match)'{-v,--invert-match}'[invert matching]'
     '(-n -N --line-number --no-line-number)'{-n,--line-number}'[show line numbers]'
-    '(-M --max-columns)'{-M,--max-columns=}'[specify max length of lines to print]:number of bytes'
-    '(-m --max-count)'{-m,--max-count=}'[specify max number of matches per file]:number of matches'
+    '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
+    '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
     '--max-filesize=[specify size above which files should be ignored]:file size'
     '--maxdepth=[specify max number of directories to descend]:number of directories'
     '(--mmap --no-mmap)--mmap[search using memory maps when possible]'
@@ -64,18 +64,18 @@ _rg() {
     '(-p --heading --no-heading --pretty --vimgrep)'{-p,--pretty}'[alias for --color=always --heading -n]'
     '(-q --quiet)'{-q,--quiet}'[suppress normal output]'
     '--regex-size-limit=[specify upper size limit of compiled regex]:regex size'
-    '(1 -f --file)*'{-e,--regexp=}'[specify pattern]:pattern'
-    '(-o --only-matching -r --replace)'{-r,--replace=}'[specify string used to replace matches]:replace string'
+    '(1 -f --file)*'{-e+,--regexp=}'[specify pattern]:pattern'
+    '(-o --only-matching -r --replace)'{-r+,--replace=}'[specify string used to replace matches]:replace string'
     '(-i -s -S --ignore-case --case-sensitive --smart-case)'{-S,--smart-case}'[search case-insensitively if the pattern is all lowercase]'
     '(-j --threads)--sort-files[sort results by file path (disables parallelism)]'
     '(-a --text)'{-a,--text}'[search binary files as if they were text]'
-    '(-j --sort-files --threads)'{-j,--threads=}'[specify approximate number of threads to use]:number of threads'
-    '*'{-t,--type=}'[only search files matching specified type]: :_rg_types'
+    '(-j --sort-files --threads)'{-j+,--threads=}'[specify approximate number of threads to use]:number of threads'
+    '*'{-t+,--type=}'[only search files matching specified type]: :_rg_types'
     '*--type-add=[add new glob for file type]: :->typespec'
     '*--type-clear=[clear globs previously defined for specified file type]: :_rg_types'
     # This should actually be exclusive with everything but other type options
     '(:)--type-list[show all supported file types and their associated globs]'
-    '*'{-T,--type-not=}"[don't search files matching specified type]: :_rg_types"
+    '*'{-T+,--type-not=}"[don't search files matching specified type]: :_rg_types"
     '*'{-u,--unrestricted}'[reduce level of "smart" searching]'
     '(: -)'{-V,--version}'[display version information]'
     '(-p --heading --no-heading --pretty)--vimgrep[show results in vim-compatible format]'
@@ -84,6 +84,11 @@ _rg() {
     '(-e -f --file --files --regexp --type-list)1: :_rg_pattern'
     '(--type-list)*:file:_files'
   )
+
+  [[ ${_RG_COMPLETE_LIST_ARGS:-} == (1|t*|y*) ]] && {
+    printf '%s\n' "${rg_args[@]}"
+    return 0
+  }
 
   _arguments -s -S : "${rg_args[@]}" && return 0
 
