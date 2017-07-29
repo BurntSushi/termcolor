@@ -1705,6 +1705,7 @@ fn regression_483_non_matching_exit_code() {
 
     wd.assert_err(&mut cmd);
 }
+
 // See: https://github.com/BurntSushi/ripgrep/issues/506
 #[test]
 fn regression_506_word_boundaries_not_parenthesized() {
@@ -1720,7 +1721,19 @@ fn regression_506_word_boundaries_not_parenthesized() {
     let expected = "min\nmax\n";
 
     assert_eq!(lines, expected);
+}
 
+// See: https://github.com/BurntSushi/ripgrep/issues/568
+#[test]
+fn regression_568_leading_hyphen_option_arguments() {
+    let wd = WorkDir::new("regression_568_leading_hyphen_option_arguments");
+    let path = "file";
+    wd.create(path, "foo bar baz\n");
+
+    let mut cmd = wd.command();
+    cmd.arg("-r").arg("-n").arg("-i").arg("bar").arg(path);
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo -n baz\n");
 }
 
 #[test]
