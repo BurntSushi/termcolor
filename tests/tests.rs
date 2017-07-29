@@ -1728,12 +1728,22 @@ fn regression_506_word_boundaries_not_parenthesized() {
 fn regression_568_leading_hyphen_option_arguments() {
     let wd = WorkDir::new("regression_568_leading_hyphen_option_arguments");
     let path = "file";
-    wd.create(path, "foo bar baz\n");
+    wd.create(path, "foo bar -baz\n");
+
+    let mut cmd = wd.command();
+    cmd.arg("-e-baz").arg("-e").arg("-baz").arg(path);
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo bar -baz\n");
+
+    let mut cmd = wd.command();
+    cmd.arg("-rni").arg("bar").arg(path);
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "foo ni -baz\n");
 
     let mut cmd = wd.command();
     cmd.arg("-r").arg("-n").arg("-i").arg("bar").arg(path);
     let lines: String = wd.stdout(&mut cmd);
-    assert_eq!(lines, "foo -n baz\n");
+    assert_eq!(lines, "foo -n -baz\n");
 }
 
 #[test]
