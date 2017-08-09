@@ -209,6 +209,16 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
     assert_eq!(lines, expected);
 });
 
+sherlock!(line, "Watson|and exhibited clearly, with a label attached.",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("-x");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+and exhibited clearly, with a label attached.
+";
+    assert_eq!(lines, expected);
+});
+
 sherlock!(literal, "()", "file", |wd: WorkDir, mut cmd: Command| {
     wd.create("file", "blib\n()\nblab\n");
     cmd.arg("-F");

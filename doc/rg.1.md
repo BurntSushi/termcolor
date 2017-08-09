@@ -105,6 +105,10 @@ Project home page: https://github.com/BurntSushi/ripgrep
 : Only show matches surrounded by word boundaries. This is equivalent to
   putting \\b before and after the search pattern.
 
+-x, --line-regexp
+: Only show matches surrounded by line boundaries. This is equivalent to
+  putting ^...$ around the search pattern.
+
 # LESS COMMON OPTIONS
 
 -A, --after-context *NUM*

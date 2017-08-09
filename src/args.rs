@@ -427,7 +427,8 @@ impl<'a> ArgMatches<'a> {
     ///
     /// Note that if -F/--fixed-strings is set, then all patterns will be
     /// escaped. Similarly, if -w/--word-regexp is set, then all patterns
-    /// are surrounded by `\b`.
+    /// are surrounded by `\b`, and if -x/--line-regexp is set, then all
+    /// patterns are surrounded by `^...$`.
     ///
     /// If any pattern is invalid UTF-8, then an error is returned.
     fn patterns(&self) -> Result<Vec<String>> {
@@ -470,7 +471,7 @@ impl<'a> ArgMatches<'a> {
         Ok(pats)
     }
 
-    /// Converts an OsStr pattern to a String pattern, including word
+    /// Converts an OsStr pattern to a String pattern, including line/word
     /// boundaries or escapes if applicable.
     ///
     /// If the pattern is not valid UTF-8, then an error is returned.
@@ -479,10 +480,12 @@ impl<'a> ArgMatches<'a> {
         Ok(self.str_pattern(s))
     }
 
-    /// Converts a &str pattern to a String pattern, including word
+    /// Converts a &str pattern to a String pattern, including line/word
     /// boundaries or escapes if applicable.
     fn str_pattern(&self, pat: &str) -> String {
-        let s = self.word_pattern(self.literal_pattern(pat.to_string()));
+        let litpat = self.literal_pattern(pat.to_string());
+        let s = self.line_pattern(self.word_pattern(litpat));
+
         if s.is_empty() {
             self.empty_pattern()
         } else {
@@ -506,6 +509,16 @@ impl<'a> ArgMatches<'a> {
     fn word_pattern(&self, pat: String) -> String {
         if self.is_present("word-regexp") {
             format!(r"\b(?:{})\b", pat)
+        } else {
+            pat
+        }
+    }
+
+    /// Returns the given pattern as a line pattern if the -x/--line-regexp
+    /// flag is set. Otherwise, the pattern is returned unchanged.
+    fn line_pattern(&self, pat: String) -> String {
+        if self.is_present("line-regexp") {
+            format!(r"^(?:{})$", pat)
         } else {
             pat
         }

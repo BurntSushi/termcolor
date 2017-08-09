@@ -109,7 +109,8 @@ pub fn app() -> App<'static, 'static> {
         .arg(flag("unrestricted").short("u")
              .multiple(true))
         .arg(flag("invert-match").short("v"))
-        .arg(flag("word-regexp").short("w"))
+        .arg(flag("word-regexp").short("w").overrides_with("line-regexp"))
+        .arg(flag("line-regexp").short("x"))
         // Third, set up less common flags.
         .arg(flag("after-context").short("A")
              .value_name("NUM").takes_value(true)
@@ -348,6 +349,10 @@ lazy_static! {
              "Only show matches surrounded by word boundaries. This is \
               equivalent to putting \\b before and after all of the search \
               patterns.");
+        doc!(h, "line-regexp",
+             "Only show matches surrounded by line boundaries.",
+             "Only show matches surrounded by line boundaries. This is \
+              equivalent to putting ^...$ around all of the search patterns.");
 
         doc!(h, "after-context",
              "Show NUM lines after each match.");
