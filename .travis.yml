@@ -17,13 +17,13 @@ matrix:
     # (All *nix releases are done on the nightly channel to take advantage
     # of the regex library's multiple pattern SIMD search.)
     - os: linux
-      rust: nightly-2017-03-13
+      rust: nightly
       env: TARGET=i686-unknown-linux-musl
     - os: linux
-      rust: nightly-2017-03-13
+      rust: nightly
       env: TARGET=x86_64-unknown-linux-musl
     - os: osx
-      rust: nightly-2017-03-13
+      rust: nightly
       env: TARGET=x86_64-apple-darwin
     # Beta channel.
     - os: linux
@@ -34,10 +34,10 @@ matrix:
       env: TARGET=x86_64-unknown-linux-gnu
     # Minimum Rust supported channel.
     - os: linux
-      rust: 1.16.0
+      rust: 1.17.0
       env: TARGET=x86_64-unknown-linux-gnu
     - os: linux
-      rust: 1.16.0
+      rust: 1.17.0
       env: TARGET=x86_64-unknown-linux-musl
 
 before_install:
