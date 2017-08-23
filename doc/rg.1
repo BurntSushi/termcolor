@@ -29,6 +29,10 @@ time searching.
 Because of this, features like backreferences and arbitrary lookaround
 are not supported.
 .PP
+Note that ripgrep may abort unexpectedly when using default settings if
+it searches a file that is simultaneously truncated.
+This behavior can be avoided by passing the \-\-no\-mmap flag.
+.PP
 Project home page: https://github.com/BurntSushi/ripgrep
 .SH COMMON OPTIONS
 .TP
@@ -45,7 +49,10 @@ Only show count of line matches for each file.
 .B \-\-color \f[I]WHEN\f[]
 Whether to use color in the output.
 Valid values are never, auto, always or ansi.
-[default: auto]
+The default is auto.
+When always is used, coloring is attempted based on your environment.
+When ansi is used, coloring is forcefully done using ANSI escape color
+codes.
 .RS
 .RE
 .TP
@@ -296,6 +303,17 @@ This is the default mode when not at a tty.
 .B \-\-hidden
 Search hidden directories and files.
 (Hidden directories and files are skipped by default.)
+.RS
+.RE
+.TP
+.B \-\-iglob \f[I]GLOB\f[] ...
+Include or exclude files/directories case insensitively.
+This always overrides any other ignore logic if there is a conflict, but
+is otherwise applied in addition to ignore files (e.g., .gitignore or
+\&.ignore).
+Multiple glob flags may be used.
+Globbing rules match .gitignore globs.
+Precede a glob with a \[aq]!\[aq] to exclude it.
 .RS
 .RE
 .TP

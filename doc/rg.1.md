@@ -25,6 +25,10 @@ ripgrep's regex engine uses finite automata and guarantees linear time
 searching. Because of this, features like backreferences and arbitrary
 lookaround are not supported.
 
+Note that ripgrep may abort unexpectedly when using default settings if it
+searches a file that is simultaneously truncated. This behavior can be avoided
+by passing the --no-mmap flag.
+
 Project home page: https://github.com/BurntSushi/ripgrep
 
 # COMMON OPTIONS
