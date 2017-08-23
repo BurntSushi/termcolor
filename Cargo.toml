@@ -16,6 +16,10 @@ license = "Unlicense/MIT"
 exclude = ["HomebrewFormula"]
 build = "build.rs"
 
+[badges]
+travis-ci = { repository = "BurntSushi/ripgrep" }
+appveyor = { repository = "BurntSushi/ripgrep" }
+
 [[bin]]
 bench = false
 path = "src/main.rs"
