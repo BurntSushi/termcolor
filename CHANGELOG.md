@@ -1,3 +1,73 @@
+0.6.0 (2017-08-23)
+==================
+This is a new minor version release of ripgrep that includes many bug fixes
+and a few new features such as `--iglob` and `-x/--line-regexp`.
+
+Note that this release increases the minimum supported Rust version from 1.12
+to 1.17.
+
+Feature enhancements:
+
+* Added or improved file type filtering for BitBake, C++, Cabal, cshtml, Julia,
+  Make, msbuild, QMake, Yocto
+* [FEATURE #163](https://github.com/BurntSushi/ripgrep/issues/163):
+  Add an `--iglob` flag that is like `-g/--glob`, but matches globs
+  case insensitively.
+* [FEATURE #520](https://github.com/BurntSushi/ripgrep/pull/518):
+  Add `-x/--line-regexp` flag, which requires a match to span an entire line.
+* [FEATURE #551](https://github.com/BurntSushi/ripgrep/pull/551),
+  [FEATURE #554](https://github.com/BurntSushi/ripgrep/pull/554):
+  `ignore`: add new `matched_path_or_any_parents` method.
+
+Bug fixes:
+
+* [BUG #342](https://github.com/BurntSushi/ripgrep/issues/342):
+  Fix invisible text in some PowerShell environments by changing the
+  default color scheme on Windows.
+* [BUG #413](https://github.com/BurntSushi/ripgrep/issues/413):
+  Release binaries on Unix are now `strip`'d by default. This decreases
+  binary size by an order of magnitude.
+* [BUG #483](https://github.com/BurntSushi/ripgrep/issues/483):
+  When `--quiet` is passed, `--files` should be quiet.
+* [BUG #488](https://github.com/BurntSushi/ripgrep/pull/488):
+  When `--vimgrep` is passed, `--with-filename` should be enabled
+  automatically.
+* [BUG #493](https://github.com/BurntSushi/ripgrep/issues/493):
+  Fix another bug in the implementation of the `-o/--only-matching`
+  flag.
+* [BUG #499](https://github.com/BurntSushi/ripgrep/pull/499):
+  Permit certain flags to override others.
+* [BUG #523](https://github.com/BurntSushi/ripgrep/pull/523):
+  `wincolor`: Re-fetch Windows console on all calls.
+* [BUG #523](https://github.com/BurntSushi/ripgrep/issues/524):
+  `--version` now shows enabled compile-time features.
+* [BUG #532](https://github.com/BurntSushi/ripgrep/issues/532),
+  [BUG #536](https://github.com/BurntSushi/ripgrep/pull/536),
+  [BUG #538](https://github.com/BurntSushi/ripgrep/pull/538),
+  [BUG #540](https://github.com/BurntSushi/ripgrep/pull/540),
+  [BUG #560](https://github.com/BurntSushi/ripgrep/pull/560),
+  [BUG #565](https://github.com/BurntSushi/ripgrep/pull/565):
+  Improve zsh completion.
+* [BUG #578](https://github.com/BurntSushi/ripgrep/pull/578):
+  Enable SIMD for `encoding_rs` when appropriate.
+* [BUG #580](https://github.com/BurntSushi/ripgrep/issues/580):
+  Fix `-w/--word-regexp` in the presence of capturing groups.
+* [BUG #581](https://github.com/BurntSushi/ripgrep/issues/581):
+  Document that ripgrep may terminate unexpectedly when searching via
+  memory maps (which can happen using default settings).
+
+Friends of ripgrep:
+
+I'd like to give a big Thank You to @okdana for their recent hard work on
+ripgrep. This includes new features like `--line-regexp`, heroic effort on
+zsh auto-completion and thinking through some thorny argv issues with me.
+
+I'd also like to thank @ericbn for their work on improving ripgrep's argv
+parsing by allowing some flags to override others.
+
+Thanks @okdana and @ericbn!
+
+
 0.5.2 (2017-05-11)
 ==================
 Feature enhancements:
