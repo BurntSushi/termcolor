@@ -1090,16 +1090,19 @@ clean!(regression_405, "test", ".", |wd: WorkDir, mut cmd: Command| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/428
-clean!(regression_428_color_context_path, "foo", ".", |wd: WorkDir, mut cmd: Command| {
+#[cfg(not(windows))]
+clean!(regression_428_color_context_path, "foo", ".",
+|wd: WorkDir, mut cmd: Command| {
     wd.create("sherlock", "foo\nbar");
     cmd.arg("-A1").arg("-H").arg("--no-heading").arg("-N")
        .arg("--colors=match:none").arg("--color=always");
 
     let lines: String = wd.stdout(&mut cmd);
-    let expected = format!("\
-{colored_path}:foo
-{colored_path}-bar
-", colored_path=format!("\x1b\x5b\x6d\x1b\x5b\x33\x35\x6d{path}\x1b\x5b\x6d", path=path("sherlock")));
+    let expected = format!(
+        "{colored_path}:foo\n{colored_path}-bar\n",
+        colored_path=format!(
+            "\x1b\x5b\x6d\x1b\x5b\x33\x35\x6d{path}\x1b\x5b\x6d",
+            path=path("sherlock")));
     assert_eq!(lines, expected);
 });
 
