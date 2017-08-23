@@ -18,9 +18,12 @@ mk_tarball() {
     mkdir "$td/$name"
     mkdir "$td/$name/complete"
 
-    cp target/$TARGET/release/rg "$td/$name/"
+    cp target/$TARGET/release/rg "$td/$name/rg"
+    strip "$td/$name/rg"
     cp {doc/rg.1,README.md,UNLICENSE,COPYING,LICENSE-MIT} "$td/$name/"
-    cp target/$TARGET/release/build/ripgrep-*/out/{rg.bash-completion,rg.fish,_rg.ps1} "$td/$name/complete/"
+    cp \
+      target/$TARGET/release/build/ripgrep-*/out/{rg.bash-completion,rg.fish,_rg.ps1} \
+      "$td/$name/complete/"
     cp complete/_rg "$td/$name/complete/"
 
     pushd $td
