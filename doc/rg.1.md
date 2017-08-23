@@ -37,7 +37,9 @@ Project home page: https://github.com/BurntSushi/ripgrep
 
 --color *WHEN*
 : Whether to use color in the output. Valid values are never, auto, always or
-  ansi. [default: auto]
+  ansi. The default is auto. When always is used, coloring is attempted based
+  on your environment. When ansi is used, coloring is forcefully done using
+  ANSI escape color codes.
 
 -e, --regexp *PATTERN* ...
 : Use PATTERN to search. This option can be provided multiple times, where all
@@ -195,6 +197,13 @@ Project home page: https://github.com/BurntSushi/ripgrep
 --hidden
 : Search hidden directories and files. (Hidden directories and files are
   skipped by default.)
+
+--iglob *GLOB* ...
+: Include or exclude files/directories case insensitively. This always
+  overrides any other ignore logic if there is a conflict, but is otherwise
+  applied in addition to ignore files (e.g., .gitignore or .ignore). Multiple
+  glob flags may be used. Globbing rules match .gitignore globs. Precede a
+  glob with a '!' to exclude it.
 
 --ignore-file *FILE* ...
 : Specify additional ignore files for filtering file paths.
