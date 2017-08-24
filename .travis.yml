@@ -65,7 +65,7 @@ deploy:
     # channel to use to produce the release artifacts
     # NOTE make sure you only release *once* per target
     # TODO you may want to pick a different channel
-    condition: $TRAVIS_RUST_VERSION = nightly-2017-03-13
+    condition: $TRAVIS_RUST_VERSION = nightly
     tags: true
 
 branches:
