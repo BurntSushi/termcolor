@@ -210,7 +210,8 @@ $ # (Or using the attribute name, which is also `ripgrep`.)
 ```
 
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`. Note
-that this requires you to have **Rust 1.12 or newer** installed.
+that the minimum supported version of Rust for ripgrep is **1.17**, although
+ripgrep may work with older versions.
 
 ```
 $ cargo install ripgrep
@@ -346,7 +347,7 @@ For **fish**, move `complete/rg.fish` to `$HOME/.config/fish/completions/`.
 For **PowerShell**, add `. _rg.ps1` to your PowerShell
 [profile](https://technet.microsoft.com/en-us/library/bb613488(v=vs.85).aspx)
 (note the leading period). If the `_rg.ps1` file is not on your `PATH`, do
-`. /path/to/_rg.ps1` instead. 
+`. /path/to/_rg.ps1` instead.
 
 For **zsh**, move `complete/_rg` to one of your `$fpath` directories.
 
@@ -354,7 +355,7 @@ For **zsh**, move `complete/_rg` to one of your `$fpath` directories.
 
 `ripgrep` is written in Rust, so you'll need to grab a
 [Rust installation](https://www.rust-lang.org/) in order to compile it.
-`ripgrep` compiles with Rust 1.12 (stable) or newer. Building is easy:
+`ripgrep` compiles with Rust 1.17 (stable) or newer. Building is easy:
 
 ```
 $ git clone https://github.com/BurntSushi/ripgrep
@@ -449,7 +450,7 @@ Example `$OutputEncoding` settings:
 `$OutputEncoding = [System.Console]::OutputEncoding`
 
 If you continue to have encoding problems, you can also force the encoding
-that the console will use for printing to UTF-8 with 
+that the console will use for printing to UTF-8 with
 `[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8`. This
 will also reset when PowerShell is restarted, so you can add that line
 to your profile as well if you want to make the setting permanent.
