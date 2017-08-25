@@ -610,6 +610,8 @@ impl WalkBuilder {
     /// does not exist or does not specify `core.excludesFile`, then
     /// `$XDG_CONFIG_HOME/git/ignore` is read. If `$XDG_CONFIG_HOME` is not
     /// set or is empty, then `$HOME/.config/git/ignore` is used instead.
+    ///
+    /// This is enabled by default.
     pub fn git_global(&mut self, yes: bool) -> &mut WalkBuilder {
         self.ig_builder.git_global(yes);
         self
