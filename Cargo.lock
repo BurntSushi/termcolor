@@ -16,7 +16,7 @@ dependencies = [
  "num_cpus 1.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "same-file 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "termcolor 0.3.2",
+ "termcolor 0.3.3",
 ]
 
 [[package]]
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "termcolor"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "wincolor 0.1.4",
 ]
