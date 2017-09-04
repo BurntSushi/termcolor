@@ -71,9 +71,9 @@ increases the times to `3.081s` for ripgrep and `11.403s` for GNU grep.
 
 ### Why should I use `ripgrep`?
 
-* It can replace both The Silver Searcher and GNU grep because it is faster
-  than both. (N.B. It is not, strictly speaking, a "drop-in" replacement for
-  both, but the feature sets are far more similar than different.)
+* It can replace both The Silver Searcher and GNU grep because it is generally
+  faster than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
+  for both, but the feature sets are far more similar than different.)
 * Like The Silver Searcher, `ripgrep` defaults to recursive directory search
   and won't search files ignored by your `.gitignore` files. It also ignores
   hidden and binary files by default. `ripgrep` also implements full support
@@ -118,7 +118,7 @@ multiline search, then `ripgrep` may not quite meet your needs (yet).
 
 ### Is it really faster than everything else?
 
-Yes. A large number of benchmarks with detailed analysis for each is
+Generally, yes. A large number of benchmarks with detailed analysis for each is
 [available on my blog](http://blog.burntsushi.net/ripgrep/).
 
 Summarizing, `ripgrep` is fast because:
