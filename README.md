@@ -146,12 +146,15 @@ Summarizing, `ripgrep` is fast because:
 
 The binary name for `ripgrep` is `rg`.
 
-[Binaries for `ripgrep` are available for Windows, Mac and
-Linux.](https://github.com/BurntSushi/ripgrep/releases) Linux binaries are
-static executables. Windows binaries are available either as built with MinGW
-(GNU) or with Microsoft Visual C++ (MSVC). When possible, prefer MSVC over GNU,
-but you'll need to have the
-[Microsoft VC++ 2015 redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
+**[Archives of precompiled binaries for `ripgrep` are available for Windows, Mac
+and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Users of platforms
+not explicitly mentioned below (such as Debian and Ubuntu) are advised to
+download one of these archives.
+
+Linux binaries are static executables. Windows binaries are available either as
+built with MinGW (GNU) or with Microsoft Visual C++ (MSVC). When possible,
+prefer MSVC over GNU, but you'll need to have the [Microsoft VC++ 2015
+redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 installed.
 
 If you're a **Mac OS X Homebrew** user, then you can install ripgrep either
