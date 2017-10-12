@@ -487,3 +487,26 @@ was later deprecated in
 available [here][msys issue explanation].
 
 [msys issue explanation]: https://github.com/BurntSushi/ripgrep/issues/281#issuecomment-269093893
+
+#### When I run `rg` it executes some other command!
+
+It's likely that you have a shell alias or even another tool called `rg` which
+is interfering with `ripgrep` — run `which rg` to see what it is.
+
+(Notably, the `rails` plug-in for
+[Oh My Zsh](https://github.com/robbyrussell/oh-my-zsh/wiki/Plugins#rails) sets
+up an `rg` alias for `rails generate`.)
+
+Problems like this can be resolved in one of several ways:
+
+* If you're using the OMZ `rails` plug-in, disable it by editing the `plugins`
+  array in your zsh configuration.
+* Temporarily bypass an existing `rg` alias by calling `ripgrep` as
+  `command rg`, `\rg`, or `'rg'`.
+* Temporarily bypass an existing alias or another tool named `rg` by calling
+  `ripgrep` by its full path (e.g., `/usr/bin/rg` or `/usr/local/bin/rg`).
+* Permanently disable an existing `rg` alias by adding `unalias rg` to the
+  bottom of your shell configuration file (e.g., `.bash_profile` or `.zshrc`).
+* Give `ripgrep` its own alias that doesn't conflict with other tools/aliases by
+  adding a line like the following to the bottom of your shell configuration
+  file: `alias ripgrep='command rg'`
