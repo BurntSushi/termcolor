@@ -41,12 +41,14 @@ impl WorkDir {
         }
     }
 
-    /// Create a new file with the given name and contents in this directory, or panic on error.
+    /// Create a new file with the given name and contents in this directory,
+    /// or panic on error.
     pub fn create<P: AsRef<Path>>(&self, name: P, contents: &str) {
         self.create_bytes(name, contents.as_bytes());
     }
 
-    /// Try to create a new file with the given name and contents in this directory.
+    /// Try to create a new file with the given name and contents in this
+    /// directory.
     pub fn try_create<P: AsRef<Path>>(&self, name: P, contents: &str) -> io::Result<()> {
         self.try_create_bytes(name, contents.as_bytes())
     }
@@ -58,13 +60,15 @@ impl WorkDir {
         nice_err(&path, file.set_len(filesize));
     }
 
-    /// Create a new file with the given name and contents in this directory, or panic on error.
+    /// Create a new file with the given name and contents in this directory,
+    /// or panic on error.
     pub fn create_bytes<P: AsRef<Path>>(&self, name: P, contents: &[u8]) {
         let path = self.dir.join(name);
         nice_err(&path, self.try_create_bytes(&path, contents));
     }
 
-    /// Try to create a new file with the given name and contents in this directory.
+    /// Try to create a new file with the given name and contents in this
+    /// directory.
     fn try_create_bytes<P: AsRef<Path>>(&self, path: P, contents: &[u8]) -> io::Result<()> {
         let mut file = File::create(&path)?;
         file.write_all(contents)?;
