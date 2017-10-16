@@ -1014,10 +1014,10 @@ fn regression_210() {
     let badutf8 = OsStr::from_bytes(&b"foo\xffbar"[..]);
 
     let wd = WorkDir::new("regression_210");
-    let mut cmd = wd.command();
     // APFS does not support creating files with invalid UTF-8 bytes.
     // https://github.com/BurntSushi/ripgrep/issues/559
     if wd.try_create(badutf8, "test").is_ok() {
+        let mut cmd = wd.command();
         cmd.arg("-H").arg("test").arg(badutf8);
 
         let out = wd.output(&mut cmd);
