@@ -50,7 +50,8 @@ impl WorkDir {
     /// Try to create a new file with the given name and contents in this
     /// directory.
     pub fn try_create<P: AsRef<Path>>(&self, name: P, contents: &str) -> io::Result<()> {
-        self.try_create_bytes(name, contents.as_bytes())
+        let path = self.dir.join(name);
+        self.try_create_bytes(path, contents.as_bytes())
     }
 
     /// Create a new file with the given name and size.
