@@ -22,7 +22,7 @@ crossbeam = "0.2"
 globset = { version = "0.2.0", path = "../globset" }
 lazy_static = "0.2"
 log = "0.3"
-memchr = "1"
+memchr = "2"
 regex = "0.2.1"
 thread_local = "0.3.2"
 walkdir = "1.0.7"

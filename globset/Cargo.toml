@@ -22,7 +22,7 @@ bench = false
 aho-corasick = "0.6.0"
 fnv = "1.0"
 log = "0.3"
-memchr = "1"
+memchr = "2"
 regex = "0.2.1"
 
 [dev-dependencies]
