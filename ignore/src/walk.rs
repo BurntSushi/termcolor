@@ -1,5 +1,5 @@
 use std::cmp;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, FileType, Metadata};
 use std::io;
@@ -11,7 +11,8 @@ use std::time::Duration;
 use std::vec;
 
 use crossbeam::sync::MsQueue;
-use walkdir::{self, WalkDir, WalkDirIterator, is_same_file};
+use same_file::is_same_file;
+use walkdir::{self, WalkDir};
 
 use dir::{Ignore, IgnoreBuilder};
 use gitignore::GitignoreBuilder;
@@ -36,8 +37,8 @@ impl DirEntry {
     }
 
     /// Whether this entry corresponds to a symbolic link or not.
-    pub fn path_is_symbolic_link(&self) -> bool {
-        self.dent.path_is_symbolic_link()
+    pub fn path_is_symlink(&self) -> bool {
+        self.dent.path_is_symlink()
     }
 
     /// Returns true if and only if this entry corresponds to stdin.
@@ -137,12 +138,12 @@ impl DirEntryInner {
         }
     }
 
-    fn path_is_symbolic_link(&self) -> bool {
+    fn path_is_symlink(&self) -> bool {
         use self::DirEntryInner::*;
         match *self {
             Stdin => false,
-            Walkdir(ref x) => x.path_is_symbolic_link(),
-            Raw(ref x) => x.path_is_symbolic_link(),
+            Walkdir(ref x) => x.path_is_symlink(),
+            Raw(ref x) => x.path_is_symlink(),
         }
     }
 
@@ -199,6 +200,7 @@ impl DirEntryInner {
 
     #[cfg(unix)]
     fn ino(&self) -> Option<u64> {
+        use walkdir::DirEntryExt;
         use self::DirEntryInner::*;
         match *self {
             Stdin => None,
@@ -244,7 +246,7 @@ impl DirEntryRaw {
         &self.path
     }
 
-    fn path_is_symbolic_link(&self) -> bool {
+    fn path_is_symlink(&self) -> bool {
         self.ty.is_symlink() || self.follow_link
     }
 
@@ -404,7 +406,9 @@ pub struct WalkBuilder {
     max_depth: Option<usize>,
     max_filesize: Option<u64>,
     follow_links: bool,
-    sorter: Option<Arc<Fn(&OsString, &OsString) -> cmp::Ordering + 'static>>,
+    sorter: Option<Arc<
+        Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static
+    >>,
     threads: usize,
 }
 
@@ -458,7 +462,9 @@ impl WalkBuilder {
                 }
                 if let Some(ref cmp) = cmp {
                     let cmp = cmp.clone();
-                    wd = wd.sort_by(move |a, b| cmp(a, b));
+                    wd = wd.sort_by(move |a, b| {
+                        cmp(a.file_name(), b.file_name())
+                    });
                 }
                 (p.to_path_buf(), Some(WalkEventIter::from(wd)))
             }
@@ -572,16 +578,16 @@ impl WalkBuilder {
     }
 
     /// Enables all the standard ignore filters.
-    /// 
+    ///
     /// This toggles, as a group, all the filters that are enabled by default:
-    /// 
+    ///
     /// - [hidden()](#method.hidden)
     /// - [parents()](#method.parents)
     /// - [ignore()](#method.ignore)
     /// - [git_ignore()](#method.git_ignore)
     /// - [git_global()](#method.git_global)
     /// - [git_exclude()](#method.git_exclude)
-    /// 
+    ///
     /// They may still be toggled individually after calling this function.
     ///
     /// This is (by definition) enabled by default.
@@ -662,7 +668,7 @@ impl WalkBuilder {
         self
     }
 
-    /// Set a function for sorting directory entries.
+    /// Set a function for sorting directory entries by file name.
     ///
     /// If a compare function is set, the resulting iterator will return all
     /// paths in sorted order. The compare function will be called to compare
@@ -670,8 +676,9 @@ impl WalkBuilder {
     /// entry.
     ///
     /// Note that this is not used in the parallel iterator.
-    pub fn sort_by<F>(&mut self, cmp: F) -> &mut WalkBuilder
-            where F: Fn(&OsString, &OsString) -> cmp::Ordering + 'static {
+    pub fn sort_by_file_name<F>(&mut self, cmp: F) -> &mut WalkBuilder
+    where F: Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static
+    {
         self.sorter = Some(Arc::new(cmp));
         self
     }
@@ -752,7 +759,7 @@ impl Iterator for Walk {
             };
             match ev {
                 Err(err) => {
-                    return Some(Err(Error::from(err)));
+                    return Some(Err(Error::from_walkdir(err)));
                 }
                 Ok(WalkEvent::Exit) => {
                     self.ig = self.ig.parent().unwrap();
@@ -788,7 +795,7 @@ impl Iterator for Walk {
 /// the entire contents of a directory have been enumerated.
 struct WalkEventIter {
     depth: usize,
-    it: walkdir::Iter,
+    it: walkdir::IntoIter,
     next: Option<Result<walkdir::DirEntry, walkdir::Error>>,
 }
 

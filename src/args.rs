@@ -287,7 +287,7 @@ impl Args {
         wd.parents(!self.no_ignore_parent);
         wd.threads(self.threads());
         if self.sort_files {
-            wd.sort_by(|a, b| a.cmp(b));
+            wd.sort_by_file_name(|a, b| a.cmp(b));
         }
         wd
     }

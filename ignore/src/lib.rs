@@ -54,6 +54,7 @@ extern crate lazy_static;
 extern crate log;
 extern crate memchr;
 extern crate regex;
+extern crate same_file;
 #[cfg(test)]
 extern crate tempdir;
 extern crate thread_local;
@@ -198,6 +199,29 @@ impl Error {
         }
         errline.with_path(path)
     }
+
+    /// Build an error from a walkdir error.
+    fn from_walkdir(err: walkdir::Error) -> Error {
+        let depth = err.depth();
+        if let (Some(anc), Some(child)) = (err.loop_ancestor(), err.path()) {
+            return Error::WithDepth {
+                depth: depth,
+                err: Box::new(Error::Loop {
+                    ancestor: anc.to_path_buf(),
+                    child: child.to_path_buf(),
+                }),
+            };
+        }
+        let path = err.path().map(|p| p.to_path_buf());
+        let mut ig_err = Error::Io(io::Error::from(err));
+        if let Some(path) = path {
+            ig_err = Error::WithPath {
+                path: path,
+                err: Box::new(ig_err),
+            };
+        }
+        ig_err
+    }
 }
 
 impl error::Error for Error {
@@ -255,30 +279,6 @@ impl fmt::Display for Error {
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
         Error::Io(err)
-    }
-}
-
-impl From<walkdir::Error> for Error {
-    fn from(err: walkdir::Error) -> Error {
-        let depth = err.depth();
-        if let (Some(anc), Some(child)) = (err.loop_ancestor(), err.path()) {
-            return Error::WithDepth {
-                depth: depth,
-                err: Box::new(Error::Loop {
-                    ancestor: anc.to_path_buf(),
-                    child: child.to_path_buf(),
-                }),
-            };
-        }
-        let path = err.path().map(|p| p.to_path_buf());
-        let mut ig_err = Error::Io(io::Error::from(err));
-        if let Some(path) = path {
-            ig_err = Error::WithPath {
-                path: path,
-                err: Box::new(ig_err),
-            };
-        }
-        ig_err
     }
 }
 
