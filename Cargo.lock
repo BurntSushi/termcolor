@@ -1,14 +1,14 @@
 [root]
 name = "ripgrep"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "atty 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecount 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.26.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "encoding_rs 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "grep 0.1.6",
- "ignore 0.2.2",
+ "grep 0.1.7",
+ "ignore 0.3.0",
  "lazy_static 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "globset"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "aho-corasick 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "grep"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -137,10 +137,10 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "globset 0.2.0",
+ "globset 0.2.1",
  "lazy_static 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
