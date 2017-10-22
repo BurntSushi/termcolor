@@ -36,7 +36,7 @@ clap = "2.26"
 encoding_rs = "0.7"
 env_logger = { version = "0.4", default-features = false }
 grep = { version = "0.1.7", path = "grep" }
-ignore = { version = "0.3.0", path = "ignore" }
+ignore = { version = "0.3.1", path = "ignore" }
 lazy_static = "0.2"
 libc = "0.2"
 log = "0.3"
