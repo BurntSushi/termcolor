@@ -361,8 +361,13 @@ impl<W: WriteColor> Printer<W> {
             let mut last_written = 0;
             for o in offsets {
                 self.write(&buf[last_written..o.start]);
-                self.write_colored(
-                    &buf[o.start..o.end], |colors| colors.matched());
+                // This conditional checks if the match is both empty *and*
+                // past the end of the line. In this case, we never want to
+                // emit an additional color escape.
+                if o.start != o.end || o.end != buf.len() {
+                    self.write_colored(
+                        &buf[o.start..o.end], |colors| colors.matched());
+                }
                 last_written = o.end;
             }
             self.write(&buf[last_written..]);

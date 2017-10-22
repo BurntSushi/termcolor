@@ -1146,6 +1146,29 @@ clean!(regression_493, " 're ", "input.txt", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(lines, " 're \n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/599
+clean!(regression_599, "^$", "input.txt", |wd: WorkDir, mut cmd: Command| {
+    wd.create("input.txt", "\n\ntest\n");
+    cmd.args(&[
+        "--color", "ansi",
+        "--colors", "path:none",
+        "--colors", "line:none",
+        "--colors", "match:fg:red",
+        "--colors", "match:style:nobold",
+        "--line-number",
+    ]);
+
+    let lines: String = wd.stdout(&mut cmd);
+    // Technically, the expected output should only be two lines, but:
+    // https://github.com/BurntSushi/ripgrep/issues/441
+    let expected = "\
+[m1[m:[m[31m[m
+[m2[m:[m[31m[m
+[m4[m:
+";
+    assert_eq!(expected, lines);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1
 clean!(feature_1_sjis, "Шерлок Холмс", ".", |wd: WorkDir, mut cmd: Command| {
     let sherlock =
