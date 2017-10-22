@@ -1,3 +1,37 @@
+0.7.0 (2017-10-20)
+==================
+This is a new minor version release of ripgrep that includes mostly bug fixes.
+
+ripgrep continues to require Rust 1.17, and there are no known breaking changes
+introduced in this release.
+
+Feature enhancements:
+
+* Added or improved file type filtering for config & license files, Elm,
+  Purescript, Standard ML, sh, systemd, Terraform
+* [FEATURE #593](https://github.com/BurntSushi/ripgrep/pull/593):
+  Using both `-o/--only-matching` and `-r/--replace` does the right thing.
+
+Bug fixes:
+
+* [BUG #200](https://github.com/BurntSushi/ripgrep/issues/200):
+  ripgrep will stop when its pipe is closed.
+* [BUG #402](https://github.com/BurntSushi/ripgrep/issues/402):
+  Fix context printing bug when the `-m/--max-count` flag is used.
+* [BUG #521](https://github.com/BurntSushi/ripgrep/issues/521):
+  Fix interaction between `-r/--replace` and terminal colors.
+* [BUG #559](https://github.com/BurntSushi/ripgrep/issues/559):
+  Ignore test that tried reading a non-UTF-8 file path on macOS.
+* [BUG #599](https://github.com/BurntSushi/ripgrep/issues/599):
+  Fix color escapes on empty matches.
+* [BUG #600](https://github.com/BurntSushi/ripgrep/issues/600):
+  Avoid expensive (on Windows) file handle check when using --files.
+* [BUG #618](https://github.com/BurntSushi/ripgrep/issues/618):
+  Clarify installation instructions for Ubuntu users.
+* [BUG #633](https://github.com/BurntSushi/ripgrep/issues/633):
+  Faster symlink loop checking on Windows.
+
+
 0.6.0 (2017-08-23)
 ==================
 This is a new minor version release of ripgrep that includes many bug fixes
