@@ -21,7 +21,6 @@ use std::sync::{Arc, RwLock};
 use gitignore::{self, Gitignore, GitignoreBuilder};
 use pathutil::{is_hidden, strip_prefix};
 use overrides::{self, Override};
-use same_file::Handle;
 use types::{self, Types};
 use {Error, Match, PartialErrorBuilder};
 
@@ -96,9 +95,6 @@ struct IgnoreInner {
     compiled: Arc<RwLock<HashMap<OsString, Ignore>>>,
     /// The path to the directory that this matcher was built from.
     dir: PathBuf,
-    /// An open handle to the directory, for checking symlink loops in the
-    /// parallel iterator.
-    handle: Arc<Option<Handle>>,
     /// An override matcher (default is empty).
     overrides: Arc<Override>,
     /// A file type matcher.
@@ -133,11 +129,6 @@ impl Ignore {
     /// Return the directory path of this matcher.
     pub fn path(&self) -> &Path {
         &self.0.dir
-    }
-
-    /// Return a handle to the directory of this matcher.
-    pub fn handle(&self) -> Option<&Handle> {
-        (*self.0.handle).as_ref()
     }
 
     /// Return true if this matcher has no parent.
@@ -246,17 +237,9 @@ impl Ignore {
                 errs.maybe_push(err);
                 m
             };
-        let handle = match Handle::from_path(dir) {
-            Ok(handle) => Some(handle),
-            Err(err) => {
-                errs.push(Error::from(err).with_path(dir));
-                None
-            }
-        };
         let ig = IgnoreInner {
             compiled: self.0.compiled.clone(),
             dir: dir.to_path_buf(),
-            handle: Arc::new(handle),
             overrides: self.0.overrides.clone(),
             types: self.0.types.clone(),
             parent: Some(self.clone()),
@@ -467,14 +450,9 @@ impl IgnoreBuilder {
                 }
                 gi
             };
-        let handle = match Handle::from_path(&self.dir) {
-            Ok(handle) => Some(handle),
-            Err(_) => None,
-        };
         Ignore(Arc::new(IgnoreInner {
             compiled: Arc::new(RwLock::new(HashMap::new())),
             dir: self.dir.clone(),
-            handle: Arc::new(handle),
             overrides: self.overrides.clone(),
             types: self.types.clone(),
             parent: None,

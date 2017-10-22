@@ -1312,7 +1312,10 @@ fn check_symlink_loop(
         Error::from(err).with_path(child_path).with_depth(child_depth)
     })?;
     for ig in ig_parent.parents().take_while(|ig| !ig.is_absolute_parent()) {
-        if ig.handle().map_or(true, |parent| parent == &hchild) {
+        let h = Handle::from_path(ig.path()).map_err(|err| {
+            Error::from(err).with_path(child_path).with_depth(child_depth)
+        })?;
+        if hchild == h {
             return Err(Error::Loop {
                 ancestor: ig.path().to_path_buf(),
                 child: child_path.to_path_buf(),
