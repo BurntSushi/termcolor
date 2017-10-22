@@ -1,3 +1,14 @@
+0.7.1 (2017-10-22)
+==================
+This is a patch release of ripgrep that includes a fix to very bad regression
+introduced in ripgrep 0.7.0.
+
+Bug fixes:
+
+* [BUG #648](https://github.com/BurntSushi/ripgrep/issues/648):
+  Fix a bug where it was very easy to exceed standard file descriptor limits.
+
+
 0.7.0 (2017-10-20)
 ==================
 This is a new minor version release of ripgrep that includes mostly bug fixes.
