@@ -474,7 +474,7 @@ impl<W: WriteColor> Printer<W> {
     fn write_colored<F>(&mut self, buf: &[u8], get_color: F)
         where F: Fn(&ColorSpecs) -> &ColorSpec
     {
-        let _ = self.wtr.set_color( get_color(&self.colors) );
+        let _ = self.wtr.set_color(get_color(&self.colors));
         self.write(buf);
         let _ = self.wtr.reset();
     }
