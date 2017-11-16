@@ -840,12 +840,15 @@ impl<'a> Parser<'a> {
                 Ok(())
             }
         }
-        let mut negated = false;
         let mut ranges = vec![];
-        if self.chars.peek() == Some(&'!') {
-            assert!(self.bump() == Some('!'));
-            negated = true;
-        }
+        let negated = match self.chars.peek() {
+            Some(&'!') | Some(&'^') => {
+                let bump = self.bump();
+                assert!(bump == Some('!') || bump == Some('^'));
+                true
+            }
+            _ => false,
+        };
         let mut first = true;
         let mut in_range = false;
         loop {
@@ -1073,6 +1076,8 @@ mod tests {
     syntax!(cls17, "[a-z0-9]", vec![rclass(&[('a', 'z'), ('0', '9')])]);
     syntax!(cls18, "[!0-9a-z]", vec![rclassn(&[('0', '9'), ('a', 'z')])]);
     syntax!(cls19, "[!a-z0-9]", vec![rclassn(&[('a', 'z'), ('0', '9')])]);
+    syntax!(cls20, "[^a]", vec![classn('a', 'a')]);
+    syntax!(cls21, "[^a-z]", vec![classn('a', 'z')]);
 
     syntaxerr!(err_rseq1, "a**", ErrorKind::InvalidRecursive);
     syntaxerr!(err_rseq2, "**a", ErrorKind::InvalidRecursive);
@@ -1162,6 +1167,7 @@ mod tests {
     matches!(matchrange9, "[-a-c]", "b");
     matches!(matchrange10, "[a-c-]", "b");
     matches!(matchrange11, "[-]", "-");
+    matches!(matchrange12, "a[^0-9]b", "a_b");
 
     matches!(matchpat1, "*hello.txt", "hello.txt");
     matches!(matchpat2, "*hello.txt", "gareth_says_hello.txt");
@@ -1234,6 +1240,9 @@ mod tests {
     nmatches!(matchnot25, "*.c", "mozilla-sha1/sha1.c", SLASHLIT);
     nmatches!(matchnot26, "**/m4/ltoptions.m4",
               "csharp/src/packages/repositories.config", SLASHLIT);
+    nmatches!(matchnot27, "a[^0-9]b", "a0b");
+    nmatches!(matchnot28, "a[^0-9]b", "a9b");
+    nmatches!(matchnot29, "[^-]", "-");
 
     macro_rules! extract {
         ($which:ident, $name:ident, $pat:expr, $expect:expr) => {
