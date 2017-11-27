@@ -1799,6 +1799,25 @@ fn regression_568_leading_hyphen_option_arguments() {
     assert_eq!(lines, "foo -n -baz\n");
 }
 
+// See: https://github.com/BurntSushi/ripgrep/issues/693
+#[test]
+fn regression_693_context_option_in_contextless_mode() {
+    let wd = WorkDir::new("regression_693_context_option_in_contextless_mode");
+
+    wd.create("foo", "xyz\n");
+    wd.create("bar", "xyz\n");
+
+    let mut cmd = wd.command();
+    cmd.arg("-C1").arg("-c").arg("--sort-files").arg("xyz");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+bar:1
+foo:1
+";
+    assert_eq!(lines, expected);
+}
+
 #[test]
 fn type_list() {
     let wd = WorkDir::new("type_list");

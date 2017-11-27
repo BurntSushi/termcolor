@@ -153,14 +153,16 @@ impl Args {
 
     /// Retrieve the configured file separator.
     pub fn file_separator(&self) -> Option<Vec<u8>> {
-        let use_heading_sep =
-            self.heading
-            && !self.count
-            && !self.files_with_matches
-            && !self.files_without_matches;
+        let contextless =
+            self.count
+            || self.files_with_matches
+            || self.files_without_matches;
+        let use_heading_sep = self.heading && !contextless;
+
         if use_heading_sep {
             Some(b"".to_vec())
-        } else if self.before_context > 0 || self.after_context > 0 {
+        } else if !contextless
+            && (self.before_context > 0 || self.after_context > 0) {
             Some(self.context_separator.clone())
         } else {
             None
