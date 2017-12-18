@@ -300,7 +300,9 @@ Project home page: https://github.com/BurntSushi/ripgrep
 -S, --smart-case
 : Search case insensitively if the pattern is all lowercase.
   Search case sensitively otherwise. This is overridden by either
-  --case-sensitive or --ignore-case.
+  --case-sensitive or --ignore-case. Note: This feature is smart enough
+  to treat simple classes like \\S as lowercase, but may not handle more
+  complex syntax like \\p{Ll} as expected.
 
 --sort-files
 : Sort results by file path. Note that this currently
