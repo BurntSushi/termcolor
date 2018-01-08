@@ -116,6 +116,12 @@ give you a glimpse at some important downsides or missing features of
 In other words, if you like fancy regexes, searching compressed files or
 multiline search, then `ripgrep` may not quite meet your needs (yet).
 
+### Feature comparison
+
+Andy Lester, author of [ack](https://beyondgrep.com/), has published an
+excellent table comparing the features of ack, ag, git-grep, GNU grep and
+ripgrep: https://beyondgrep.com/feature-comparison/
+
 ### Is it really faster than everything else?
 
 Generally, yes. A large number of benchmarks with detailed analysis for each is
