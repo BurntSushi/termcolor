@@ -371,7 +371,7 @@ impl<'a> ArgMatches<'a> {
 
     /// Return all file paths that ripgrep should search.
     fn paths(&self) -> Vec<PathBuf> {
-        let mut paths: Vec<PathBuf> = match self.values_of_os("path") {
+        let mut paths: Vec<PathBuf> = match self.values_of_os("PATH") {
             None => vec![],
             Some(vals) => vals.map(|p| Path::new(p).to_path_buf()).collect(),
         };

@@ -18,10 +18,10 @@ Project home page: https://github.com/BurntSushi/ripgrep
 Use -h for short descriptions and --help for more details.";
 
 const USAGE: &str = "
-    rg [options] PATTERN [path ...]
-    rg [options] [-e PATTERN ...] [-f FILE ...] [path ...]
-    rg [options] --files [path ...]
-    rg [options] --type-list";
+    rg [OPTIONS] PATTERN [PATH ...]
+    rg [OPTIONS] [-e PATTERN ...] [-f FILE ...] [PATH ...]
+    rg [OPTIONS] --files [PATH ...]
+    rg [OPTIONS] --type-list";
 
 const TEMPLATE: &str = "\
 {bin} {version}
@@ -67,7 +67,7 @@ pub fn app() -> App<'static, 'static> {
                 "file", "files", "help-short", "help", "regexp", "type-list",
                 "ripgrep-version",
              ]))
-        .arg(arg("path").multiple(true))
+        .arg(arg("PATH").multiple(true))
         .arg(flag("regexp").short("e")
              .takes_value(true).multiple(true).number_of_values(1)
              .set(ArgSettings::AllowLeadingHyphen)
@@ -247,10 +247,11 @@ lazy_static! {
              "Use pattern to search. This option can be provided multiple \
              times, where all patterns given are searched. This is also \
              useful when searching for patterns that start with a dash.");
-        doc!(h, "path",
+        doc!(h, "PATH",
              "A file or directory to search.",
              "A file or directory to search. Directories are searched \
-              recursively.");
+              recursively. Paths specified on the command line override glob \
+              and ignore rules.");
         doc!(h, "files",
              "Print each file that would be searched.",
              "Print each file that would be searched without actually \

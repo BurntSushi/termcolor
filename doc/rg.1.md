@@ -4,17 +4,17 @@ rg - recursively search current directory for lines matching a pattern
 
 # SYNOPSIS
 
-rg [*options*] *PATTERN* [*path* ...]
+rg [*OPTIONS*] *PATTERN* [*PATH* ...]
 
-rg [*options*] [-e *PATTERN* ...] [-f *FILE* ...] [*path* ...]
+rg [*OPTIONS*] [-e *PATTERN* ...] [-f *FILE* ...] [*PATH* ...]
 
-rg [*options*] --files [*path* ...]
+rg [*OPTIONS*] --files [*PATH* ...]
 
-rg [*options*] --type-list
+rg [*OPTIONS*] --type-list
 
-rg [*options*] --help
+rg [*OPTIONS*] --help
 
-rg [*options*] --version
+rg [*OPTIONS*] --version
 
 # DESCRIPTION
 
@@ -30,6 +30,16 @@ searches a file that is simultaneously truncated. This behavior can be avoided
 by passing the --no-mmap flag.
 
 Project home page: https://github.com/BurntSushi/ripgrep
+
+# POSITIONAL ARGUMENTS
+
+*PATTERN*
+: A regular expression used for searching. To match a pattern beginning with a
+  dash, use the -e/--regexp option.
+
+*PATH*
+: A file or directory to search. Directories are searched recursively. Paths
+  specified expicitly on the command line override glob and ignore rules.
 
 # COMMON OPTIONS
 
