@@ -166,6 +166,8 @@ pub fn app() -> App<'static, 'static> {
         .arg(flag("no-ignore-vcs"))
         .arg(flag("null").short("0"))
         .arg(flag("only-matching").short("o"))
+        .arg(flag("passthru").alias("passthrough")
+            .conflicts_with_all(&["only-matching", "replace"]))
         .arg(flag("path-separator").value_name("SEPARATOR").takes_value(true))
         .arg(flag("pretty").short("p"))
         .arg(flag("replace").short("r")
@@ -499,6 +501,8 @@ lazy_static! {
              "Print only matched parts of a line.",
              "Print only the matched (non-empty) parts of a matching line, \
               with each such part on a separate output line.");
+        doc!(h, "passthru",
+             "Show both matching and non-matching lines.");
         doc!(h, "path-separator",
              "Path separator to use when printing file paths.",
              "The path separator to use when printing file paths. This \

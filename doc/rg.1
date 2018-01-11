@@ -435,6 +435,14 @@ such part on a separate output line.
 .RS
 .RE
 .TP
+.B \-\-passthru, \-\-passthrough
+Show both matching and non\-matching lines.
+This is equivalent to adding ^ to the list of search patterns.
+This option overrides \-\-count and cannot be used with
+\-\-only\-matching or \-\-replace.
+.RS
+.RE
+.TP
 .B \-\-path\-separator \f[I]SEPARATOR\f[]
 The path separator to use when printing file paths.
 This defaults to your platform\[aq]s path separator, which is / on Unix

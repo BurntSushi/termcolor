@@ -433,7 +433,9 @@ impl<'a> ArgMatches<'a> {
     /// Note that if -F/--fixed-strings is set, then all patterns will be
     /// escaped. Similarly, if -w/--word-regexp is set, then all patterns
     /// are surrounded by `\b`, and if -x/--line-regexp is set, then all
-    /// patterns are surrounded by `^...$`.
+    /// patterns are surrounded by `^...$`. Finally, if --passthru is set,
+    /// the pattern `^` is added to the end (to ensure that it works as
+    /// expected with multiple -e/-f patterns).
     ///
     /// If any pattern is invalid UTF-8, then an error is returned.
     fn patterns(&self) -> Result<Vec<String>> {
@@ -470,7 +472,11 @@ impl<'a> ArgMatches<'a> {
                 }
             }
         }
-        if pats.is_empty() {
+        // It's important that this be at the end; otherwise it would always
+        // match first, and we wouldn't get colours in the output
+        if self.is_present("passthru") && !self.is_present("count") {
+            pats.push("^".to_string())
+        } else if pats.is_empty() {
             pats.push(self.empty_pattern())
         }
         Ok(pats)

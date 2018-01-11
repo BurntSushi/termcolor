@@ -288,6 +288,10 @@ Project home page: https://github.com/BurntSushi/ripgrep
 : Print only the matched (non-empty) parts of a matching line, with each such
   part on a separate output line.
 
+--passthru, --passthrough
+: Show both matching and non-matching lines. This option cannot be used with
+  --only-matching or --replace.
+
 --path-separator *SEPARATOR*
 : The path separator to use when printing file paths. This defaults to your
   platform's path separator, which is / on Unix and \\ on Windows. This flag is

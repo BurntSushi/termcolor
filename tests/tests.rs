@@ -1610,6 +1610,61 @@ clean!(suggest_fixed_strings_for_invalid_regex, "foo(", ".",
 });
 
 #[test]
+fn feature_740_passthru() {
+    let wd = WorkDir::new("feature_740");
+    wd.create("file", "\nfoo\nbar\nfoobar\n\nbaz\n");
+    wd.create("patterns", "foo\n\nbar\n");
+
+    // We can't assume that the way colour specs are translated to ANSI
+    // sequences will remain stable, and --replace doesn't currently work with
+    // pass-through, so for now we don't actually test the match sub-strings
+    let common_args = &["-n", "--passthru"];
+    let expected = "\
+1:
+2:foo
+3:bar
+4:foobar
+5:
+6:baz
+";
+
+    // With single pattern
+    let mut cmd = wd.command();
+    cmd.args(common_args).arg("foo").arg("file");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, expected);
+
+    // With multiple -e patterns
+    let mut cmd = wd.command();
+    cmd.args(common_args)
+        .arg("-e").arg("foo").arg("-e").arg("bar").arg("file");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, expected);
+
+    // With multiple -f patterns
+    let mut cmd = wd.command();
+    cmd.args(common_args).arg("-f").arg("patterns").arg("file");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, expected);
+
+    // -c should override
+    let mut cmd = wd.command();
+    cmd.args(common_args).arg("-c").arg("foo").arg("file");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, "2\n");
+
+    // -o should conflict
+    let mut cmd = wd.command();
+    cmd.args(common_args).arg("-o").arg("foo").arg("file");
+    wd.assert_err(&mut cmd);
+
+    // -r should conflict
+    let mut cmd = wd.command();
+    cmd.args(common_args).arg("-r").arg("$0").arg("foo").arg("file");
+    wd.assert_err(&mut cmd);
+}
+
+#[test]
 fn binary_nosearch() {
     let wd = WorkDir::new("binary_nosearch");
     wd.create("file", "foo\x00bar\nfoo\x00baz\n");
