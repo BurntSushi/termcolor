@@ -274,7 +274,7 @@ const DEFAULT_TYPES: &'static [(&'static str, &'static [&'static str])] = &[
     ("wiki", &["*.mediawiki", "*.wiki"]),
     ("xml", &["*.xml", "*.xml.dist"]),
     ("yacc", &["*.y"]),
-    ("yaml", &["*.yaml", "*.yml", "yarn.lock"]),
+    ("yaml", &["*.yaml", "*.yml"]),
     ("zsh", &[
         ".zshenv", "zshenv",
         ".zlogin", "zlogin",
