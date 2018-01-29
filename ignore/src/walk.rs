@@ -538,7 +538,7 @@ impl WalkBuilder {
         self
     }
 
-    /// Add an ignore file to the matcher.
+    /// Add a global ignore file to the matcher.
     ///
     /// This has lower precedence than all other sources of ignore rules.
     ///
@@ -555,6 +555,20 @@ impl WalkBuilder {
             Err(err) => { errs.push(err); }
         }
         errs.into_error_option()
+    }
+
+    /// Add a custom ignore file name
+    ///
+    /// These ignore files have higher precedence than all other ignore files.
+    ///
+    /// When specifying multiple names, earlier names have lower precedence than
+    /// later names.
+    pub fn add_custom_ignore_filename<S: AsRef<OsStr>>(
+        &mut self,
+        file_name: S
+    ) -> &mut WalkBuilder {
+        self.ig_builder.add_custom_ignore_filename(file_name);
+        self
     }
 
     /// Add an override matcher.
@@ -1474,6 +1488,22 @@ mod tests {
         assert_paths(td.path(), &WalkBuilder::new(td.path()), &[
             "x", "x/y", "x/y/foo", "a", "a/b", "a/b/foo", "a/b/c",
         ]);
+    }
+
+    #[test]
+    fn custom_ignore() {
+        let td = TempDir::new("walk-test-").unwrap();
+        let custom_ignore = ".customignore";
+        mkdirp(td.path().join("a"));
+        wfile(td.path().join(custom_ignore), "foo");
+        wfile(td.path().join("foo"), "");
+        wfile(td.path().join("a/foo"), "");
+        wfile(td.path().join("bar"), "");
+        wfile(td.path().join("a/bar"), "");
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.add_custom_ignore_filename(&custom_ignore);
+        assert_paths(td.path(), &builder, &["bar", "a", "a/bar"]);
     }
 
     #[test]
