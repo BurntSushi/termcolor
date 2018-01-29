@@ -416,7 +416,6 @@ impl GitignoreBuilder {
             is_only_dir: false,
         };
         let mut literal_separator = false;
-        let has_slash = line.chars().any(|c| c == '/');
         let mut is_absolute = false;
         if line.starts_with("\\!") || line.starts_with("\\#") {
             line = &line[1..];
@@ -447,13 +446,13 @@ impl GitignoreBuilder {
         // If there is a literal slash, then we note that so that globbing
         // doesn't let wildcards match slashes.
         glob.actual = line.to_string();
-        if has_slash {
+        if is_absolute || line.chars().any(|c| c == '/') {
             literal_separator = true;
         }
-        // If there was a leading slash, then this is a glob that must
-        // match the entire path name. Otherwise, we should let it match
-        // anywhere, so use a **/ prefix.
-        if !is_absolute {
+        // If there was a slash, then this is a glob that must match the entire
+        // path name. Otherwise, we should let it match anywhere, so use a **/
+        // prefix.
+        if !literal_separator {
             // ... but only if we don't already have a **/ prefix.
             if !(glob.actual.starts_with("**/") || (glob.actual == "**" && glob.is_only_dir)) {
                 glob.actual = format!("**/{}", glob.actual);
@@ -617,10 +616,10 @@ mod tests {
     ignored!(ig25, ROOT, "Cargo.lock", "./tabwriter-bin/Cargo.lock");
     ignored!(ig26, ROOT, "/foo/bar/baz", "./foo/bar/baz");
     ignored!(ig27, ROOT, "foo/", "xyz/foo", true);
-    ignored!(ig28, ROOT, "src/*.rs", "src/grep/src/main.rs");
-    ignored!(ig29, "./src", "/llvm/", "./src/llvm", true);
-    ignored!(ig30, ROOT, "node_modules/ ", "node_modules", true);
-    ignored!(ig31, ROOT, "**/", "foo/bar", true);
+    ignored!(ig28, "./src", "/llvm/", "./src/llvm", true);
+    ignored!(ig29, ROOT, "node_modules/ ", "node_modules", true);
+    ignored!(ig30, ROOT, "**/", "foo/bar", true);
+    ignored!(ig31, ROOT, "path1/*", "path1/foo");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
@@ -640,6 +639,8 @@ mod tests {
         "./third_party/protobuf/csharp/src/packages/repositories.config");
     not_ignored!(ignot15, ROOT, "!/bar", "foo/bar");
     not_ignored!(ignot16, ROOT, "*\n!**/", "foo", true);
+    not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
+    not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()

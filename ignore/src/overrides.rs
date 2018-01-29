@@ -202,8 +202,9 @@ mod tests {
     #[test]
     fn gitignore() {
         let ov = ov(&["/foo", "bar/*.rs", "baz/**"]);
+        assert!(ov.matched("bar/lib.rs", false).is_whitelist());
         assert!(ov.matched("bar/wat/lib.rs", false).is_ignore());
-        assert!(ov.matched("wat/bar/lib.rs", false).is_whitelist());
+        assert!(ov.matched("wat/bar/lib.rs", false).is_ignore());
         assert!(ov.matched("foo", false).is_whitelist());
         assert!(ov.matched("wat/foo", false).is_ignore());
         assert!(ov.matched("baz", false).is_ignore());

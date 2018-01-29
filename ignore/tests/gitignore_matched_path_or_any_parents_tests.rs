@@ -212,16 +212,16 @@ fn test_dirs_in_deep() {
     assert!(m("ROOT/parent_dir/dir_deep_01/child_dir/file", false).is_ignore());
 
     // 02
-    assert!(m("ROOT/parent_dir/dir_deep_02", true).is_none()); // dir itself doesn't match
-    assert!(m("ROOT/parent_dir/dir_deep_02/file", false).is_ignore());
-    assert!(m("ROOT/parent_dir/dir_deep_02/child_dir", true).is_ignore());
-    assert!(m("ROOT/parent_dir/dir_deep_02/child_dir/file", false).is_ignore());
+    assert!(m("ROOT/parent_dir/dir_deep_02", true).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_02/file", false).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_02/child_dir", true).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_02/child_dir/file", false).is_none());
 
     // 03
-    assert!(m("ROOT/parent_dir/dir_deep_03", true).is_none()); // dir itself doesn't match
-    assert!(m("ROOT/parent_dir/dir_deep_03/file", false).is_ignore());
-    assert!(m("ROOT/parent_dir/dir_deep_03/child_dir", true).is_ignore());
-    assert!(m("ROOT/parent_dir/dir_deep_03/child_dir/file", false).is_ignore());
+    assert!(m("ROOT/parent_dir/dir_deep_03", true).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_03/file", false).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_03/child_dir", true).is_none());
+    assert!(m("ROOT/parent_dir/dir_deep_03/child_dir/file", false).is_none());
 
     // 10
     assert!(m("ROOT/parent_dir/dir_deep_10", true).is_none());
