@@ -35,13 +35,6 @@ macro_rules! errored {
     }
 }
 
-macro_rules! eprintln {
-    ($($tt:tt)*) => {{
-        use std::io::Write;
-        let _ = writeln!(&mut ::std::io::stderr(), $($tt)*);
-    }}
-}
-
 mod app;
 mod args;
 mod decoder;
