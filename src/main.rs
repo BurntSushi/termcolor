@@ -9,6 +9,7 @@ extern crate grep;
 extern crate ignore;
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate memchr;
@@ -339,7 +340,6 @@ fn eprint_nothing_searched() {
 // https://github.com/BurntSushi/ripgrep/issues/200.
 #[cfg(unix)]
 fn reset_sigpipe() {
-    extern crate libc;
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }

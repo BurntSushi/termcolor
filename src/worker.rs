@@ -310,7 +310,10 @@ impl Worker {
             // regular read calls.
             return self.search(printer, path, file);
         }
-        let mmap = unsafe { Mmap::map(file)? };
+        let mmap = match self.mmap(file)? {
+            None => return self.search(printer, path, file),
+            Some(mmap) => mmap,
+        };
         let buf = &*mmap;
         if buf.len() >= 3 && Encoding::for_bom(buf).is_some() {
             // If we have a UTF-16 bom in our memory map, then we need to fall
@@ -330,4 +333,28 @@ impl Worker {
             .text(self.opts.text)
             .run())
     }
+
+    #[cfg(not(unix))]
+    fn mmap(&self, file: &File) -> Result<Option<Mmap>> {
+        Ok(Some(mmap_readonly(file)?))
+    }
+
+    #[cfg(unix)]
+    fn mmap(&self, file: &File) -> Result<Option<Mmap>> {
+        use libc::{ENODEV, EOVERFLOW};
+
+        let err = match mmap_readonly(file) {
+            Ok(mmap) => return Ok(Some(mmap)),
+            Err(err) => err,
+        };
+        let code = err.raw_os_error();
+        if code == Some(ENODEV) || code == Some(EOVERFLOW) {
+            return Ok(None);
+        }
+        Err(From::from(err))
+    }
+}
+
+fn mmap_readonly(file: &File) -> io::Result<Mmap> {
+    unsafe { Mmap::map(file) }
 }
