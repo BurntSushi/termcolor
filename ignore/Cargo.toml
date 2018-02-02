@@ -28,6 +28,10 @@ same-file = "1"
 thread_local = "0.3.2"
 walkdir = "2"
 
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = ["std", "winnt"]
+
 [dev-dependencies]
 tempdir = "0.3.5"
 

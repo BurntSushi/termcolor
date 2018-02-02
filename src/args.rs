@@ -209,7 +209,7 @@ impl Args {
     /// Returns true if there is exactly one file path given to search.
     pub fn is_one_path(&self) -> bool {
         self.paths.len() == 1
-        && (self.paths[0] == Path::new("-") || self.paths[0].is_file())
+        && (self.paths[0] == Path::new("-") || path_is_file(&self.paths[0]))
     }
 
     /// Create a worker whose configuration is taken from the
@@ -562,7 +562,7 @@ impl<'a> ArgMatches<'a> {
             self.is_present("with-filename")
             || self.is_present("vimgrep")
             || paths.len() > 1
-            || paths.get(0).map_or(false, |p| p.is_dir())
+            || paths.get(0).map_or(false, |p| path_is_dir(p))
         }
     }
 
@@ -609,7 +609,7 @@ impl<'a> ArgMatches<'a> {
         } else {
             // If we're only searching a few paths and all of them are
             // files, then memory maps are probably faster.
-            paths.len() <= 10 && paths.iter().all(|p| p.is_file())
+            paths.len() <= 10 && paths.iter().all(|p| path_is_file(p))
         })
     }
 
@@ -1035,4 +1035,45 @@ fn stdin_is_readable() -> bool {
     // On Windows, it's not clear what the possibilities are to me, so just
     // always return true.
     true
+}
+
+/// Returns true if and only if this path points to a directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn path_is_dir(path: &Path) -> bool {
+    fs::metadata(path).map(|md| metadata_is_dir(&md)).unwrap_or(false)
+}
+
+/// Returns true if and only if this entry points to a directory.
+#[cfg(not(windows))]
+fn path_is_dir(path: &Path) -> bool {
+    path.is_dir()
+}
+
+/// Returns true if and only if this path points to a file.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn path_is_file(path: &Path) -> bool {
+    !path_is_dir(path)
+}
+
+/// Returns true if and only if this entry points to a directory.
+#[cfg(not(windows))]
+fn path_is_file(path: &Path) -> bool {
+    path.is_file()
+}
+
+/// Returns true if and only if the given metadata points to a directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn metadata_is_dir(md: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    use winapi::um::winnt::FILE_ATTRIBUTE_DIRECTORY;
+    md.file_attributes() & FILE_ATTRIBUTE_DIRECTORY != 0
 }

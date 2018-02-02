@@ -51,6 +51,10 @@ same-file = "1"
 termcolor = { version = "0.3.3", path = "termcolor" }
 globset = { version = "0.2.1", path = "globset" }
 
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = ["std", "winnt"]
+
 [build-dependencies]
 clap = "2.26"
 lazy_static = "1"

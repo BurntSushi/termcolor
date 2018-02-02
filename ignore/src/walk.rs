@@ -89,6 +89,11 @@ impl DirEntry {
         self.err.as_ref()
     }
 
+    /// Returns true if and only if this entry points to a directory.
+    fn is_dir(&self) -> bool {
+        self.dent.is_dir()
+    }
+
     fn new_stdin() -> DirEntry {
         DirEntry {
             dent: DirEntryInner::Stdin,
@@ -207,6 +212,24 @@ impl DirEntryInner {
             Walkdir(ref x) => Some(x.ino()),
             Raw(ref x) => Some(x.ino()),
         }
+    }
+
+    /// Returns true if and only if this entry points to a directory.
+    ///
+    /// This works around a bug in Rust's standard library:
+    /// https://github.com/rust-lang/rust/issues/46484
+    #[cfg(windows)]
+    fn is_dir(&self) -> bool {
+        self.metadata().map(|md| metadata_is_dir(&md)).unwrap_or(false)
+    }
+
+    /// Returns true if and only if this entry points to a directory.
+    ///
+    /// This works around a bug in Rust's standard library:
+    /// https://github.com/rust-lang/rust/issues/46484
+    #[cfg(not(windows))]
+    fn is_dir(&self) -> bool {
+        self.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
     }
 }
 
@@ -456,7 +479,7 @@ impl WalkBuilder {
                 (p.to_path_buf(), None)
             } else {
                 let mut wd = WalkDir::new(p);
-                wd = wd.follow_links(follow_links || p.is_file());
+                wd = wd.follow_links(follow_links || path_is_file(p));
                 if let Some(max_depth) = max_depth {
                     wd = wd.max_depth(max_depth);
                 }
@@ -728,7 +751,7 @@ impl Walk {
             return false;
         }
 
-        let is_dir = ent.file_type().is_dir();
+        let is_dir = walkdir_entry_is_dir(ent);
         let max_size = self.max_filesize;
         let should_skip_path = skip_path(&self.ig, ent.path(), is_dir);
         let should_skip_filesize = if !is_dir && max_size.is_some() {
@@ -757,7 +780,7 @@ impl Iterator for Walk {
                         }
                         Some((path, Some(it))) => {
                             self.it = Some(it);
-                            if self.parents && path.is_dir() {
+                            if self.parents && path_is_dir(&path) {
                                 let (ig, err) = self.ig_root.add_parents(path);
                                 self.ig = ig;
                                 if let Some(err) = err {
@@ -847,7 +870,7 @@ impl Iterator for WalkEventIter {
             None => None,
             Some(Err(err)) => Some(Err(err)),
             Some(Ok(dent)) => {
-                if dent.file_type().is_dir() {
+                if walkdir_entry_is_dir(&dent) {
                     self.depth += 1;
                     Some(Ok(WalkEvent::Dir(dent)))
                 } else {
@@ -1000,7 +1023,7 @@ struct Work {
 impl Work {
     /// Returns true if and only if this work item is a directory.
     fn is_dir(&self) -> bool {
-        self.dent.file_type().map_or(false, |t| t.is_dir())
+        self.dent.is_dir()
     }
 
     /// Adds ignore rules for parent directories.
@@ -1174,13 +1197,13 @@ impl Worker {
                     return (self.f)(Err(err));
                 }
             };
-            if dent.file_type().map_or(false, |ft| ft.is_dir()) {
+            if dent.is_dir() {
                 if let Err(err) = check_symlink_loop(ig, dent.path(), depth) {
                     return (self.f)(Err(err));
                 }
             }
         }
-        let is_dir = dent.file_type().map_or(false, |ft| ft.is_dir());
+        let is_dir = dent.is_dir();
         let max_size = self.max_filesize;
         let should_skip_path = skip_path(ig, dent.path(), is_dir);
         let should_skip_filesize = if !is_dir && max_size.is_some() {
@@ -1374,6 +1397,62 @@ fn skip_path(ig: &Ignore, path: &Path, is_dir: bool) -> bool {
     } else {
         false
     }
+}
+
+/// Returns true if and only if this path points to a directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn path_is_dir(path: &Path) -> bool {
+    fs::metadata(path).map(|md| metadata_is_dir(&md)).unwrap_or(false)
+}
+
+/// Returns true if and only if this entry points to a directory.
+#[cfg(not(windows))]
+fn path_is_dir(path: &Path) -> bool {
+    path.is_dir()
+}
+
+/// Returns true if and only if this path points to a file.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn path_is_file(path: &Path) -> bool {
+    !path_is_dir(path)
+}
+
+/// Returns true if and only if this entry points to a directory.
+#[cfg(not(windows))]
+fn path_is_file(path: &Path) -> bool {
+    path.is_file()
+}
+
+/// Returns true if and only if the given walkdir entry points to a directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn walkdir_entry_is_dir(dent: &walkdir::DirEntry) -> bool {
+    dent.metadata().map(|md| metadata_is_dir(&md)).unwrap_or(false)
+}
+
+/// Returns true if and only if the given walkdir entry points to a directory.
+#[cfg(not(windows))]
+fn walkdir_entry_is_dir(dent: &walkdir::DirEntry) -> bool {
+    dent.file_type().is_dir()
+}
+
+/// Returns true if and only if the given metadata points to a directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn metadata_is_dir(md: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    use winapi::um::winnt::FILE_ATTRIBUTE_DIRECTORY;
+    md.file_attributes() & FILE_ATTRIBUTE_DIRECTORY != 0
 }
 
 #[cfg(test)]

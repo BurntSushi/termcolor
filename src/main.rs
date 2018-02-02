@@ -18,6 +18,8 @@ extern crate num_cpus;
 extern crate regex;
 extern crate same_file;
 extern crate termcolor;
+#[cfg(windows)]
+extern crate winapi;
 
 use std::error::Error;
 use std::process;
@@ -267,15 +269,14 @@ fn get_or_log_dir_entry(
                     eprintln!("{}", err);
                 }
             }
-            let ft = match dent.file_type() {
-                None => return Some(dent), // entry is stdin
-                Some(ft) => ft,
-            };
+            if dent.file_type().is_none() {
+                return Some(dent); // entry is stdin
+            }
             // A depth of 0 means the user gave the path explicitly, so we
             // should always try to search it.
-            if dent.depth() == 0 && !ft.is_dir() {
+            if dent.depth() == 0 && !ignore_entry_is_dir(&dent) {
                 return Some(dent);
-            } else if !ft.is_file() {
+            } else if !ignore_entry_is_file(&dent) {
                 return None;
             }
             // If we are redirecting stdout to a file, then don't search that
@@ -286,6 +287,45 @@ fn get_or_log_dir_entry(
             Some(dent)
         }
     }
+}
+
+/// Returns true if and only if the given `ignore::DirEntry` points to a
+/// directory.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn ignore_entry_is_dir(dent: &ignore::DirEntry) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    use winapi::um::winnt::FILE_ATTRIBUTE_DIRECTORY;
+
+    dent.metadata().map(|md| {
+        md.file_attributes() & FILE_ATTRIBUTE_DIRECTORY != 0
+    }).unwrap_or(false)
+}
+
+/// Returns true if and only if the given `ignore::DirEntry` points to a
+/// directory.
+#[cfg(not(windows))]
+fn ignore_entry_is_dir(dent: &ignore::DirEntry) -> bool {
+    dent.file_type().map_or(false, |ft| ft.is_dir())
+}
+
+/// Returns true if and only if the given `ignore::DirEntry` points to a
+/// file.
+///
+/// This works around a bug in Rust's standard library:
+/// https://github.com/rust-lang/rust/issues/46484
+#[cfg(windows)]
+fn ignore_entry_is_file(dent: &ignore::DirEntry) -> bool {
+    !ignore_entry_is_dir(dent)
+}
+
+/// Returns true if and only if the given `ignore::DirEntry` points to a
+/// file.
+#[cfg(not(windows))]
+fn ignore_entry_is_file(dent: &ignore::DirEntry) -> bool {
+    dent.file_type().map_or(false, |ft| ft.is_file())
 }
 
 fn is_stdout_file(
