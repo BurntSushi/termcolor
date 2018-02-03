@@ -23,10 +23,24 @@ If possible, please include both your search patterns and the corpus on which
 you are searching. Unless the bug is very obvious, then it is unlikely that it
 will be fixed if the ripgrep maintainers cannot reproduce it.
 
+If the corpus is too big and you cannot decrease its size, file the bug anyway
+and the ripgrep maintainers will help figure out next steps.
+
 #### If this is a bug, what is the actual behavior?
 
-Show the command you ran and the actual output. Include the `--debug` in your
-invocation of ripgrep if possible.
+Show the command you ran and the actual output. Include the `--debug` flag in
+your invocation of ripgrep.
+
+If the output is large, put it in a gist: https://gist.github.com/
+
+If the output is small, put it in code fences:
+
+```
+your
+output
+goes
+here
+```
 
 #### If this is a bug, what is the expected behavior?
 
