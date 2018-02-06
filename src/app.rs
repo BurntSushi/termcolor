@@ -135,6 +135,18 @@ pub struct RGArg {
     ///
     /// This is shown in the `--help` output.
     pub doc_long: &'static str,
+    /// Whether this flag is hidden or not.
+    ///
+    /// This is typically used for uncommon flags that only serve to override
+    /// other flags. For example, --no-ignore is a prominent flag that disables
+    /// ripgrep's gitignore functionality, but --ignore re-enables it. Since
+    /// gitignore support is enabled by default, use of the --ignore flag is
+    /// somewhat niche and relegated to special cases when users make use of
+    /// configuration files to set defaults.
+    ///
+    /// Generally, these flags should be documented in the documentation for
+    /// the flag they override.
+    pub hidden: bool,
     /// The type of this argument.
     pub kind: RGArgKind,
 }
@@ -238,6 +250,7 @@ impl RGArg {
             name: name,
             doc_short: "",
             doc_long: "",
+            hidden: false,
             kind: RGArgKind::Positional {
                 value_name: value_name,
                 multiple: false,
@@ -261,6 +274,7 @@ impl RGArg {
             name: long_name,
             doc_short: "",
             doc_long: "",
+            hidden: false,
             kind: RGArgKind::Switch {
                 long: long_name,
                 short: None,
@@ -290,6 +304,7 @@ impl RGArg {
             name: long_name,
             doc_short: "",
             doc_long: "",
+            hidden: false,
             kind: RGArgKind::Flag {
                 long: long_name,
                 short: None,
@@ -364,6 +379,13 @@ impl RGArg {
             }
         }
         self.claparg = self.claparg.multiple(true);
+        self
+    }
+
+    /// Hide this flag from all documentation.
+    fn hidden(mut self) -> RGArg {
+        self.hidden = true;
+        self.claparg = self.claparg.hidden(true);
         self
     }
 

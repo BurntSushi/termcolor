@@ -99,6 +99,9 @@ fn formatted_options() -> io::Result<String> {
 
     let mut formatted = vec![];
     for arg in args {
+        if arg.hidden {
+            continue;
+        }
         // ripgrep only has two positional arguments, and probably will only
         // ever have two positional arguments, so we just hardcode them into
         // the template.
