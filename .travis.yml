@@ -77,8 +77,8 @@ deploy:
   skip_cleanup: true
   on:
     condition: $TRAVIS_RUST_VERSION = nightly
-    branch: ag/misc-improvements
-    # tags: true
+    branch: master
+    tags: true
   api_key:
     secure: "IbSnsbGkxSydR/sozOf1/SRvHplzwRUHzcTjM7BKnr7GccL86gRPUrsrvD103KjQUGWIc1TnK1YTq5M0Onswg/ORDjqa1JEJPkPdPnVh9ipbF7M2De/7IlB4X4qXLKoApn8+bx2x/mfYXu4G+G1/2QdbaKK2yfXZKyjz0YFx+6CNrVCT2Nk8q7aHvOOzAL58vsG8iPDpupuhxlMDDn/UhyOWVInmPPQ0iJR1ZUJN8xJwXvKvBbfp3AhaBiAzkhXHNLgBR8QC5noWWMXnuVDMY3k4f3ic0V+p/qGUCN/nhptuceLxKFicMCYObSZeUzE5RAI0/OBW7l3z2iCoc+TbAnn+JrX/ObJCfzgAOXAU3tLaBFMiqQPGFKjKg1ltSYXomOFP/F7zALjpvFp4lYTBajRR+O3dqaxA9UQuRjw27vOeUpMcga4ZzL4VXFHzrxZKBHN//XIGjYAVhJ1NSSeGpeJV5/+jYzzWKfwSagRxQyVCzMooYFFXzn8Yxdm3PJlmp3GaAogNkdB9qKcrEvRINCelalzALPi0hD/HUDi8DD2PNTCLLMo6VSYtvc685Zbe+KgNzDV1YyTrRCUW6JotrS0r2ULLwnsh40hSB//nNv3XmwNmC/CmW5QAnIGj8cBMF4S2t6ohADIndojdAfNiptmaZOIT6owK7bWMgPMyopo="
 branches:
