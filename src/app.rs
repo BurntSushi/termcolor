@@ -884,9 +884,17 @@ fn flag_follow(args: &mut Vec<RGArg>) {
 When this flag is enabled, ripgrep will follow symbolic links while traversing
 directories. This is disabled by default. Note that ripgrep will check for
 symbolic link loops and report errors if it finds one.
+
+This flag can be disabled with --no-follow.
 ");
     let arg = RGArg::switch("follow").short("L")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-follow");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-follow")
+        .hidden()
+        .overrides("follow");
     args.push(arg);
 }
 
@@ -939,9 +947,17 @@ fn flag_hidden(args: &mut Vec<RGArg>) {
 Search hidden files and directories. By default, hidden files and directories
 are skipped. Note that if a hidden file or a directory is whitelisted in an
 ignore file, then it will be searched even if this flag isn't provided.
+
+This flag can be disabled with --no-hidden.
 ");
     let arg = RGArg::switch("hidden")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-hidden");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-hidden")
+        .hidden()
+        .overrides("hidden");
     args.push(arg);
 }
 
@@ -1164,9 +1180,17 @@ fn flag_no_ignore(args: &mut Vec<RGArg>) {
     const LONG: &str = long!("\
 Don't respect ignore files (.gitignore, .ignore, etc.). This implies
 --no-ignore-parent and --no-ignore-vcs.
+
+This flag can be disabled with the --ignore flag.
 ");
     let arg = RGArg::switch("no-ignore")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("ignore");
+    args.push(arg);
+
+    let arg = RGArg::switch("ignore")
+        .hidden()
+        .overrides("no-ignore");
     args.push(arg);
 }
 
@@ -1174,9 +1198,17 @@ fn flag_no_ignore_parent(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Don't respect ignore files in parent directories.";
     const LONG: &str = long!("\
 Don't respect ignore files (.gitignore, .ignore, etc.) in parent directories.
+
+This flag can be disabled with the --ignore-parent flag.
 ");
     let arg = RGArg::switch("no-ignore-parent")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("ignore-parent");
+    args.push(arg);
+
+    let arg = RGArg::switch("ignore-parent")
+        .hidden()
+        .overrides("no-ignore-parent");
     args.push(arg);
 }
 
@@ -1186,9 +1218,17 @@ fn flag_no_ignore_vcs(args: &mut Vec<RGArg>) {
 Don't respect version control ignore files (.gitignore, etc.). This implies
 --no-ignore-parent for VCS files. Note that .ignore files will continue to be
 respected.
+
+This flag can be disabled with the --ignore-vcs flag.
 ");
     let arg = RGArg::switch("no-ignore-vcs")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("ignore-vcs");
+    args.push(arg);
+
+    let arg = RGArg::switch("ignore-vcs")
+        .hidden()
+        .overrides("no-ignore-vcs");
     args.push(arg);
 }
 
@@ -1197,9 +1237,17 @@ fn flag_no_messages(args: &mut Vec<RGArg>) {
     const LONG: &str = long!("\
 Suppress all error messages. This provides the same behavior as redirecting
 stderr to /dev/null on Unix-like systems.
+
+This flag can be disabled with the --messages flag.
 ");
     let arg = RGArg::switch("no-messages")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("messages");
+    args.push(arg);
+
+    let arg = RGArg::switch("messages")
+        .hidden()
+        .overrides("no-messages");
     args.push(arg);
 }
 
@@ -1347,9 +1395,17 @@ fn flag_search_zip(args: &mut Vec<RGArg>) {
 Search in compressed files. Currently gz, bz2, xz, and lzma files are
 supported. This option expects the decompression binaries to be available in
 your PATH.
+
+This flag can be disabled with --no-search-zip.
 ");
     let arg = RGArg::switch("search-zip").short("z")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-search-zip");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-search-zip")
+        .hidden()
+        .overrides("search-zip");
     args.push(arg);
 }
 
@@ -1373,9 +1429,17 @@ fn flag_sort_files(args: &mut Vec<RGArg>) {
     const LONG: &str = long!("\
 Sort results by file path. Note that this currently disables all parallelism
 and runs search in a single thread.
+
+This flag can be disabled with --no-sort-files.
 ");
     let arg = RGArg::switch("sort-files")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-sort-files");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-sort-files")
+        .hidden()
+        .overrides("sort-files");
     args.push(arg);
 }
 
@@ -1393,9 +1457,17 @@ considered binary and search stops (unless this flag is present).
 
 Note that when the `-u/--unrestricted` flag is provided for a third time, then
 this flag is automatically enabled.
+
+This flag can be disabled with --no-text.
 ");
     let arg = RGArg::switch("text").short("a")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-text");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-text")
+        .hidden()
+        .overrides("text");
     args.push(arg);
 }
 
