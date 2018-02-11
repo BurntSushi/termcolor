@@ -694,7 +694,7 @@ the background color for line numbers to yellow:
 
     rg --colors 'match:fg:magenta' --colors 'line:bg:yellow' foo.
 
-Extended colors can be used for {value} when the terminal supports ANSI color
+Extended colors can be used for `{value}` when the terminal supports ANSI color
 sequences. These are specified as either 'x' (256-color) or 'x,x,x' (24-bit
 truecolor) where x is a number between 0 and 255 inclusive. x may be given as
 a normal decimal number or a hexadecimal number, which is prefixed by `0x`.
