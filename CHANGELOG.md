@@ -1,3 +1,135 @@
+0.8.0 (2017-02-11)
+==================
+This is a new minor version releae of ripgrep that satisfies several popular
+feature requests (config files, search compressed files, true colors), fixes
+many bugs and improves the quality of life for ripgrep maintainers. This
+release also includes greatly improved documentation in the form of a
+[User Guide](GUIDE.md) and a [FAQ](FAQ.md).
+
+This release increases the **minimum supported Rust version** from 1.17 to
+1.20.
+
+**BREAKING CHANGES**:
+
+Note that these are all very minor and unlikely to impact most users.
+
+* In order to support configuration files, flag overrides needed to be
+  rethought. In some cases, this changed ripgrep's behavior. For example,
+  in ripgrep 0.7.1, `rg foo -s -i` will perform a case sensitive search
+  since the `-s/--case-sensitive` flag was defined to always take precedence
+  over the `-i/--ignore-case` flag, regardless of position. In ripgrep 0.8.0
+  however, the override rule for all flags has changed to "the most recent
+  flag wins among competing flags." That is, `rg foo -s -i` now performs a
+  case insensitive search.
+* The `-M/--max-columns` flag was tweaked so that specifying a value of `0`
+  now makes ripgrep behave as if the flag was absent. This makes it possible
+  to set a default value in a configuration file and then override it. The
+  previous ripgrep behavior was to suppress all matching non-empty lines.
+* In all globs, `[^...]` is now equivalent to `[!...]` (indicating class
+  negation). Previously, `^` had no special significance in a character class.
+* For **downstream packagers**, the directory hierarchy in ripgrep's archive
+  releases has changed. The root directory now only contains the executable,
+  README and license. There is now a new directory called `doc` which contains
+  the man page (previously in the root), a user guide (new), a FAQ (new) and
+  the CHANGELOG (previously not included in release). The `complete`
+  directory remains the same.
+
+Feature enhancements:
+
+* Added or improved file type filtering for
+  Apache Avro, C++, GN, Google Closure Templates, Jupyter notebooks, man pages,
+  Protocol Buffers, Smarty and Web IDL.
+* [FEATURE #196](https://github.com/BurntSushi/ripgrep/issues/196):
+  Support a configuration file. See
+  [the new user guide](GUIDE.md#configuration-file)
+  for details.
+* [FEATURE #261](https://github.com/BurntSushi/ripgrep/issues/261):
+  Add extended or "true" color support. Works in Windows 10!
+  [See the FAQ for details.](FAQ.md#colors)
+* [FEATURE #539](https://github.com/BurntSushi/ripgrep/issues/539):
+  Search gzip, bsip2, lzma or xz files when given `-z/--search-zip` flag.
+* [FEATURE #544](https://github.com/BurntSushi/ripgrep/issues/544):
+  Add support for line number alignment via a new `--line-number-width` flag.
+* [FEATURE #654](https://github.com/BurntSushi/ripgrep/pull/654):
+  Support linuxbrew in ripgrep's Brew tap.
+* [FEATURE #673](https://github.com/BurntSushi/ripgrep/issues/673):
+  Bring back `.rgignore` files. (A higher precedent, application specific
+  version of `.ignore`.)
+* [FEATURE #676](https://github.com/BurntSushi/ripgrep/issues/676):
+  Provide ARM binaries. **WARNING:** This will be provided on a best effort
+  basis.
+* [FEATURE #709](https://github.com/BurntSushi/ripgrep/issues/709):
+  Suggest `-F/--fixed-strings` flag on a regex syntax error.
+* [FEATURE #740](https://github.com/BurntSushi/ripgrep/issues/740):
+  Add a `--passthru` flag that causes ripgrep to print every line it reads.
+* [FEATURE #785](https://github.com/BurntSushi/ripgrep/pull/785):
+  Overhaul documentation. Cleaned up README, added user guide and FAQ.
+* [FEATURE 7f5c07](https://github.com/BurntSushi/ripgrep/commit/7f5c07434be92103b5bf7e216b9c7494aed2d8cb):
+  Add hidden flags for convenient overrides (e.g., `--no-text`).
+
+Bug fixes:
+
+* [BUG #553](https://github.com/BurntSushi/ripgrep/issues/553):
+  Permit flags to be repeated.
+* [BUG #633](https://github.com/BurntSushi/ripgrep/issues/633):
+  Fix a bug where ripgrep would panic on Windows while following symlinks.
+* [BUG #649](https://github.com/BurntSushi/ripgrep/issues/649):
+  Fix handling of `!**/` in `.gitignore`.
+* [BUG #663](https://github.com/BurntSushi/ripgrep/issues/663):
+  **BREAKING CHANGE:** Support `[^...]` glob syntax (as identical to `[!...]`).
+* [BUG #693](https://github.com/BurntSushi/ripgrep/issues/693):
+  Don't display context separators when not printing matches.
+* [BUG #705](https://github.com/BurntSushi/ripgrep/issues/705):
+  Fix a bug that prevented ripgrep from searching OneDrive directories.
+* [BUG #717](https://github.com/BurntSushi/ripgrep/issues/717):
+  Improve `--smart-case` uppercase character detection.
+* [BUG #725](https://github.com/BurntSushi/ripgrep/issues/725):
+  Clarify that globs do not override explicitly given paths to search.
+* [BUG #742](https://github.com/BurntSushi/ripgrep/pull/742):
+  Write ANSI reset code as `\x1B[0m` instead of `\x1B[m`.
+* [BUG #747](https://github.com/BurntSushi/ripgrep/issues/747):
+  Remove `yarn.lock` from YAML file type.
+* [BUG #760](https://github.com/BurntSushi/ripgrep/issues/760):
+  ripgrep can now search `/sys/devices/system/cpu/vulnerabilities/*` files.
+* [BUG #761](https://github.com/BurntSushi/ripgrep/issues/761):
+  Fix handling of gitignore patterns that contain a `/`.
+* [BUG #776](https://github.com/BurntSushi/ripgrep/pull/776):
+  **BREAKING CHANGE:** `--max-columns=0` now disables the limit.
+* [BUG #779](https://github.com/BurntSushi/ripgrep/issues/779):
+  Clarify documentation for `--files-without-match`.
+* [BUG #780](https://github.com/BurntSushi/ripgrep/issues/780),
+  [BUG #781](https://github.com/BurntSushi/ripgrep/issues/781):
+  Fix bug where ripgrep missed some matching lines.
+
+Maintenance fixes:
+
+* [MAINT #772](https://github.com/BurntSushi/ripgrep/pull/772):
+  Drop `env_logger` in favor of simpler logger to avoid many new dependencies.
+* [MAINT #772](https://github.com/BurntSushi/ripgrep/pull/772):
+  Add git revision hash to ripgrep's version string.
+* [MAINT #772](https://github.com/BurntSushi/ripgrep/pull/772):
+  (Seemingly) improve compile times.
+* [MAINT #776](https://github.com/BurntSushi/ripgrep/pull/776):
+  Automatically generate man page during build.
+* [MAINT #786](https://github.com/BurntSushi/ripgrep/pull/786):
+  Remove use of `unsafe` in `globset`. :tada:
+* [MAINT e9d448](https://github.com/BurntSushi/ripgrep/commit/e9d448e93bb4e1fb3b0c1afc29adb5af6ed5283d):
+  Add an issue template (has already drastically improved bug reports).
+* [MAINT ae2d03](https://github.com/BurntSushi/ripgrep/commit/ae2d036dd4ba2a46acac9c2d77c32e7c667eb850):
+  Remove the `compile` script.
+
+Friends of ripgrep:
+
+I'd like to extend my gratitude to
+[@balajisivaraman](https://github.com/balajisivaraman)
+for their recent hard work in a number of areas, and in particular, for
+implementing the "search compressed files" feature. Their work in sketching out
+a specification for that and other work has been exemplary.
+
+Thanks
+[@balajisivaraman](https://github.com/balajisivaraman)!
+
+
 0.7.1 (2017-10-22)
 ==================
 This is a patch release of ripgrep that includes a fix to very bad regression
