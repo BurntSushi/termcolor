@@ -47,7 +47,7 @@ memmap = "0.6"
 num_cpus = "1"
 regex = "0.2.4"
 same-file = "1"
-termcolor = { version = "0.3.3", path = "termcolor" }
+termcolor = { version = "0.3.4", path = "termcolor" }
 
 [dependencies.clap]
 version = "2.29.4"
