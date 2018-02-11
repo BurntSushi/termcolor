@@ -276,7 +276,7 @@ dependencies = [
 name = "termcolor"
 version = "0.3.3"
 dependencies = [
- "wincolor 0.1.5",
+ "wincolor 0.1.6",
 ]
 
 [[package]]
@@ -359,7 +359,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "wincolor"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "winapi 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
