@@ -1,23 +1,23 @@
 class RipgrepBin < Formula
-  version '0.7.1'
-  desc "Search tool like grep and The Silver Searcher."
+  version '0.8.0'
+  desc "Recursively search directories for a regex pattern."
   homepage "https://github.com/BurntSushi/ripgrep"
 
   if OS.mac?
       url "https://github.com/BurntSushi/ripgrep/releases/download/#{version}/ripgrep-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "ee670b0fba46323ee9a2d1c5b8bee46fa3e45778f6f105f2e8e9ee29e8bd0d45"
+      sha256 "36a23cc8417d4ccf67a27c2abaedbd8d7c15f7ffb78aded76e967acb62d88cd2"
   elsif OS.linux?
       url "https://github.com/BurntSushi/ripgrep/releases/download/#{version}/ripgrep-#{version}-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "ac595c2239b9a30e0e0744578afa6b73e32cdd8ae61d4f1c0ee5d6b55adbadcf"
+      sha256 "818de1900f721ff3bb904416c70415f5a30fed0f78522e32cce61d382fdb311e"
   end
 
   conflicts_with "ripgrep"
 
   def install
     bin.install "rg"
-    man1.install "rg.1"
+    man1.install "doc/rg.1"
 
-    bash_completion.install "complete/rg.bash-completion"
+    bash_completion.install "complete/rg.bash"
     fish_completion.install "complete/rg.fish"
     zsh_completion.install "complete/_rg"
   end
