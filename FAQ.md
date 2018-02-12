@@ -20,6 +20,7 @@
 * [How do I create an alias for ripgrep on Windows?](#rg-alias-windows)
 * [How do I create a PowerShell profile?](#powershell-profile)
 * [How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
+* [Can ripgrep replace grep?](#posix4ever)
 
 
 <h3 name="config">
@@ -466,3 +467,66 @@ that the console will use for printing to UTF-8 with
 `[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8`. This
 will also reset when PowerShell is restarted, so you can add that line
 to your profile as well if you want to make the setting permanent.
+
+
+<h3 name="posix4ever">
+Can ripgrep replace grep?
+</h3>
+
+Yes and no.
+
+If, upon hearing that "ripgrep can replace grep," you *actually* hear, "ripgrep
+can be used in every instance grep can be used, in exactly the same way, for
+the same use cases, with exactly the same bug-for-bug behavior," then no,
+ripgrep trivially *cannot* replace grep. Moreover, ripgrep will *never* replace
+grep.
+
+If, upon hearing that "ripgrep can replace grep," you *actually* hear, "ripgrep
+can replace grep in some cases and not in other use cases," then yes, that is
+indeed true!
+
+Let's go over some of those use cases in favor of ripgrep. Some of these may
+not apply to you. That's OK. There may be other use cases not listed here that
+do apply to you. That's OK too.
+
+(For all claims related to performance in the following words, see my
+[blog post](https://blog.burntsushi.net/ripgrep/)
+introducing ripgrep.)
+
+* Are you frequently searching a repository of code? If so, ripgrep might be a
+  good choice since there's likely a good chunk of your repository that you
+  don't want to search. grep, can, of course, be made to filter files using
+  recursive search, and if you don't mind writing out the requisite `--exclude`
+  rules or writing wrapper scripts, then grep might be sufficient. (I'm not
+  kidding, I myself did this with grep for almost a decade before writing
+  ripgrep.) But if you instead enjoy having a search tool respect your
+  `.gitignore`, then ripgrep might be perfect for you!
+* Are you frequently searching non-ASCII text that is UTF-8 encoded? One of
+  ripgrep's key features is that it can handle Unicode features in your
+  patterns in a way that tends to be faster than GNU grep. Unicode features
+  in ripgrep are enabled by default; there is no need to configure your locale
+  settings to use ripgrep properly because ripgrep doesn't respect your locale
+  settings.
+* Do you need to search UTF-16 files and you don't want to bother explicitly
+  transcoding them? Great. ripgrep does this for you automatically. No need
+  to enable it.
+* Do you need to search a large directory of large files? ripgrep uses
+  parallelism by default, which tends to make it faster than a standard
+  `grep -r` search. However, if you're OK writing the occasional
+  `find ./ -print0 | xargs -P8 -0 grep` command, then maybe grep is good
+  enough.
+
+Here are some cases where you might *not* want to use ripgrep. The same caveats
+for the previous section apply.
+
+* Are you writing portable shell scripts intended to work in a variety of
+  environments? Great, probably not a good idea to use ripgrep! ripgrep is has
+  nowhere near the ubquity of grep, so if you do use ripgrep, you might need
+  to futz with the installation process more than you would with grep.
+* Do you care about POSIX compatibility? If so, then you can't use ripgrep
+  because it never was, isn't and never will be POSIX compatible.
+* Do you hate tools that try to do something smart? If so, ripgrep is all about
+  being smart, so you might prefer to just stick with grep.
+* Is there a particular feature of grep you rely on that ripgrep either doesn't
+  have or never will have? If the former, file a bug report, maybe ripgrep can
+  do it! If the latter, well, then, just use grep.
