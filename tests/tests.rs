@@ -1232,6 +1232,19 @@ clean!(regression_599, "^$", "input.txt", |wd: WorkDir, mut cmd: Command| {
     assert_eq!(expected, lines);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/807
+clean!(regression_807, "test", ".", |wd: WorkDir, mut cmd: Command| {
+    wd.create(".gitignore", ".a/b");
+    wd.create_dir(".a/b");
+    wd.create_dir(".a/c");
+    wd.create(".a/b/file", "test");
+    wd.create(".a/c/file", "test");
+
+    cmd.arg("--hidden");
+    let lines: String = wd.stdout(&mut cmd);
+    assert_eq!(lines, format!("{}:test\n", path(".a/c/file")));
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1
 clean!(feature_1_sjis, "Шерлок Холмс", ".", |wd: WorkDir, mut cmd: Command| {
     let sherlock =

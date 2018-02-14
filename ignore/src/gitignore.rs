@@ -66,6 +66,12 @@ impl Glob {
     pub fn is_only_dir(&self) -> bool {
         self.is_only_dir
     }
+
+    /// Returns true if and only if this glob has a `**/` prefix.
+    fn has_doublestar_prefix(&self) -> bool {
+        self.actual.starts_with("**/")
+        || (self.actual == "**" && self.is_only_dir)
+    }
 }
 
 /// Gitignore is a matcher for the globs in one or more gitignore files
@@ -278,7 +284,10 @@ impl Gitignore {
         // BUT, a file name might not have any directory components to it,
         // in which case, we don't want to accidentally strip any part of the
         // file name.
-        if !is_file_name(path) {
+        //
+        // As an additional special case, if the root is just `.`, then we
+        // shouldn't try to strip anything, e.g., when path begins with a `.`.
+        if self.root != Path::new(".") && !is_file_name(path) {
             if let Some(p) = strip_prefix(&self.root, path) {
                 path = p;
                 // If we're left with a leading slash, get rid of it.
@@ -454,7 +463,7 @@ impl GitignoreBuilder {
         // prefix.
         if !literal_separator {
             // ... but only if we don't already have a **/ prefix.
-            if !(glob.actual.starts_with("**/") || (glob.actual == "**" && glob.is_only_dir)) {
+            if !glob.has_doublestar_prefix() {
                 glob.actual = format!("**/{}", glob.actual);
             }
         }
@@ -620,6 +629,12 @@ mod tests {
     ignored!(ig29, ROOT, "node_modules/ ", "node_modules", true);
     ignored!(ig30, ROOT, "**/", "foo/bar", true);
     ignored!(ig31, ROOT, "path1/*", "path1/foo");
+    ignored!(ig32, ROOT, ".a/b", ".a/b");
+    ignored!(ig33, "./", ".a/b", ".a/b");
+    ignored!(ig34, ".", ".a/b", ".a/b");
+    ignored!(ig35, "./.", ".a/b", ".a/b");
+    ignored!(ig36, "././", ".a/b", ".a/b");
+    ignored!(ig37, "././.", ".a/b", ".a/b");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
