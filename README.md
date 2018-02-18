@@ -172,8 +172,8 @@ The binary name for ripgrep is `rg`.
 
 **[Archives of precompiled binaries for ripgrep are available for Windows,
 macOS and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Users of
-platforms not explicitly mentioned below (such as Debian) are advised
-to download one of these archives.
+platforms not explicitly mentioned below are advised to download one of these
+archives.
 
 Linux binaries are static executables. Windows binaries are available either as
 built with MinGW (GNU) or with Microsoft Visual C++ (MSVC). When possible,
@@ -243,13 +243,23 @@ $ nix-env --install ripgrep
 $ # (Or using the attribute name, which is also ripgrep.)
 ```
 
+If you're a **Debian** or an **Ubuntu** user, then ripgrep can be installed
+using a binary `.deb` file provided in each
+[ripgrep release](https://github.com/BurntSushi/ripgrep/releases). Note that
+ripgrep is not in the official Debian or Ubuntu repositories.
+
+```
+$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/0.8.0/ripgrep_0.8.0_amd64.deb
+$ sudo dpkg -i ripgrep-0.8.0_amd64.deb
+```
+
 If you're an **Ubuntu** user, ripgrep can be installed from the `snap` store.
 * Note that if you are using `16.04 LTS` or later, snap is already installed.
 * For older versions you can install snap using
 [this guide](https://docs.snapcraft.io/core/install-ubuntu).
 
 ```
-sudo snap install rg
+$ sudo snap install rg
 ```
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
