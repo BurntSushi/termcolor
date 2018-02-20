@@ -1026,6 +1026,11 @@ impl Work {
         self.dent.is_dir()
     }
 
+    /// Returns true if and only if this work item is a symlink.
+    fn is_symlink(&self) -> bool {
+        self.dent.file_type().map_or(false, |ft| ft.is_symlink())
+    }
+
     /// Adds ignore rules for parent directories.
     ///
     /// Note that this only applies to entries at depth 0. On all other
@@ -1112,7 +1117,7 @@ impl Worker {
         while let Some(mut work) = self.get_work() {
             // If the work is not a directory, then we can just execute the
             // caller's callback immediately and move on.
-            if !work.is_dir() {
+            if work.is_symlink() || !work.is_dir() {
                 if (self.f)(Ok(work.dent)).is_quit() {
                     self.quit_now();
                     return;
