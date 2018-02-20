@@ -243,8 +243,8 @@ $ nix-env --install ripgrep
 $ # (Or using the attribute name, which is also ripgrep.)
 ```
 
-If you're a **Debian** or an **Ubuntu** user, then ripgrep can be installed
-using a binary `.deb` file provided in each
+If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
+then ripgrep can be installed using a binary `.deb` file provided in each
 [ripgrep release](https://github.com/BurntSushi/ripgrep/releases). Note that
 ripgrep is not in the official Debian or Ubuntu repositories.
 
