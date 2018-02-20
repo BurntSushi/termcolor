@@ -67,7 +67,7 @@ pub struct Searcher<'a, R, W: 'a> {
     grep: &'a Grep,
     path: &'a Path,
     haystack: R,
-    match_count: u64,
+    match_line_count: u64,
     line_count: Option<u64>,
     byte_offset: Option<u64>,
     last_match: Match,
@@ -127,12 +127,12 @@ impl Options {
         self.files_with_matches || self.files_without_matches || self.quiet
     }
 
-    /// Returns true if the search should terminate based on the match count.
-    pub fn terminate(&self, match_count: u64) -> bool {
-        if match_count > 0 && self.stop_after_first_match() {
+    /// Returns true if the search should terminate based on the match line count.
+    pub fn terminate(&self, match_line_count: u64) -> bool {
+        if match_line_count > 0 && self.stop_after_first_match() {
             return true;
         }
-        if self.max_count.map_or(false, |max| match_count >= max) {
+        if self.max_count.map_or(false, |max| match_line_count >= max) {
             return true;
         }
         false
@@ -166,7 +166,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
             grep: grep,
             path: path,
             haystack: haystack,
-            match_count: 0,
+            match_line_count: 0,
             line_count: None,
             byte_offset: None,
             last_match: Match::default(),
@@ -271,7 +271,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     #[inline(never)]
     pub fn run(mut self) -> Result<u64, Error> {
         self.inp.reset();
-        self.match_count = 0;
+        self.match_line_count = 0;
         self.line_count = if self.opts.line_number { Some(0) } else { None };
         self.byte_offset = if self.opts.byte_offset { Some(0) } else { None };
         self.last_match = Match::default();
@@ -323,21 +323,21 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
                 self.print_after_context(upto);
             }
         }
-        if self.match_count > 0 {
+        if self.match_line_count > 0 {
             if self.opts.count {
-                self.printer.path_count(self.path, self.match_count);
+                self.printer.path_count(self.path, self.match_line_count);
             } else if self.opts.files_with_matches {
                 self.printer.path(self.path);
             }
         } else if self.opts.files_without_matches {
             self.printer.path(self.path);
         }
-        Ok(self.match_count)
+        Ok(self.match_line_count)
     }
 
     #[inline(always)]
     fn terminate(&self) -> bool {
-        self.opts.terminate(self.match_count)
+        self.opts.terminate(self.match_line_count)
     }
 
     #[inline(always)]
@@ -427,7 +427,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
 
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
-        self.match_count += 1;
+        self.match_line_count += 1;
         if self.opts.skip_matches() {
             return;
         }
