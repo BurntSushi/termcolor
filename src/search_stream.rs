@@ -68,6 +68,7 @@ pub struct Searcher<'a, R, W: 'a> {
     path: &'a Path,
     haystack: R,
     match_line_count: u64,
+    match_count: Option<u64>,
     line_count: Option<u64>,
     byte_offset: Option<u64>,
     last_match: Match,
@@ -83,6 +84,7 @@ pub struct Options {
     pub before_context: usize,
     pub byte_offset: bool,
     pub count: bool,
+    pub count_matches: bool,
     pub files_with_matches: bool,
     pub files_without_matches: bool,
     pub eol: u8,
@@ -100,6 +102,7 @@ impl Default for Options {
             before_context: 0,
             byte_offset: false,
             count: false,
+            count_matches: false,
             files_with_matches: false,
             files_without_matches: false,
             eol: b'\n',
@@ -114,11 +117,11 @@ impl Default for Options {
 }
 
 impl Options {
-    /// Several options (--quiet, --count, --files-with-matches,
+    /// Several options (--quiet, --count, --count-matches, --files-with-matches,
     /// --files-without-match) imply that we shouldn't ever display matches.
     pub fn skip_matches(&self) -> bool {
         self.count || self.files_with_matches || self.files_without_matches
-        || self.quiet
+        || self.quiet || self.count_matches
     }
 
     /// Some options (--quiet, --files-with-matches, --files-without-match)
@@ -167,6 +170,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
             path: path,
             haystack: haystack,
             match_line_count: 0,
+            match_count: None,
             line_count: None,
             byte_offset: None,
             last_match: Match::default(),
@@ -205,6 +209,15 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     /// Disabled by default.
     pub fn count(mut self, yes: bool) -> Self {
         self.opts.count = yes;
+        self
+    }
+
+    /// If enabled, searching will print the count of individual matches
+    /// instead of each match.
+    ///
+    /// Disabled by default.
+   pub fn count_matches(mut self, yes: bool) -> Self {
+        self.opts.count_matches = yes;
         self
     }
 
@@ -274,6 +287,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
         self.match_line_count = 0;
         self.line_count = if self.opts.line_number { Some(0) } else { None };
         self.byte_offset = if self.opts.byte_offset { Some(0) } else { None };
+        self.match_count = if self.opts.count_matches { Some(0) } else { None };
         self.last_match = Match::default();
         self.after_context_remaining = 0;
         while !self.terminate() {
@@ -326,6 +340,8 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
         if self.match_line_count > 0 {
             if self.opts.count {
                 self.printer.path_count(self.path, self.match_line_count);
+            } else if self.opts.count_matches {
+                self.printer.path_count(self.path, self.match_count.unwrap());
             } else if self.opts.files_with_matches {
                 self.printer.path(self.path);
             }
@@ -428,6 +444,7 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     #[inline(always)]
     fn print_match(&mut self, start: usize, end: usize) {
         self.match_line_count += 1;
+        self.count_individual_matches(start, end);
         if self.opts.skip_matches() {
             return;
         }
@@ -469,6 +486,15 @@ impl<'a, R: io::Read, W: WriteColor> Searcher<'a, R, W> {
     fn count_byte_offset(&mut self, buf_last_end: usize) {
         if let Some(ref mut byte_offset) = self.byte_offset {
             *byte_offset += buf_last_end as u64;
+        }
+    }
+
+    #[inline(always)]
+    fn count_individual_matches(&mut self, start: usize, end: usize) {
+        if let Some(ref mut count) = self.match_count {
+            for _ in self.grep.regex().find_iter(&self.inp.buf[start..end]) {
+                *count += 1;
+            }
         }
     }
 
@@ -1064,6 +1090,13 @@ fn main() {
 /baz.rs:258:but Doctor Watson has to have it taken out for him and dusted,
 /baz.rs:321:and exhibited clearly, with a label attached.
 ");
+    }
+
+    #[test]
+    fn count_matches() {
+        let (_, out) = search_smallcap(
+            "the", SHERLOCK, |s| s.count_matches(true));
+        assert_eq!(out, "/baz.rs:4\n");
     }
 
     #[test]

@@ -517,6 +517,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_context(&mut args);
     flag_context_separator(&mut args);
     flag_count(&mut args);
+    flag_count_matches(&mut args);
     flag_debug(&mut args);
     flag_dfa_size_limit(&mut args);
     flag_encoding(&mut args);
@@ -636,7 +637,8 @@ This overrides the --context flag.
 }
 
 fn flag_byte_offset(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Print the 0-based byte offset for each matching line.";
+    const SHORT: &str =
+        "Print the 0-based byte offset for each matching line.";
     const LONG: &str = long!("\
 Print the 0-based byte offset within the input file
 before each line of output. If -o (--only-matching) is
@@ -771,7 +773,7 @@ sequences like \\x7F or \\t may be used. The default value is --.
 }
 
 fn flag_count(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Only show the count of matches for each file.";
+    const SHORT: &str = "Only show the count of matching lines for each file.";
     const LONG: &str = long!("\
 This flag suppresses normal output and shows the number of lines that match
 the given patterns for each file searched. Each file containing a match has its
@@ -781,9 +783,32 @@ that match and not the total number of matches.
 If only one file is given to ripgrep, then only the count is printed if there
 is a match. The --with-filename flag can be used to force printing the file
 path in this case.
+
+This overrides the --count-matches flag.
 ");
     let arg = RGArg::switch("count").short("c")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG).overrides("count-matches");
+    args.push(arg);
+}
+
+fn flag_count_matches(args: &mut Vec<RGArg>) {
+    const SHORT: &str =
+        "Only show the count of individual matches for each file.";
+    const LONG: &str = long!("\
+This flag suppresses normal output and shows the number of individual
+matches of the given patterns for each file searched. Each file
+containing matches has its path and match count printed on each line.
+Note that this reports the total number of individual matches and not
+the number of lines that match.
+
+If only one file is given to ripgrep, then only the count is printed if there
+is a match. The --with-filename flag can be used to force printing the file
+path in this case.
+
+This overrides the --count flag.
+");
+    let arg = RGArg::switch("count-matches")
+        .help(SHORT).long_help(LONG).overrides("count");
     args.push(arg);
 }
 

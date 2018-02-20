@@ -35,6 +35,7 @@ struct Options {
     before_context: usize,
     byte_offset: bool,
     count: bool,
+    count_matches: bool,
     files_with_matches: bool,
     files_without_matches: bool,
     eol: u8,
@@ -56,6 +57,7 @@ impl Default for Options {
             before_context: 0,
             byte_offset: false,
             count: false,
+            count_matches: false,
             files_with_matches: false,
             files_without_matches: false,
             eol: b'\n',
@@ -123,6 +125,15 @@ impl WorkerBuilder {
     /// Disabled by default.
     pub fn count(mut self, yes: bool) -> Self {
         self.opts.count = yes;
+        self
+    }
+
+    /// If enabled, searching will print the count of individual matches
+    /// instead of each match.
+    ///
+    /// Disabled by default.
+    pub fn count_matches(mut self, yes: bool) -> Self {
+        self.opts.count_matches = yes;
         self
     }
 
@@ -297,6 +308,7 @@ impl Worker {
             .before_context(self.opts.before_context)
             .byte_offset(self.opts.byte_offset)
             .count(self.opts.count)
+            .count_matches(self.opts.count_matches)
             .files_with_matches(self.opts.files_with_matches)
             .files_without_matches(self.opts.files_without_matches)
             .eol(self.opts.eol)
@@ -337,6 +349,7 @@ impl Worker {
         Ok(searcher
             .byte_offset(self.opts.byte_offset)
             .count(self.opts.count)
+            .count_matches(self.opts.count_matches)
             .files_with_matches(self.opts.files_with_matches)
             .files_without_matches(self.opts.files_without_matches)
             .eol(self.opts.eol)

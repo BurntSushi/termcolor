@@ -22,6 +22,7 @@ pub struct BufferSearcher<'a, W: 'a> {
     path: &'a Path,
     buf: &'a [u8],
     match_line_count: u64,
+    match_count: Option<u64>,
     line_count: Option<u64>,
     byte_offset: Option<u64>,
     last_line: usize,
@@ -41,6 +42,7 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
             path: path,
             buf: buf,
             match_line_count: 0,
+            match_count: None,
             line_count: None,
             byte_offset: None,
             last_line: 0,
@@ -62,6 +64,15 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
     /// Disabled by default.
     pub fn count(mut self, yes: bool) -> Self {
         self.opts.count = yes;
+        self
+    }
+
+    /// If enabled, searching will print the count of individual matches
+    /// instead of each match.
+    ///
+    /// Disabled by default.
+    pub fn count_matches(mut self, yes: bool) -> Self {
+        self.opts.count_matches = yes;
         self
     }
 
@@ -135,6 +146,7 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
         // The memory map searcher uses one contiguous block of bytes, so the
         // offsets given the printer are sufficient to compute the byte offset.
         self.byte_offset = if self.opts.byte_offset { Some(0) } else { None };
+        self.match_count = if self.opts.count_matches { Some(0) } else { None };
         let mut last_end = 0;
         for m in self.grep.iter(self.buf) {
             if self.opts.invert_match {
@@ -153,6 +165,10 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
         }
         if self.opts.count && self.match_line_count > 0 {
             self.printer.path_count(self.path, self.match_line_count);
+        } else if self.opts.count_matches
+            && self.match_count.map_or(false, |c| c > 0)
+        {
+            self.printer.path_count(self.path, self.match_count.unwrap());
         }
         if self.opts.files_with_matches && self.match_line_count > 0 {
             self.printer.path(self.path);
@@ -164,8 +180,18 @@ impl<'a, W: WriteColor> BufferSearcher<'a, W> {
     }
 
     #[inline(always)]
+    fn count_individual_matches(&mut self, start: usize, end: usize) {
+        if let Some(ref mut count) = self.match_count {
+            for _ in self.grep.regex().find_iter(&self.buf[start..end]) {
+                *count += 1;
+            }
+        }
+    }
+
+    #[inline(always)]
     pub fn print_match(&mut self, start: usize, end: usize) {
         self.match_line_count += 1;
+        self.count_individual_matches(start, end);
         if self.opts.skip_matches() {
             return;
         }
@@ -315,6 +341,13 @@ and exhibited clearly, with a label attached.\
             "Sherlock", SHERLOCK, |s| s.count(true));
         assert_eq!(2, count);
         assert_eq!(out, "/baz.rs:2\n");
+    }
+
+    #[test]
+    fn count_matches() {
+        let (_, out) = search(
+            "the", SHERLOCK, |s| s.count_matches(true));
+        assert_eq!(out, "/baz.rs:4\n");
     }
 
     #[test]
