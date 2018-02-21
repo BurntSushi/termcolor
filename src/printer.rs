@@ -280,6 +280,7 @@ impl<W: WriteColor> Printer<W> {
         start: usize,
         end: usize,
         line_number: Option<u64>,
+        byte_offset: Option<u64>
     ) {
         if !self.line_per_match && !self.only_matching {
             let mat = re
@@ -287,12 +288,13 @@ impl<W: WriteColor> Printer<W> {
                 .map(|m| (m.start(), m.end()))
                 .unwrap_or((0, 0));
             return self.write_match(
-                re, path, buf, start, end, line_number, mat.0, mat.1);
+                re, path, buf, start, end, line_number,
+                byte_offset, mat.0, mat.1);
         }
         for m in re.find_iter(&buf[start..end]) {
             self.write_match(
-                re, path.as_ref(), buf, start, end,
-                line_number, m.start(), m.end());
+                re, path.as_ref(), buf, start, end, line_number,
+                byte_offset, m.start(), m.end());
         }
     }
 
@@ -304,6 +306,7 @@ impl<W: WriteColor> Printer<W> {
         start: usize,
         end: usize,
         line_number: Option<u64>,
+        byte_offset: Option<u64>,
         match_start: usize,
         match_end: usize,
     ) {
@@ -320,6 +323,14 @@ impl<W: WriteColor> Printer<W> {
         }
         if self.column {
             self.column_number(match_start as u64 + 1, b':');
+        }
+        if let Some(byte_offset) = byte_offset {
+            if self.only_matching {
+                self.write_byte_offset(
+                    byte_offset + ((start + match_start) as u64), b':');
+            } else {
+                self.write_byte_offset(byte_offset + (start as u64), b':');
+            }
         }
         if self.replace.is_some() {
             let mut count = 0;
@@ -395,6 +406,7 @@ impl<W: WriteColor> Printer<W> {
         start: usize,
         end: usize,
         line_number: Option<u64>,
+        byte_offset: Option<u64>,
     ) {
         if self.heading && self.with_filename && !self.has_printed {
             self.write_file_sep();
@@ -406,6 +418,9 @@ impl<W: WriteColor> Printer<W> {
         }
         if let Some(line_number) = line_number {
             self.line_number(line_number, b'-');
+        }
+        if let Some(byte_offset) = byte_offset {
+            self.write_byte_offset(byte_offset + (start as u64), b'-');
         }
         if self.max_columns.map_or(false, |m| end - start > m) {
             self.write(b"[Omitted long context line]");
@@ -478,6 +493,11 @@ impl<W: WriteColor> Printer<W> {
 
     fn column_number(&mut self, n: u64, sep: u8) {
         self.write_colored(n.to_string().as_bytes(), |colors| colors.column());
+        self.separator(&[sep]);
+    }
+
+    fn write_byte_offset(&mut self, o: u64, sep: u8) {
+        self.write_colored(o.to_string().as_bytes(), |colors| colors.column());
         self.separator(&[sep]);
     }
 
