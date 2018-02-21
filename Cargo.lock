@@ -41,7 +41,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "clap"
-version = "2.29.4"
+version = "2.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "ansi_term 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -229,7 +229,7 @@ version = "0.8.0"
 dependencies = [
  "atty 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecount 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "clap 2.29.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "encoding_rs 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "globset 0.3.0",
  "grep 0.1.8",
@@ -371,7 +371,7 @@ dependencies = [
 "checksum bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b3c30d3802dfb7281680d6285f2ccdaa8c2d8fee41f93805dba5c4cf50dc23cf"
 "checksum bytecount 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "882585cd7ec84e902472df34a5e01891202db3bf62614e1f0afe459c1afcf744"
 "checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
-"checksum clap 2.29.4 (registry+https://github.com/rust-lang/crates.io-index)" = "7b8f59bcebcfe4269b09f71dab0da15b355c75916a8f975d3876ce81561893ee"
+"checksum clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1c07b9257a00f3fc93b7f3c417fc15607ec7a56823bc2c37ec744e266387de5b"
 "checksum crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "24ce9782d4d5c53674646a6a4c1863a21a8fc0cb649b3c94dfc16e45071dea19"
 "checksum encoding_rs 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "98fd0f24d1fb71a4a6b9330c8ca04cbd4e7cc5d846b54ca74ff376bc7c9f798d"
 "checksum fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
