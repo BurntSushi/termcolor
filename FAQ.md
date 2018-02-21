@@ -21,6 +21,7 @@
 * [How do I create a PowerShell profile?](#powershell-profile)
 * [How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
 * [Can ripgrep replace grep?](#posix4ever)
+* [What does the "rip" in ripgrep mean?](#intentcountsforsomething)
 
 
 <h3 name="config">
@@ -530,3 +531,39 @@ for the previous section apply.
 * Is there a particular feature of grep you rely on that ripgrep either doesn't
   have or never will have? If the former, file a bug report, maybe ripgrep can
   do it! If the latter, well, then, just use grep.
+
+
+<h3 name="intentcountsforsomething">
+What does the "rip" in ripgrep mean?
+</h3>
+
+When I first started writing ripgrep, I called it `rep`, intending it to be a
+shorter variant of `grep`. Soon after, I renamed it to `xrep` since `rep`
+wasn't obvious enough of a name for my taste. And also because adding `x` to
+anything always makes it better, right?
+
+Before ripgrep's first public release, I decided that I didn't like `xrep`. I
+thought it was slightly awkward to type, and despite my previous praise of the
+letter `x`, I kind of thought it was pretty lame. Being someone who really
+likes Rust, I wanted to call it "rustgrep" or maybe "rgrep" for short. But I
+thought that was just as lame, and maybe a little too in-your-face. But I
+wanted to continue using `r` so I could at least pretend Rust had something to
+do with it.
+
+I spent a couple of days trying to think of very short words that began with
+the letter `r` that were even somewhat related to the task of searching. I
+don't remember how it popped into my head, but "rip" came up as something that
+meant "fast," as in, "to rip through your text." The fact that RIP is also an
+initialism for "Rest in Peace" (as in, "ripgrep kills grep") never really
+dawned on me. Perhaps the coincidence is too striking, but I didn't realize it
+until someone explicitly pointed it out to me after the initial public realize.
+I admit that I found it mildly amusing, but if I had realized it myself before
+the public release, I probably would have pressed on and chose a different
+name. Alas, renaming things after a release is hard, so I decided to mush on.
+
+Given the fact that
+[ripgrep never was, is or will be a 100% drop-in replacement for
+grep](#posix4ever),
+ripgrep is neither actually a "grep killer" nor was it ever intended to be. It
+certainly does eat into some of its use cases, but that's nothing that other
+tools like ack or The Silver Searcher weren't already doing.
