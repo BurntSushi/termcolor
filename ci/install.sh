@@ -27,7 +27,7 @@ install_osx_dependencies() {
       return
     fi
 
-    brew install asciidoc
+    brew install asciidoc docbook-xsl
 }
 
 configure_cargo() {
