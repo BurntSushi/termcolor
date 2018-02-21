@@ -553,13 +553,14 @@ do with it.
 I spent a couple of days trying to think of very short words that began with
 the letter `r` that were even somewhat related to the task of searching. I
 don't remember how it popped into my head, but "rip" came up as something that
-meant "fast," as in, "to rip through your text." The fact that RIP is also an
-initialism for "Rest in Peace" (as in, "ripgrep kills grep") never really
-dawned on me. Perhaps the coincidence is too striking, but I didn't realize it
-until someone explicitly pointed it out to me after the initial public realize.
-I admit that I found it mildly amusing, but if I had realized it myself before
-the public release, I probably would have pressed on and chose a different
-name. Alas, renaming things after a release is hard, so I decided to mush on.
+meant "fast," as in, "to rip through your text." The fact that RIP is also
+an initialism for "Rest in Peace" (as in, "ripgrep kills grep") never really
+dawned on me. Perhaps the coincidence is too striking to believe that, but
+I didn't realize it until someone explicitly pointed it out to me after the
+initial public release. I admit that I found it mildly amusing, but if I had
+realized it myself before the public release, I probably would have pressed on
+and chose a different name. Alas, renaming things after a release is hard, so I
+decided to mush on.
 
 Given the fact that
 [ripgrep never was, is or will be a 100% drop-in replacement for
