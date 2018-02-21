@@ -1,3 +1,39 @@
+0.8.1 (2018-02-20)
+==================
+This is a patch release of ripgrep that primarily fixes regressions introduced
+in 0.8.0 (#820 and #824) in directory traversal on Windows. These regressions
+do not impact non-Windows users.
+
+Feature enhancements:
+
+* Added or improved file type filtering for csv and VHDL.
+* [FEATURE #798](https://github.com/BurntSushi/ripgrep/issues/798):
+  Add `underline` support to `termcolor` and ripgrep. See documentation on the
+  `--colors` flag for details.
+
+Bug fixes:
+
+* [BUG #684](https://github.com/BurntSushi/ripgrep/issues/684):
+  Improve documentation for the `--ignore-file` flag.
+* [BUG #789](https://github.com/BurntSushi/ripgrep/issues/789):
+  Don't show `(rev )` if the revision wasn't available during the build.
+* [BUG #791](https://github.com/BurntSushi/ripgrep/issues/791):
+  Add man page to ARM release.
+* [BUG #797](https://github.com/BurntSushi/ripgrep/issues/797):
+  Improve documentation for "intense" setting in `termcolor`.
+* [BUG #800](https://github.com/BurntSushi/ripgrep/issues/800):
+  Fix a bug in the `ignore` crate for custom ignore files. This had no impact
+  on ripgrep.
+* [BUG #807](https://github.com/BurntSushi/ripgrep/issues/807):
+  Fix a bug where `rg --hidden .` behaved differently from `rg --hidden ./`.
+* [BUG #815](https://github.com/BurntSushi/ripgrep/issues/815):
+  Clarify a common failure mode in user guide.
+* [BUG #820](https://github.com/BurntSushi/ripgrep/issues/820):
+  Fixes a bug on Windows where symlinks were followed even if not requested.
+* [BUG #824](https://github.com/BurntSushi/ripgrep/issues/824):
+  Fix a performance regression in directory traversal on Windows.
+
+
 0.8.0 (2018-02-11)
 ==================
 This is a new minor version releae of ripgrep that satisfies several popular
