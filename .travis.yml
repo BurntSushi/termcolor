@@ -30,7 +30,8 @@ matrix:
       env: TARGET=x86_64-unknown-linux-musl
     - os: osx
       rust: nightly
-      env: TARGET=x86_64-apple-darwin
+      # XML_CATALOG_FILES is apparently necessary for asciidoc on macOS.
+      env: TARGET=x86_64-apple-darwin XML_CATALOG_FILES=/usr/local/etc/xml/catalog
     - os: linux
       rust: nightly
       env: TARGET=arm-unknown-linux-gnueabihf GCC_VERSION=4.8
