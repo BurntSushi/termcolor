@@ -91,6 +91,11 @@ Standard Unix-style glob syntax is supported:
   `[!ab]` to match any character except for `a` and `b`.
 * Metacharacters such as `*` and `?` can be escaped with character class
   notation. e.g., `[*]` matches `*`.
+* When backslash escapes are enabled, a backslash (`\`) will escape all meta
+  characters in a glob. If it precedes a non-meta character, then the slash is
+  ignored. A `\\` will match a literal `\\`. Note that this mode is only
+  enabled on Unix platforms by default, but can be enabled on any platform
+  via the `backslash_escape` setting on `Glob`.
 
 A `GlobBuilder` can be used to prevent wildcards from matching path separators,
 or to enable case insensitive matching.
@@ -154,6 +159,8 @@ pub enum ErrorKind {
     /// Occurs when an alternating group is nested inside another alternating
     /// group, e.g., `{{a,b},{c,d}}`.
     NestedAlternates,
+    /// Occurs when an unescaped '\' is found at the end of a glob.
+    DanglingEscape,
     /// An error associated with parsing or compiling a regex.
     Regex(String),
 }
@@ -199,6 +206,9 @@ impl ErrorKind {
             ErrorKind::NestedAlternates => {
                 "nested alternate groups are not allowed"
             }
+            ErrorKind::DanglingEscape => {
+                "dangling '\\'"
+            }
             ErrorKind::Regex(ref err) => err,
         }
     }
@@ -223,6 +233,7 @@ impl fmt::Display for ErrorKind {
             | ErrorKind::UnopenedAlternates
             | ErrorKind::UnclosedAlternates
             | ErrorKind::NestedAlternates
+            | ErrorKind::DanglingEscape
             | ErrorKind::Regex(_) => {
                 write!(f, "{}", self.description())
             }
