@@ -20,6 +20,7 @@
 * [How do I create an alias for ripgrep on Windows?](#rg-alias-windows)
 * [How do I create a PowerShell profile?](#powershell-profile)
 * [How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
+* [How is ripgrep licensed?](#license)
 * [Can ripgrep replace grep?](#posix4ever)
 * [What does the "rip" in ripgrep mean?](#intentcountsforsomething)
 
@@ -468,6 +469,34 @@ that the console will use for printing to UTF-8 with
 `[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8`. This
 will also reset when PowerShell is restarted, so you can add that line
 to your profile as well if you want to make the setting permanent.
+
+
+<h3 name="license">
+How is ripgrep licensed?
+</h3>
+
+ripgrep is dual licensed under the
+[Unlicense](https://unlicense.org/)
+and MIT licenses. Specifically, you may use ripgrep under the terms of either
+license.
+
+The reason why ripgrep is dual licensed this way is two-fold:
+
+1. I, as ripgrep's author, would like to participate in a small bit of
+   ideological activism by promoting the Unlicense's goal: to disclaim
+   copyright monopoly interest.
+2. I, as ripgrep's author, would like as many people to use rigprep as
+   possible. Since the Unlicense is not a proven or well known license, ripgrep
+   is also offered under the MIT license, which is ubiquitous and accepted by
+   almost everyone.
+
+More specifically, ripgrep and all its dependencies are compatible with this
+licensing choice. In particular, ripgrep's dependencies (direct and transitive)
+will always be limited to permissive licenses. That is, ripgrep will never
+depend on code that is not permissively licensed. This means rejecting any
+dependency that uses a copyleft license such as the GPL, LGPL, MPL or any of
+the Creative Commons ShareAlike licenses. Whether the license is "weak"
+copyleft or not does not matter; ripgrep will **not** depend on it.
 
 
 <h3 name="posix4ever">
