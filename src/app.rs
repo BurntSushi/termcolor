@@ -31,7 +31,7 @@ Use -h for short descriptions and --help for more details.";
 
 const USAGE: &str = "
     rg [OPTIONS] PATTERN [PATH ...]
-    rg [OPTIONS] [-e PATTERN ...] [-f FILE ...] [PATH ...]
+    rg [OPTIONS] [-e PATTERN ...] [-f PATTERNFILE ...] [PATH ...]
     rg [OPTIONS] --files [PATH ...]
     rg [OPTIONS] --type-list";
 
@@ -823,7 +823,7 @@ input lines, and the newline is not counted as part of the pattern.
 
 A line is printed if and only if it matches at least one of the patterns.
 ");
-    let arg = RGArg::flag("file", "PATH").short("f")
+    let arg = RGArg::flag("file", "PATTERNFILE").short("f")
         .help(SHORT).long_help(LONG)
         .multiple()
         .allow_leading_hyphen();
@@ -1002,10 +1002,10 @@ fn flag_ignore_file(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Specify additional ignore files.";
     const LONG: &str = long!("\
 Specifies a path to one or more .gitignore format rules files. These patterns
-are applied after the patterns found in .gitignore and .ignore are applied 
-and are matched relative to the current working directory. Multiple additional 
-ignore files can be specified by using the --ignore-file flag several times. 
-When specifying multiple ignore files, earlier files have lower precedence 
+are applied after the patterns found in .gitignore and .ignore are applied
+and are matched relative to the current working directory. Multiple additional
+ignore files can be specified by using the --ignore-file flag several times.
+When specifying multiple ignore files, earlier files have lower precedence
 than later files.
 
 If you are looking for a way to include or exclude files and directories

@@ -12,7 +12,7 @@ Synopsis
 
 *rg* [_OPTIONS_] *-e* _PATTERN_... [_PATH_...]
 
-*rg* [_OPTIONS_] *-f* _PATH_... [_PATH_...]
+*rg* [_OPTIONS_] *-f* _PATTERNFILE_... [_PATH_...]
 
 *rg* [_OPTIONS_] *--files* [_PATH_...]
 
