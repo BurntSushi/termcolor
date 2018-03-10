@@ -747,10 +747,16 @@ impl<'a> ArgMatches<'a> {
         let count = self.is_present("count");
         let count_matches = self.is_present("count-matches");
         let invert_matches = self.is_present("invert-match");
+        let only_matching = self.is_present("only-matching");
         if count_matches && invert_matches {
-            return (true, false);
+            // Treat `-v --count-matches` as `-v -c`.
+            (true, false)
+        } else if count && only_matching {
+            // Treat `-c --only-matching` as `--count-matches`.
+            (false, true)
+        } else {
+            (count, count_matches)
         }
-        (count, count_matches)
     }
 
     /// Returns the user's color choice based on command line parameters and

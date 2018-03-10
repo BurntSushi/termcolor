@@ -426,6 +426,13 @@ sherlock!(count_matches_inverted, "Sherlock", ".", |wd: WorkDir, mut cmd: Comman
     assert_eq!(lines, expected);
 });
 
+sherlock!(count_matches_via_only, "the", ".", |wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--count").arg("--only-matching");
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "sherlock:4\n";
+    assert_eq!(lines, expected);
+});
+
 sherlock!(files_with_matches, "Sherlock", ".", |wd: WorkDir, mut cmd: Command| {
     cmd.arg("--files-with-matches");
     let lines: String = wd.stdout(&mut cmd);

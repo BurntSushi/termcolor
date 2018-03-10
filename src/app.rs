@@ -784,7 +784,8 @@ If only one file is given to ripgrep, then only the count is printed if there
 is a match. The --with-filename flag can be used to force printing the file
 path in this case.
 
-This overrides the --count-matches flag.
+This overrides the --count-matches flag. Note that when --count is combined
+with --only-matching, then ripgrep behaves as if --count-matches was given.
 ");
     let arg = RGArg::switch("count").short("c")
         .help(SHORT).long_help(LONG).overrides("count-matches");
@@ -805,7 +806,8 @@ If only one file is given to ripgrep, then only the count is printed if there
 is a match. The --with-filename flag can be used to force printing the file
 path in this case.
 
-This overrides the --count flag.
+This overrides the --count flag. Note that when --count is combined with
+--only-matching, then ripgrep behaves as if --count-matches was given.
 ");
     let arg = RGArg::switch("count-matches")
         .help(SHORT).long_help(LONG).overrides("count");
