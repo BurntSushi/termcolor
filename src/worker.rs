@@ -341,14 +341,17 @@ impl Worker {
 
     #[cfg(unix)]
     fn mmap(&self, file: &File) -> Result<Option<Mmap>> {
-        use libc::{ENODEV, EOVERFLOW};
+        use libc::{EOVERFLOW, ENODEV, ENOMEM};
 
         let err = match mmap_readonly(file) {
             Ok(mmap) => return Ok(Some(mmap)),
             Err(err) => err,
         };
         let code = err.raw_os_error();
-        if code == Some(ENODEV) || code == Some(EOVERFLOW) {
+        if code == Some(EOVERFLOW)
+            || code == Some(ENODEV)
+            || code == Some(ENOMEM)
+        {
             return Ok(None);
         }
         Err(From::from(err))
