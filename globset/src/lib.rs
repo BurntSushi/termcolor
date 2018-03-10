@@ -163,6 +163,13 @@ pub enum ErrorKind {
     DanglingEscape,
     /// An error associated with parsing or compiling a regex.
     Regex(String),
+    /// Hints that destructuring should not be exhaustive.
+    ///
+    /// This enum may grow additional variants, so this makes sure clients
+    /// don't count on exhaustive matching. (Otherwise, adding a new variant
+    /// could break existing code.)
+    #[doc(hidden)]
+    __Nonexhaustive,
 }
 
 impl StdError for Error {
@@ -210,6 +217,7 @@ impl ErrorKind {
                 "dangling '\\'"
             }
             ErrorKind::Regex(ref err) => err,
+            ErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }
@@ -240,6 +248,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::InvalidRange(s, e) => {
                 write!(f, "invalid range; '{}' > '{}'", s, e)
             }
+            ErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }
