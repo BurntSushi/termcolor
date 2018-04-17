@@ -266,19 +266,15 @@ $ sudo dpkg -i ripgrep_0.8.1_amd64.deb
 ```
 
 If you're an **Ubuntu** user, ripgrep can be installed from the `snap` store.
+
 * Note that if you are using `16.04 LTS` or later, snap is already installed.
 * For older versions you can install snap using
   [this guide](https://docs.snapcraft.io/core/install-ubuntu).
-* If you get permission errors when running ripgrep after installation, try
-  uninstalling and then re-installing with the `--classic` flag.
 
 For the latest stable release:
+
 ```
-$ sudo snap install rg
-```
-For the most recent release candidate:
-```
-$ sudo snap install --candidate rg
+$ sudo snap install --classic rg
 ```
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
