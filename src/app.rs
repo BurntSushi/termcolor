@@ -1281,8 +1281,8 @@ This flag can be disabled with the --ignore-vcs flag.
 fn flag_no_messages(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Suppress all error messages.";
     const LONG: &str = long!("\
-Suppress all error messages. This provides the same behavior as redirecting
-stderr to /dev/null on Unix-like systems.
+Suppress all error messages related to opening and reading files. Error
+messages related to the syntax of the pattern given are still shown.
 
 This flag can be disabled with the --messages flag.
 ");
