@@ -57,11 +57,12 @@ _rg() {
     '(-H --with-filename --no-filename)--no-filename[suppress all file names]'
     "(-p --heading --pretty --vimgrep)--no-heading[don't group matches by file name]"
     "--no-config[don't load configuration files]"
+    '--no-ignore-messages[suppress gitignore parse error messages]'
     "(--no-ignore-parent)--no-ignore[don't respect ignore files]"
     "--no-ignore-parent[don't respect ignore files in parent directories]"
     "--no-ignore-vcs[don't respect version control ignore files]"
     '(-n -N --line-number --no-line-number)'{-N,--no-line-number}'[suppress line numbers]'
-    '--no-messages[suppress all error messages]'
+    '--no-messages[suppress some error messages]'
     "(--mmap --no-mmap)--no-mmap[don't search using memory maps]"
     '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
     '(-o -r --only-matching --passthrough --passthru --replace)'{-o,--only-matching}'[show only matching part of each line]'
