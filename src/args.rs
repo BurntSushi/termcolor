@@ -63,6 +63,7 @@ pub struct Args {
     maxdepth: Option<usize>,
     mmap: bool,
     no_ignore: bool,
+    no_ignore_messages: bool,
     no_ignore_parent: bool,
     no_ignore_vcs: bool,
     no_messages: bool,
@@ -308,6 +309,12 @@ impl Args {
         self.no_messages
     }
 
+    /// Returns true if error messages associated with parsing .ignore or
+    /// .gitignore files should be suppressed.
+    pub fn no_ignore_messages(&self) -> bool {
+        self.no_ignore_messages
+    }
+
     /// Create a new recursive directory iterator over the paths in argv.
     pub fn walker(&self) -> ignore::Walk {
         self.walker_builder().build()
@@ -327,7 +334,7 @@ impl Args {
         }
         for path in &self.ignore_files {
             if let Some(err) = wd.add_ignore(path) {
-                if !self.no_messages {
+                if !self.no_messages && !self.no_ignore_messages {
                     eprintln!("{}", err);
                 }
             }
@@ -402,6 +409,7 @@ impl<'a> ArgMatches<'a> {
             maxdepth: self.usize_of("maxdepth")?,
             mmap: mmap,
             no_ignore: self.no_ignore(),
+            no_ignore_messages: self.is_present("no-ignore-messages"),
             no_ignore_parent: self.no_ignore_parent(),
             no_ignore_vcs: self.no_ignore_vcs(),
             no_messages: self.is_present("no-messages"),

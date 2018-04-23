@@ -544,6 +544,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_mmap(&mut args);
     flag_no_config(&mut args);
     flag_no_ignore(&mut args);
+    flag_no_ignore_messages(&mut args);
     flag_no_ignore_parent(&mut args);
     flag_no_ignore_vcs(&mut args);
     flag_no_messages(&mut args);
@@ -1240,6 +1241,25 @@ This flag can be disabled with the --ignore flag.
     args.push(arg);
 }
 
+fn flag_no_ignore_messages(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Suppress gitignore parse error messages.";
+    const LONG: &str = long!("\
+Suppresses all error messages related to parsing ignore files such as .ignore
+or .gitignore.
+
+This flag can be disabled with the --ignore-messages flag.
+");
+    let arg = RGArg::switch("no-ignore-messages")
+        .help(SHORT).long_help(LONG)
+        .overrides("ignore-messages");
+    args.push(arg);
+
+    let arg = RGArg::switch("ignore-messages")
+        .hidden()
+        .overrides("no-ignore-messages");
+    args.push(arg);
+}
+
 fn flag_no_ignore_parent(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Don't respect ignore files in parent directories.";
     const LONG: &str = long!("\
@@ -1279,7 +1299,7 @@ This flag can be disabled with the --ignore-vcs flag.
 }
 
 fn flag_no_messages(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Suppress all error messages.";
+    const SHORT: &str = "Suppress some error messages.";
     const LONG: &str = long!("\
 Suppress all error messages related to opening and reading files. Error
 messages related to the syntax of the pattern given are still shown.
