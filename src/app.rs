@@ -475,23 +475,6 @@ impl RGArg {
         });
         self
     }
-
-    /// Indicate that any value given to this argument should be a valid
-    /// line number width. A valid line number width cannot start with `0`
-    /// to maintain compatibility with future improvements that add support
-    /// for padding character specifies.
-    fn line_number_width(mut self) -> RGArg {
-        self.claparg = self.claparg.validator(|val| {
-            if val.starts_with("0") {
-                Err(String::from(
-                    "Custom padding characters are currently not supported. \
-                     Please enter only a numeric value."))
-            } else {
-                val.parse::<usize>().map(|_| ()).map_err(|err| err.to_string())
-            }
-        });
-        self
-    }
 }
 
 // We add an extra space to long descriptions so that a black line is inserted
@@ -535,7 +518,6 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_ignore_file(&mut args);
     flag_invert_match(&mut args);
     flag_line_number(&mut args);
-    flag_line_number_width(&mut args);
     flag_line_regexp(&mut args);
     flag_max_columns(&mut args);
     flag_max_count(&mut args);
@@ -1097,18 +1079,6 @@ terminal.
     let arg = RGArg::switch("no-line-number").short("N")
         .help(NO_SHORT).long_help(NO_LONG)
         .overrides("line-number");
-    args.push(arg);
-}
-
-fn flag_line_number_width(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Left pad line numbers up to NUM width.";
-    const LONG: &str = long!("\
-Left pad line numbers up to NUM width. Space is used as the default padding
-character. This has no effect if --no-line-number is enabled.
-");
-    let arg = RGArg::flag("line-number-width", "NUM")
-        .help(SHORT).long_help(LONG)
-        .line_number_width();
     args.push(arg);
 }
 

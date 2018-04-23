@@ -56,7 +56,6 @@ pub struct Args {
     invert_match: bool,
     line_number: bool,
     line_per_match: bool,
-    line_number_width: Option<usize>,
     max_columns: Option<usize>,
     max_count: Option<u64>,
     max_filesize: Option<u64>,
@@ -191,8 +190,7 @@ impl Args {
             .only_matching(self.only_matching)
             .path_separator(self.path_separator)
             .with_filename(self.with_filename)
-            .max_columns(self.max_columns)
-            .line_number_width(self.line_number_width);
+            .max_columns(self.max_columns);
         if let Some(ref rep) = self.replace {
             p = p.replace(rep.clone());
         }
@@ -401,7 +399,6 @@ impl<'a> ArgMatches<'a> {
             ignore_files: self.ignore_files(),
             invert_match: self.is_present("invert-match"),
             line_number: line_number,
-            line_number_width: try!(self.usize_of("line-number-width")),
             line_per_match: self.is_present("vimgrep"),
             max_columns: self.usize_of_nonzero("max-columns")?,
             max_count: self.usize_of("max-count")?.map(|n| n as u64),
