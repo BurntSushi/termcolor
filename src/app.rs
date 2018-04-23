@@ -741,9 +741,17 @@ fn flag_column(args: &mut Vec<RGArg>) {
 Show column numbers (1-based). This only shows the column numbers for the first
 match on each line. This does not try to account for Unicode. One byte is equal
 to one column. This implies --line-number.
+
+This flag can be disabled with --no-column.
 ");
     let arg = RGArg::switch("column")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-column");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-column")
+        .hidden()
+        .overrides("column");
     args.push(arg);
 }
 

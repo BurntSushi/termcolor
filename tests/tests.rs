@@ -836,6 +836,34 @@ sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
     assert_eq!(lines, expected);
 });
 
+sherlock!(vimgrep_no_line, "Sherlock|Watson", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--vimgrep").arg("-N");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:16:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:57:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:49:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:12:but Doctor Watson has to have it taken out for him and dusted,
+";
+    assert_eq!(lines, expected);
+});
+
+sherlock!(vimgrep_no_line_no_column, "Sherlock|Watson", ".",
+|wd: WorkDir, mut cmd: Command| {
+    cmd.arg("--vimgrep").arg("-N").arg("--no-column");
+
+    let lines: String = wd.stdout(&mut cmd);
+    let expected = "\
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:but Doctor Watson has to have it taken out for him and dusted,
+";
+    assert_eq!(lines, expected);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/16
 clean!(regression_16, "xyz", ".", |wd: WorkDir, mut cmd: Command| {
     wd.create(".gitignore", "ghi/");

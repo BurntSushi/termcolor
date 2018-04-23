@@ -689,6 +689,9 @@ impl<'a> ArgMatches<'a> {
 
     /// Returns true if and only if column numbers should be shown.
     fn column(&self) -> bool {
+        if self.is_present("no-column") {
+            return false;
+        }
         self.is_present("column") || self.is_present("vimgrep")
     }
 
