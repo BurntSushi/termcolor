@@ -254,7 +254,7 @@ impl Ignore {
             git_global_matcher: self.0.git_global_matcher.clone(),
             git_ignore_matcher: gi_matcher,
             git_exclude_matcher: gi_exclude_matcher,
-            has_git: dir.join(".git").is_dir(),
+            has_git: dir.join(".git").exists(),
             opts: self.0.opts,
         };
         (ig, errs.into_error_option())
