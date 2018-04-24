@@ -1866,6 +1866,7 @@ fn feature_411_parallel_search_stats() {
     let mut cmd = wd.command();
     cmd.arg("--stats");
     cmd.arg("Sherlock");
+    cmd.arg("./");
 
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines.contains("4 matched lines"), true);
@@ -2021,7 +2022,7 @@ fn regression_270() {
     wd.create("foo", "-test");
 
     let mut cmd = wd.command();
-    cmd.arg("-e").arg("-test");
+    cmd.arg("-e").arg("-test").arg("./");
     let lines: String = wd.stdout(&mut cmd);
     assert_eq!(lines, path("foo:-test\n"));
 }
@@ -2170,7 +2171,7 @@ fn regression_693_context_option_in_contextless_mode() {
     wd.create("bar", "xyz\n");
 
     let mut cmd = wd.command();
-    cmd.arg("-C1").arg("-c").arg("--sort-files").arg("xyz");
+    cmd.arg("-C1").arg("-c").arg("--sort-files").arg("xyz").arg("./");
 
     let lines: String = wd.stdout(&mut cmd);
     let expected = "\
