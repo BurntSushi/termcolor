@@ -472,7 +472,7 @@ impl<W: WriteColor> Printer<W> {
     }
 
     fn line_number(&mut self, n: u64, sep: u8) {
-        let mut line_number = n.to_string();
+        let line_number = n.to_string();
         self.write_colored(line_number.as_bytes(), |colors| colors.line());
         self.separator(&[sep]);
     }
