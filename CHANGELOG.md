@@ -17,17 +17,26 @@ CPUs (such as AVX2) for additional optimizations.
 * Octal syntax is no longer supported. ripgrep previously accepted expressions
   like `\1` as syntax for matching `U+0001`, but ripgrep will now report an
   error instead.
+* The `--line-number-width` flag has been removed. Its functionality was not
+  carefully considered with all ripgrep output formats.
+  See [#795](https://github.com/BurntSushi/ripgrep/issues/795) for more
+  details.
 
 Feature enhancements:
 
 * [FEATURE #411](https://github.com/BurntSushi/ripgrep/issues/411):
   Add a `--stats` flag, which emits aggregate statistics after search results.
+* [FEATURE #646](https://github.com/BurntSushi/ripgrep/issues/646):
+  Add a `--no-ignore-messages` flag, which suppresses parse errors from reading
+  `.ignore` and `.gitignore` files.
 * [FEATURE #702](https://github.com/BurntSushi/ripgrep/issues/702):
   Support `\u{..}` Unicode escape sequences.
 * [FEATURE #812](https://github.com/BurntSushi/ripgrep/issues/812):
   Add `-b/--byte-offset` flag that reports byte offset of each matching line.
 * [FEATURE #814](https://github.com/BurntSushi/ripgrep/issues/814):
   Add `--count-matches` flag, which is like `--count`, but for each match.
+* [FEATURE #880](https://github.com/BurntSushi/ripgrep/issues/880):
+  Add a `--no-column` flag, which disables column numbers in the output.
 
 Bug fixes:
 
@@ -41,6 +50,8 @@ Bug fixes:
   Show comprehensible error messages for regexes like `\s*{`.
 * [BUG #526](https://github.com/BurntSushi/ripgrep/issues/526):
   Support backslash escapes in globs.
+* [BUG #795](https://github.com/BurntSushi/ripgrep/issues/795):
+  Fix problems with `--line-number-width` by removing it.
 * [BUG #832](https://github.com/BurntSushi/ripgrep/issues/832):
   Clarify usage instructions for `-f/--file` flag.
 * [BUG #851](https://github.com/BurntSushi/ripgrep/issues/851):
@@ -49,6 +60,8 @@ Bug fixes:
   Be robust with respect to `ENOMEM` errors returned by `mmap`.
 * [BUG #853](https://github.com/BurntSushi/ripgrep/issues/853):
   Upgrade `grep` crate to `regex-syntax 0.5.0`.
+* [BUG #893](https://github.com/BurntSushi/ripgrep/issues/893):
+  Improve support for git submodules.
 
 
 0.8.1 (2018-02-20)
