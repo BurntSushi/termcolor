@@ -3,8 +3,9 @@ name = "ripgrep"
 version = "0.8.1"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
-Line oriented search tool using Rust's regex library. Combines the raw
-performance of grep with the usability of the silver searcher.
+ripgrep is a line-oriented search tool that recursively searches your current
+directory for a regex pattern while respecting your gitignore rules. ripgrep
+has first class support on Windows, macOS and Linux
 """
 documentation = "https://github.com/BurntSushi/ripgrep"
 homepage = "https://github.com/BurntSushi/ripgrep"
