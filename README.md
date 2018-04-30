@@ -265,17 +265,10 @@ $ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/0.8.1/ripgrep
 $ sudo dpkg -i ripgrep_0.8.1_amd64.deb
 ```
 
-If you're an **Ubuntu** user, ripgrep can be installed from the `snap` store.
-
-* Note that if you are using `16.04 LTS` or later, snap is already installed.
-* For older versions you can install snap using
-  [this guide](https://docs.snapcraft.io/core/install-ubuntu).
-
-For the latest stable release:
-
-```
-$ sudo snap install --classic rg
-```
+(N.B. Various snaps for ripgrep on Ubuntu are also available, but none of them
+seem to work right and generate a number of very strange bug reports that I
+don't know how to fix and don't have the time to fix. Therefore, it is no
+longer a recommended installation option.)
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
 * Note that the minimum supported version of Rust for ripgrep is **1.20**,
