@@ -909,9 +909,17 @@ fn flag_fixed_strings(args: &mut Vec<RGArg>) {
 Treat the pattern as a literal string instead of a regular expression. When
 this flag is used, special regular expression meta characters such as .(){}*+
 do not need to be escaped.
+
+This flag can be disabled with --no-fixed-strings.
 ");
     let arg = RGArg::switch("fixed-strings").short("F")
-        .help(SHORT).long_help(LONG);
+        .help(SHORT).long_help(LONG)
+        .overrides("no-fixed-strings");
+    args.push(arg);
+
+    let arg = RGArg::switch("no-fixed-strings")
+        .hidden()
+        .overrides("fixed-strings");
     args.push(arg);
 }
 
