@@ -1,41 +1,42 @@
 #!/usr/bin/env zsh
 
+emulate zsh -o extended_glob -o no_function_argzero -o no_unset
+
 ##
 # Compares options in `rg --help` output to options in zsh completion function
 
-emulate -R zsh
-setopt extended_glob
-setopt no_function_argzero
-setopt no_unset
-
 get_comp_args() {
+    # Technically there are many options that the completion system sets that
+    # our function may rely on, but we'll trust that we've got it mostly right
     setopt local_options unset
 
     # Our completion function recognises a special variable which tells it to
     # dump the _arguments specs and then just return. But do this in a sub-shell
     # anyway to avoid any weirdness
     ( _RG_COMPLETE_LIST_ARGS=1 source $1 )
-    return $?
 }
 
 main() {
     local diff
-    local  rg="${${0:a}:h}/../target/${TARGET:-}/release/rg"
-    local _rg="${${0:a}:h}/../complete/_rg"
+    local  rg="${0:a:h}/../target/${TARGET:-}/release/rg"
+    local _rg="${0:a:h}/../complete/_rg"
     local -a help_args comp_args
 
     [[ -e $rg ]] || rg=${rg/%\/release\/rg/\/debug\/rg}
 
+     rg=${rg:a}
+    _rg=${_rg:a}
+
     [[ -e $rg ]] || {
-        printf >&2 'File not found: %s\n' $rg
+        print -r >&2 "File not found: $rg"
         return 1
     }
     [[ -e $_rg ]] || {
-        printf >&2 'File not found: %s\n' $_rg
+        print -r >&2 "File not found: $_rg"
         return 1
     }
 
-    printf 'Comparing options:\n-%s\n+%s\n' $rg $_rg
+    print -rl - 'Comparing options:' "-$rg" "+$_rg"
 
     # 'Parse' options out of the `--help` output. To prevent false positives we
     # only look at lines where the first non-white-space character is `-`
@@ -50,6 +51,8 @@ main() {
     # 'Parse' options out of the completion function
     comp_args=( ${(f)"$( get_comp_args $_rg )"} )
 
+    # Note that we currently exclude hidden (!...) options; matching these
+    # properly against the `--help` output could be irritating
     comp_args=( ${comp_args#\(*\)}    ) # Strip excluded options
     comp_args=( ${comp_args#\*}       ) # Strip repetition indicator
     comp_args=( ${comp_args%%-[:[]*}  ) # Strip everything after -optname-
@@ -57,14 +60,14 @@ main() {
     comp_args=( ${comp_args##[^-]*}   ) # Remove non-options
 
     # This probably isn't necessary, but we should ensure the same order
-    comp_args=( ${(f)"$( printf '%s\n' $comp_args | sort -u )"} )
+    comp_args=( ${(f)"$( print -rl - $comp_args | sort -u )"} )
 
     (( $#help_args )) || {
-        printf >&2 'Failed to get help_args\n'
+        print -r >&2 'Failed to get help_args'
         return 1
     }
     (( $#comp_args )) || {
-        printf >&2 'Failed to get comp_args\n'
+        print -r >&2 'Failed to get comp_args'
         return 1
     }
 
@@ -73,12 +76,12 @@ main() {
             diff -U2 \
                 --label '`rg --help`' \
                 --label '`_rg`' \
-                =( printf '%s\n' $help_args ) =( printf '%s\n' $comp_args )
+                =( print -rl - $help_args ) =( print -rl - $comp_args )
         else
             diff -U2 \
                 -L '`rg --help`' \
                 -L '`_rg`' \
-                =( printf '%s\n' $help_args ) =( printf '%s\n' $comp_args )
+                =( print -rl - $help_args ) =( print -rl - $comp_args )
         fi
     )"
 
@@ -91,4 +94,4 @@ main() {
     return 0
 }
 
-main "${@}"
+main "$@"
