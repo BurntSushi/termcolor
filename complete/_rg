@@ -51,7 +51,8 @@ _rg() {
     '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
     '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
     '--max-filesize=[specify size above which files should be ignored]:file size'
-    '--maxdepth=[specify max number of directories to descend]:number of directories'
+    '--max-depth=[specify max number of directories to descend]:number of directories'
+    '!--maxdepth=:number of directories'
     '(--mmap --no-mmap)--mmap[search using memory maps when possible]'
     '(-H --with-filename --no-filename)--no-filename[suppress all file names]'
     "(-p --heading --pretty --vimgrep)--no-heading[don't group matches by file name]"

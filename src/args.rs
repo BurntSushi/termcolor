@@ -58,8 +58,8 @@ pub struct Args {
     line_per_match: bool,
     max_columns: Option<usize>,
     max_count: Option<u64>,
+    max_depth: Option<usize>,
     max_filesize: Option<u64>,
-    maxdepth: Option<usize>,
     mmap: bool,
     no_ignore: bool,
     no_ignore_messages: bool,
@@ -345,7 +345,7 @@ impl Args {
 
         wd.follow_links(self.follow);
         wd.hidden(!self.hidden);
-        wd.max_depth(self.maxdepth);
+        wd.max_depth(self.max_depth);
         wd.max_filesize(self.max_filesize);
         wd.overrides(self.glob_overrides.clone());
         wd.types(self.types.clone());
@@ -407,8 +407,8 @@ impl<'a> ArgMatches<'a> {
             line_per_match: self.is_present("vimgrep"),
             max_columns: self.usize_of_nonzero("max-columns")?,
             max_count: self.usize_of("max-count")?.map(|n| n as u64),
+            max_depth: self.usize_of("max-depth")?,
             max_filesize: self.max_filesize()?,
-            maxdepth: self.usize_of("maxdepth")?,
             mmap: mmap,
             no_ignore: self.no_ignore(),
             no_ignore_messages: self.is_present("no-ignore-messages"),

@@ -521,8 +521,8 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_line_regexp(&mut args);
     flag_max_columns(&mut args);
     flag_max_count(&mut args);
+    flag_max_depth(&mut args);
     flag_max_filesize(&mut args);
-    flag_maxdepth(&mut args);
     flag_mmap(&mut args);
     flag_no_config(&mut args);
     flag_no_ignore(&mut args);
@@ -1130,6 +1130,23 @@ Limit the number of matching lines per file searched to NUM.
     args.push(arg);
 }
 
+fn flag_max_depth(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Descend at most NUM directories.";
+    const LONG: &str = long!("\
+Limit the depth of directory traversal to NUM levels beyond the paths given. A
+value of zero only searches the explicitly given paths themselves.
+
+For example, 'rg --max-depth 0 dir/' is a no-op because dir/ will not be
+descended into. 'rg --max-depth 1 dir/' will search only the direct children of
+'dir'.
+");
+    let arg = RGArg::flag("max-depth", "NUM")
+        .help(SHORT).long_help(LONG)
+        .alias("maxdepth")
+        .number();
+    args.push(arg);
+}
+
 fn flag_max_filesize(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Ignore files larger than NUM in size.";
     const LONG: &str = long!("\
@@ -1143,22 +1160,6 @@ Examples: --max-filesize 50K or --max-filesize 80M
 ");
     let arg = RGArg::flag("max-filesize", "NUM+SUFFIX?")
         .help(SHORT).long_help(LONG);
-    args.push(arg);
-}
-
-fn flag_maxdepth(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Descend at most NUM directories.";
-    const LONG: &str = long!("\
-Limit the depth of directory traversal to NUM levels beyond the paths given. A
-value of zero only searches the explicitly given paths themselves.
-
-For example, 'rg --maxdepth 0 dir/' is a no-op because dir/ will not be
-descended into. 'rg --maxdepth 1 dir/' will search only the direct children of
-'dir'.
-");
-    let arg = RGArg::flag("maxdepth", "NUM")
-        .help(SHORT).long_help(LONG)
-        .number();
     args.push(arg);
 }
 
