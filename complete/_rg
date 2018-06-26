@@ -6,164 +6,269 @@
 # Run ci/test_complete.sh after building to ensure that the options supported by
 # this function stay in synch with the `rg` binary.
 #
+# @see http://zsh.sourceforge.net/Doc/Release/Completion-System.html
 # @see https://github.com/zsh-users/zsh/blob/master/Etc/completion-style-guide
 #
-# Based on code from the zsh-users project — see copyright notice below.
+# Originally based on code from the zsh-users project — see copyright notice
+# below.
 
 _rg() {
-  local state_descr ret curcontext="${curcontext:-}"
-  local -a context line state
-  local -A opt_args val_args
-  local -a rg_args
+  local curcontext=$curcontext no='!' descr ret=1
+  local -a context line state state_descr args tmp suf
+  local -A opt_args
 
-  # Sort by long option name to match `rg --help`
-  rg_args=(
-    '(-A -C --after-context --context)'{-A+,--after-context=}'[specify lines to show after each match]:number of lines'
-    '(-B -C --before-context --context)'{-B+,--before-context=}'[specify lines to show before each match]:number of lines'
-    '(-i -s -S --ignore-case --case-sensitive --smart-case)'{-s,--case-sensitive}'[search case-sensitively]'
-    '--color=[specify when to use colors in output]:when:( never auto always ansi )'
-    '*--colors=[specify color settings and styles]: :->colorspec'
-    '--column[show column numbers]'
-    '(-A -B -C --after-context --before-context --context)'{-C+,--context=}'[specify lines to show before and after each match]:number of lines'
-    '(-b --byte-offset)'{-b,--byte-offset}'[print the 0-based byte offset for each matching line]'
-    '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
-    '(-c --count --count-matches --passthrough --passthru)'{-c,--count}'[only show count of matching lines for each file]'
-    '(--count-matches -c --count --passthrough --passthru)--count-matches[only show count of individual matches for each file]'
-    '--debug[show debug messages]'
-    '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size'
-    '(-E --encoding)'{-E+,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
-    '*'{-f+,--file=}'[specify file containing patterns to search for]:file:_files'
-    "(1)--files[show each file that would be searched (but don't search)]"
-    '(-l --files-with-matches --files-without-match)'{-l,--files-with-matches}'[only show names of files with matches]'
-    '(-l --files-with-matches --files-without-match)--files-without-match[only show names of files without matches]'
-    '(-F --fixed-strings)'{-F,--fixed-strings}'[treat pattern as literal string instead of regular expression]'
-    '(-L --follow)'{-L,--follow}'[follow symlinks]'
-    '*'{-g+,--glob=}'[include or exclude files for searching that match the specified glob]:glob'
-    '(: -)'{-h,--help}'[display help information]'
-    '(-p --no-heading --pretty --vimgrep)--heading[show matches grouped by file name]'
+  # ripgrep has many options which negate the effect of a more common one — for
+  # example, `--no-column` to negate `--column`, and `--messages` to negate
+  # `--no-messages`. There are so many of these, and they're so infrequently
+  # used, that some users will probably find it irritating if they're completed
+  # indiscriminately, so let's not do that unless either the current prefix
+  # matches one of those negation options or the user has the `complete-all`
+  # style set. Note that this prefix check has to be updated manually to account
+  # for all of the potential negation options listed below!
+  if
+    # (--[imn]* => --ignore*, --messages, --no-*)
+    [[ $PREFIX$SUFFIX == --[imn]* ]] ||
+    zstyle -t ":complete:$curcontext:*" complete-all
+  then
+    no=
+  fi
+
+  # We make heavy use of argument groups here to prevent the option specs from
+  # growing unwieldy. These aren't supported in zsh <5.4, though, so we'll strip
+  # them out below if necessary. This makes the exclusions inaccurate on those
+  # older versions, but oh well — it's not that big a deal
+  args=(
+    + '(exclusive)' # Misc. fully exclusive options
+    '(: * -)'{-h,--help}'[display help information]'
+    '(: * -)'{-V,--version}'[display version information]'
+
+    + '(case)' # Case-sensitivity options
+    {-i,--ignore-case}'[search case-insensitively]'
+    {-s,--case-sensitive}'[search case-sensitively]'
+    {-S,--smart-case}'[search case-insensitively if pattern is all lowercase]'
+
+    + '(context-a)' # Context (after) options
+    '(context-c)'{-A+,--after-context=}'[specify lines to show after each match]:number of lines'
+
+    + '(context-b)' # Context (before) options
+    '(context-c)'{-B+,--before-context=}'[specify lines to show before each match]:number of lines'
+
+    + '(context-c)' # Context (combined) options
+    '(context-a context-b)'{-C+,--context=}'[specify lines to show before and after each match]:number of lines'
+
+    + '(column)' # Column options
+    '--column[show column numbers for matches]'
+    $no"--no-column[don't show column numbers for matches]"
+
+    + '(count)' # Counting options
+    '(passthru)'{-c,--count}'[only show count of matching lines for each file]'
+    '(passthru)--count-matches[only show count of individual matches for each file]'
+
+    + file # File-input options
+    '*'{-f+,--file=}'[specify file containing patterns to search for]: :_files'
+
+    + '(file-match)' # Files with/without match options
+    '(stats)'{-l,--files-with-matches}'[only show names of files with matches]'
+    '(stats)--files-without-match[only show names of files without matches]'
+
+    + '(file-name)' # File-name options
+    {-H,--with-filename}'[show file name for matches]'
+    "--no-filename[don't show file name for matches]"
+
+    + '(fixed)' # Fixed-string options
+    {-F,--fixed-strings}'[treat pattern as literal string instead of regular expression]'
+    $no"--no-fixed-strings[don't treat pattern as literal string]"
+
+    + '(follow)' # Symlink-following options
+    {-L,--follow}'[follow symlinks]'
+    $no"--no-follow[don't follow symlinks]"
+
+    + glob # File-glob options
+    '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob'
+    '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob'
+
+    + '(heading)' # Heading options
+    '(pretty-vimgrep)--heading[show matches grouped by file name]'
+    "(pretty-vimgrep)--no-heading[don't show matches grouped by file name]"
+
+    + '(hidden)' # Hidden-file options
     '--hidden[search hidden files and directories]'
-    '*--iglob=[include or exclude files for searching that match the specified case-insensitive glob]:glob'
-    '(-i -s -S --case-sensitive --ignore-case --smart-case)'{-i,--ignore-case}'[search case-insensitively]'
-    '--ignore-file=[specify additional ignore file]:file:_files'
-    '(-v --invert-match)'{-v,--invert-match}'[invert matching]'
-    '(-n -N --line-number --no-line-number)'{-n,--line-number}'[show line numbers]'
-    '(-w -x --line-regexp --word-regexp)'{-x,--line-regexp}'[only show matches surrounded by line boundaries]'
-    '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
-    '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
-    '--max-filesize=[specify size above which files should be ignored]:file size'
+    $no"--no-hidden[don't search hidden files and directories]"
+
+    + '(ignore)' # Ignore-file options
+    "(--no-ignore-parent --no-ignore-vcs)--no-ignore[don't respect ignore files]"
+    $no'(--ignore-parent --ignore-vcs)--ignore[respect ignore files]'
+
+    + '(ignore-parent)' # Parent ignore-file options
+    "--no-ignore-parent[don't respect ignore files in parent directories]"
+    $no'--ignore-parent[respect ignore files in parent directories]'
+
+    + '(ignore-vcs)' # VCS ignore-file options
+    "--no-ignore-vcs[don't respect version control ignore files]"
+    $no'--ignore-vcs[respect version control ignore files]'
+
+    + '(line)' # Line-number options
+    {-n,--line-number}'[show line numbers for matches]'
+    {-N,--no-line-number}"[don't show line numbers for matches]"
+
+    + '(max-depth)' # Directory-depth options
     '--max-depth=[specify max number of directories to descend]:number of directories'
     '!--maxdepth=:number of directories'
-    '(--mmap --no-mmap)--mmap[search using memory maps when possible]'
-    '(-H --with-filename --no-filename)--no-filename[suppress all file names]'
-    "(-p --heading --pretty --vimgrep)--no-heading[don't group matches by file name]"
-    "--no-config[don't load configuration files]"
-    '--no-ignore-messages[suppress gitignore parse error messages]'
-    "(--no-ignore-parent)--no-ignore[don't respect ignore files]"
-    "--no-ignore-parent[don't respect ignore files in parent directories]"
-    "--no-ignore-vcs[don't respect version control ignore files]"
-    '(-n -N --line-number --no-line-number)'{-N,--no-line-number}'[suppress line numbers]'
-    '--no-messages[suppress some error messages]'
-    "(--mmap --no-mmap)--no-mmap[don't search using memory maps]"
-    '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
-    '(-o -r --only-matching --passthrough --passthru --replace)'{-o,--only-matching}'[show only matching part of each line]'
-    '(-c -o -r --count --only-matching --passthrough --replace)--passthru[show both matching and non-matching lines]'
-    '!(-c -o -r --count --only-matching --passthru --replace)--passthrough'
-    '--path-separator=[specify path separator to use when printing file names]:separator'
-    '(-p --heading --no-heading --pretty --vimgrep)'{-p,--pretty}'[alias for --color=always --heading -n]'
-    '(-q --quiet)'{-q,--quiet}'[suppress normal output]'
-    '--regex-size-limit=[specify upper size limit of compiled regex]:regex size'
-    '(1 -f --file)*'{-e+,--regexp=}'[specify pattern]:pattern'
-    '(-c -o -r --count --only-matching --passthrough --passthru --replace)'{-r+,--replace=}'[specify string used to replace matches]:replace string'
-    '(-i -s -S --ignore-case --case-sensitive --smart-case)'{-S,--smart-case}'[search case-insensitively if the pattern is all lowercase]'
-    '(-j --threads)--sort-files[sort results by file path (disables parallelism)]'
-    '(-a --text)'{-a,--text}'[search binary files as if they were text]'
-    '(-j --sort-files --threads)'{-j+,--threads=}'[specify approximate number of threads to use]:number of threads'
+
+    + '(messages)' # Error-message options
+    '(--no-ignore-messages)--no-messages[suppress some error messages]'
+    $no"--messages[don't suppress error messages affected by --no-messages]"
+
+    + '(messages-ignore)' # Ignore-error message options
+    "--no-ignore-messages[don't show ignore-file parse error messages]"
+    $no'--ignore-messages[show ignore-file parse error messages]'
+
+    + '(mmap)' # mmap options
+    '--mmap[search using memory maps when possible]'
+    "--no-mmap[don't search using memory maps]"
+
+    + '(only)' # Only-match options
+    '(passthru replace)'{-o,--only-matching}'[show only matching part of each line]'
+
+    + '(passthru)' # Pass-through options
+    '(--vimgrep count only replace)--passthru[show both matching and non-matching lines]'
+    '!(--vimgrep count only replace)--passthrough'
+
+    + '(pretty-vimgrep)' # Pretty/vimgrep display options
+    '(heading)'{-p,--pretty}'[alias for --color=always --heading -n]'
+    '(heading passthru)--vimgrep[show results in vim-compatible format]'
+
+    + regexp # Explicit pattern options
+    '(1 file)*'{-e+,--regexp=}'[specify pattern]:pattern'
+
+    + '(replace)' # Replacement options
+    '(count only passthru)'{-r+,--replace=}'[specify string used to replace matches]:replace string'
+
+    + '(sort)' # File-sorting options
+    '(threads)--sort-files[sort results by file path (disables parallelism)]'
+    $no"--no-sort-files[don't sort results by file path]"
+
+    + stats # Statistics options
+    '(--files file-match)--stats[show search statistics]'
+
+    + '(text)' # Binary-search options
+    {-a,--text}'[search binary files as if they were text]'
+    $no"--no-text[don't search binary files as if they were text]"
+
+    + '(threads)' # Thread-count options
+    '(--sort-files)'{-j+,--threads=}'[specify approximate number of threads to use]:number of threads'
+
+    + type # Type options
     '*'{-t+,--type=}'[only search files matching specified type]: :_rg_types'
-    '*--type-add=[add new glob for file type]: :->typespec'
+    '*--type-add=[add new glob for specified file type]: :->typespec'
     '*--type-clear=[clear globs previously defined for specified file type]: :_rg_types'
     # This should actually be exclusive with everything but other type options
-    '(:)--type-list[show all supported file types and their associated globs]'
-    '*'{-T+,--type-not=}"[don't search files matching specified type]: :_rg_types"
+    '(: *)--type-list[show all supported file types and their associated globs]'
+    '*'{-T+,--type-not=}"[don't search files matching specified file type]: :_rg_types"
+
+    + '(word-line)' # Whole-word/line match options
+    {-w,--word-regexp}'[only show matches surrounded by word boundaries]'
+    {-x,--line-regexp}'[only show matches surrounded by line boundaries]'
+
+    + '(zip)' # Compressed-file options
+    {-z,--search-zip}'[search in compressed files]'
+    $no"--no-search-zip[don't search in compressed files]"
+
+    + misc # Other options — no need to separate these at the moment
+    '(-b --byte-offset)'{-b,--byte-offset}'[show 0-based byte offset for each matching line]'
+    '--color=[specify when to use colors in output]:when:((
+      never\:"never use colors"
+      auto\:"use colors or not based on stdout, TERM, etc."
+      always\:"always use colors"
+      ansi\:"always use ANSI colors (even on Windows)"
+    ))'
+    '*--colors=[specify color and style settings]: :->colorspec'
+    '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
+    '--debug[show debug messages]'
+    '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size (bytes)'
+    '(-E --encoding)'{-E+,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
+    "(1 stats)--files[show each file that would be searched (but don't search)]"
+    '*--ignore-file=[specify additional ignore file]:ignore file:_files'
+    '(-v --invert-match)'{-v,--invert-match}'[invert matching]'
+    '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
+    '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
+    '--max-filesize=[specify size above which files should be ignored]:file size (bytes)'
+    "--no-config[don't load configuration files]"
+    '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
+    '--path-separator=[specify path separator to use when printing file names]:separator'
+    '(-q --quiet)'{-q,--quiet}'[suppress normal output]'
+    '--regex-size-limit=[specify upper size limit of compiled regex]:regex size (bytes)'
     '*'{-u,--unrestricted}'[reduce level of "smart" searching]'
-    '(: -)'{-V,--version}'[display version information]'
-    '(-p --heading --no-heading --pretty)--vimgrep[show results in vim-compatible format]'
-    '(-H --no-filename --with-filename)'{-H,--with-filename}'[display the file name for matches]'
-    '(-w -x --line-regexp --word-regexp)'{-w,--word-regexp}'[only show matches surrounded by word boundaries]'
-    '(-e -f --file --files --regexp --type-list)1: :_rg_pattern'
-    '(--type-list)*:file:_files'
-    '(-z --search-zip)'{-z,--search-zip}'[search in compressed files]'
-    "(--stats)--stats[print stats about this search]"
+
+    + operand # Operands
+    '(--files --type-list file regexp)1: :_guard "^-*" pattern'
+    '(--type-list)*: :_files'
   )
 
-  [[ ${_RG_COMPLETE_LIST_ARGS:-} == (1|t*|y*) ]] && {
-    printf '%s\n' "${rg_args[@]}"
+  # This is used with test_complete.sh to verify that there are no options
+  # listed in the help output that aren't also defined here
+  [[ $_RG_COMPLETE_LIST_ARGS == (1|t*|y*) ]] && {
+    print -rl - $args
     return 0
   }
 
-  _arguments -s -S : "${rg_args[@]}" && return 0
+  # Strip out argument groups where unsupported (see above)
+  [[ $ZSH_VERSION == (4|5.<0-3>)(.*)# ]] &&
+  args=( ${(@)args:#(#i)(+|[a-z0-9][a-z0-9_-]#|\([a-z0-9][a-z0-9_-]#\))} )
 
-  while (( $#state )); do
-    case "${state[1]}" in
-      colorspec)
-        # @todo I don't like this because it allows you to do weird things like
-        # `line:line:bg:`. Also, i would like the `compadd -q` behaviour
-        [[ -prefix *:none: ]] && return 1
-        [[ -prefix *:*:*:* ]] && return 1
+  _arguments -C -s -S : $args && ret=0
 
-        _values -S ':' 'color/style type' \
-          'column[specify coloring for column numbers]: :->attribute' \
-          'line[specify coloring for line numbers]: :->attribute' \
-          'match[specify coloring for match text]: :->attribute' \
-          'path[specify color for file names]: :->attribute' && return 0
+  case $state in
+    colorspec)
+      if [[ ${IPREFIX#--*=}$PREFIX == [^:]# ]]; then
+        suf=( -qS: )
+        tmp=(
+          'column:specify coloring for column numbers'
+          'line:specify coloring for line numbers'
+          'match:specify coloring for match text'
+          'path:specify coloring for file names'
+        )
+        descr='color/style type'
+      elif [[ ${IPREFIX#--*=}$PREFIX == (column|line|match|path):[^:]# ]]; then
+        suf=( -qS: )
+        tmp=(
+          'none:clear color/style for type'
+          'bg:specify background color'
+          'fg:specify foreground color'
+          'style:specify text style'
+        )
+        descr='color/style attribute'
+      elif [[ ${IPREFIX#--*=}$PREFIX == [^:]##:(bg|fg):[^:]# ]]; then
+        tmp=( black blue green red cyan magenta yellow white )
+        descr='color name or r,g,b'
+      elif [[ ${IPREFIX#--*=}$PREFIX == [^:]##:style:[^:]# ]]; then
+        tmp=( {,no}bold {,no}intense {,no}underline )
+        descr='style name'
+      else
+        _message -e colorspec 'no more arguments'
+      fi
 
-        [[ "${state}" == 'attribute' ]] &&
-        _values -S ':' 'color/style attribute' \
-          'none[clear color/style for type]' \
-          'bg[specify background color]: :->color' \
-          'fg[specify foreground color]: :->color' \
-          'style[specify text style]: :->style' && return 0
+      (( $#tmp )) && {
+        compset -P '*:'
+        _describe -t colorspec $descr tmp $suf && ret=0
+      }
+      ;;
 
-        [[ "${state}" == 'color' ]] &&
-        _values -S ':' 'color value' \
-          black blue green red cyan magenta yellow white && return 0
+    typespec)
+      if compset -P '[^:]##:include:'; then
+        _sequence -s , _rg_types && ret=0
+      # @todo This bit in particular could be better, but it's a little
+      # complex, and attempting to solve it seems to run us up against a crash
+      # bug — zsh # 40362
+      elif compset -P '[^:]##:'; then
+        _message 'glob or include directive' && ret=1
+      elif [[ ! -prefix *:* ]]; then
+        _rg_types -qS : && ret=0
+      fi
+      ;;
+  esac
 
-        [[ "${state}" == 'style' ]] &&
-        _values -S ':' 'style value' \
-          bold nobold intense nointense underline nounderline && return 0
-        ;;
-
-      typespec)
-        if compset -P '[^:]##:include:'; then
-          _sequence -s ',' _rg_types && return 0
-        # @todo This bit in particular could be better, but it's a little
-        # complex, and attempting to solve it seems to run us up against a crash
-        # bug — zsh # 40362
-        elif compset -P '[^:]##:'; then
-          _message 'glob or include directive' && return 1
-        elif [[ ! -prefix *:* ]]; then
-          _rg_types -qS ':' && return 0
-        fi
-        ;;
-    esac
-    shift state
-  done
-
-  return 1
-}
-
-# zsh 5.1 refuses to complete options if a 'match-less' operand like our pattern
-# could be 'completed' instead. We can use _guard() to avoid this problem, but
-# it introduces another one: zsh won't print the message if we try to complete
-# the pattern after having passed `--`. To work around *that* problem, we can
-# use this function to bypass the _guard() when `--` is on the command line.
-# This is inaccurate (it'd get confused by e.g. `rg -e --`), but zsh's handling
-# of `--` isn't accurate anyway
-_rg_pattern() {
-  if (( ${words[(I)--]} )); then
-    _message 'pattern'
-  else
-    _guard '^-*' 'pattern'
-  fi
+  return ret
 }
 
 # Complete encodings
@@ -199,7 +304,7 @@ _rg_encodings() {
     x-user-defined auto
   )
 
-  _wanted rg-encodings expl 'encoding' compadd -a "${@}" - _encodings
+  _wanted encodings expl encoding compadd -a "$@" - _encodings
 }
 
 # Complete file types
@@ -207,12 +312,12 @@ _rg_types() {
   local -a expl
   local -aU _types
 
-  _types=( ${${(f)"$( _call_program rg-types rg --type-list )"}%%:*} )
+  _types=( ${(@)${(f)"$( _call_program types rg --type-list )"}%%:*} )
 
-  _wanted rg-types expl 'file type' compadd -a "${@}" - _types
+  _wanted types expl 'file type' compadd -a "$@" - _types
 }
 
-_rg "${@}"
+_rg "$@"
 
 # ------------------------------------------------------------------------------
 # Copyright (c) 2011 Github zsh-users - http://github.com/zsh-users
