@@ -538,6 +538,10 @@ fn gitconfig_contents() -> Option<Vec<u8>> {
 ///
 /// Specifically, this respects XDG_CONFIG_HOME.
 fn excludes_file_default() -> Option<PathBuf> {
+    // We're fine with using env::home_dir for now. Its bugs are, IMO, pretty
+    // minor corner cases. We should still probably eventually migrate to
+    // the `dirs` crate to get a proper implementation.
+    #![allow(deprecated)]
     env::var_os("XDG_CONFIG_HOME")
         .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
         .or_else(|| env::home_dir().map(|p| p.join(".config")))
