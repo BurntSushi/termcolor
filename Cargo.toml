@@ -17,4 +17,4 @@ name = "termcolor"
 bench = false
 
 [target.'cfg(windows)'.dependencies]
-wincolor = { version = "0.1.6", path = "wincolor" }
+wincolor = { version = "1", path = "wincolor" }
