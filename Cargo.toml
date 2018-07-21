@@ -11,6 +11,7 @@ repository = "https://github.com/BurntSushi/termcolor"
 readme = "README.md"
 keywords = ["windows", "win", "color", "ansi", "console"]
 license = "Unlicense/MIT"
+exclude = ["/.travis.yml", "/appveyor.yml", "/ci/**"]
 
 [lib]
 name = "termcolor"
