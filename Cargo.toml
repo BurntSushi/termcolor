@@ -10,7 +10,7 @@ homepage = "https://github.com/BurntSushi/termcolor"
 repository = "https://github.com/BurntSushi/termcolor"
 readme = "README.md"
 keywords = ["windows", "win", "color", "ansi", "console"]
-license = "Unlicense/MIT"
+license = "Unlicense OR MIT"
 exclude = ["/.travis.yml", "/appveyor.yml", "/ci/**"]
 
 [lib]
