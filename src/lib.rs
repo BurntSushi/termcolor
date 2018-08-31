@@ -267,6 +267,7 @@ impl IoStandardStream {
 }
 
 impl io::Write for IoStandardStream {
+    #[inline(always)]
     fn write(&mut self, b: &[u8]) -> io::Result<usize> {
         match *self {
             IoStandardStream::Stdout(ref mut s) => s.write(b),
@@ -276,6 +277,7 @@ impl io::Write for IoStandardStream {
         }
     }
 
+    #[inline(always)]
     fn flush(&mut self) -> io::Result<()> {
         match *self {
             IoStandardStream::Stdout(ref mut s) => s.flush(),
@@ -294,6 +296,7 @@ enum IoStandardStreamLock<'a> {
 }
 
 impl<'a> io::Write for IoStandardStreamLock<'a> {
+    #[inline(always)]
     fn write(&mut self, b: &[u8]) -> io::Result<usize> {
         match *self {
             IoStandardStreamLock::StdoutLock(ref mut s) => s.write(b),
@@ -301,6 +304,7 @@ impl<'a> io::Write for IoStandardStreamLock<'a> {
         }
     }
 
+    #[inline(always)]
     fn flush(&mut self) -> io::Result<()> {
         match *self {
             IoStandardStreamLock::StdoutLock(ref mut s) => s.flush(),
@@ -515,51 +519,82 @@ impl WriterInner<IoStandardStream> {
 }
 
 impl io::Write for StandardStream {
+    #[inline]
     fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
+
+    #[inline]
     fn flush(&mut self) -> io::Result<()> { self.wtr.flush() }
 }
 
 impl WriteColor for StandardStream {
+    #[inline]
     fn supports_color(&self) -> bool { self.wtr.supports_color() }
+
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.wtr.set_color(spec)
     }
+
+    #[inline]
     fn reset(&mut self) -> io::Result<()> { self.wtr.reset() }
+
+    #[inline]
     fn is_synchronous(&self) -> bool { self.wtr.is_synchronous() }
 }
 
 impl<'a> io::Write for StandardStreamLock<'a> {
+    #[inline]
     fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
+
+    #[inline]
     fn flush(&mut self) -> io::Result<()> { self.wtr.flush() }
 }
 
 impl<'a> WriteColor for StandardStreamLock<'a> {
+    #[inline]
     fn supports_color(&self) -> bool { self.wtr.supports_color() }
+
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.wtr.set_color(spec)
     }
+
+    #[inline]
     fn reset(&mut self) -> io::Result<()> { self.wtr.reset() }
+
+    #[inline]
     fn is_synchronous(&self) -> bool { self.wtr.is_synchronous() }
 }
 
 impl io::Write for BufferedStandardStream {
+    #[inline]
     fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
+
+    #[inline]
     fn flush(&mut self) -> io::Result<()> { self.wtr.flush() }
 }
 
 impl WriteColor for BufferedStandardStream {
+    #[inline]
     fn supports_color(&self) -> bool { self.wtr.supports_color() }
+
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         if self.is_synchronous() {
             self.wtr.flush()?;
         }
         self.wtr.set_color(spec)
     }
+
+    #[inline]
     fn reset(&mut self) -> io::Result<()> { self.wtr.reset() }
+
+    #[inline]
     fn is_synchronous(&self) -> bool { self.wtr.is_synchronous() }
 }
 
 impl<W: io::Write> io::Write for WriterInner<W> {
+    #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match *self {
             WriterInner::NoColor(ref mut wtr) => wtr.write(buf),
@@ -569,6 +604,7 @@ impl<W: io::Write> io::Write for WriterInner<W> {
         }
     }
 
+    #[inline(always)]
     fn flush(&mut self) -> io::Result<()> {
         match *self {
             WriterInner::NoColor(ref mut wtr) => wtr.flush(),
@@ -982,6 +1018,7 @@ impl Buffer {
 }
 
 impl io::Write for Buffer {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.0 {
             BufferInner::NoColor(ref mut w) => w.write(buf),
@@ -991,6 +1028,7 @@ impl io::Write for Buffer {
         }
     }
 
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         match self.0 {
             BufferInner::NoColor(ref mut w) => w.flush(),
@@ -1002,6 +1040,7 @@ impl io::Write for Buffer {
 }
 
 impl WriteColor for Buffer {
+    #[inline]
     fn supports_color(&self) -> bool {
         match self.0 {
             BufferInner::NoColor(_) => false,
@@ -1011,6 +1050,7 @@ impl WriteColor for Buffer {
         }
     }
 
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         match self.0 {
             BufferInner::NoColor(ref mut w) => w.set_color(spec),
@@ -1020,6 +1060,7 @@ impl WriteColor for Buffer {
         }
     }
 
+    #[inline]
     fn reset(&mut self) -> io::Result<()> {
         match self.0 {
             BufferInner::NoColor(ref mut w) => w.reset(),
@@ -1029,6 +1070,7 @@ impl WriteColor for Buffer {
         }
     }
 
+    #[inline]
     fn is_synchronous(&self) -> bool {
         false
     }
@@ -1053,19 +1095,28 @@ impl<W: Write> NoColor<W> {
 }
 
 impl<W: io::Write> io::Write for NoColor<W> {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.write(buf)
     }
 
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.0.flush()
     }
 }
 
 impl<W: io::Write> WriteColor for NoColor<W> {
+    #[inline]
     fn supports_color(&self) -> bool { false }
+
+    #[inline]
     fn set_color(&mut self, _: &ColorSpec) -> io::Result<()> { Ok(()) }
+
+    #[inline]
     fn reset(&mut self) -> io::Result<()> { Ok(()) }
+
+    #[inline]
     fn is_synchronous(&self) -> bool { false }
 }
 
@@ -1088,18 +1139,22 @@ impl<W: Write> Ansi<W> {
 }
 
 impl<W: io::Write> io::Write for Ansi<W> {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.write(buf)
     }
 
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.0.flush()
     }
 }
 
 impl<W: io::Write> WriteColor for Ansi<W> {
+    #[inline]
     fn supports_color(&self) -> bool { true }
 
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.reset()?;
         if spec.bold {
@@ -1117,10 +1172,12 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         Ok(())
     }
 
+    #[inline]
     fn reset(&mut self) -> io::Result<()> {
         self.write_str("\x1B[0m")
     }
 
+    #[inline]
     fn is_synchronous(&self) -> bool { false }
 }
 
@@ -1316,11 +1373,13 @@ impl WindowsBuffer {
 
 #[cfg(windows)]
 impl io::Write for WindowsBuffer {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.buf.extend_from_slice(buf);
         Ok(buf.len())
     }
 
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
@@ -1328,18 +1387,22 @@ impl io::Write for WindowsBuffer {
 
 #[cfg(windows)]
 impl WriteColor for WindowsBuffer {
+    #[inline]
     fn supports_color(&self) -> bool { true }
 
+    #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.push(Some(spec.clone()));
         Ok(())
     }
 
+    #[inline]
     fn reset(&mut self) -> io::Result<()> {
         self.push(None);
         Ok(())
     }
 
+    #[inline]
     fn is_synchronous(&self) -> bool {
         false
     }
