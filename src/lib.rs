@@ -1550,7 +1550,7 @@ impl ColorSpec {
 ///
 /// Hexadecimal numbers are written with a `0x` prefix.
 #[allow(missing_docs)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Color {
     Black,
     Blue,
