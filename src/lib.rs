@@ -1158,10 +1158,10 @@ impl<W: io::Write> WriteColor for Ansi<W> {
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.reset()?;
         if spec.bold {
-            self.write_str("\x1B[1m")?;
+            self.write_str("\x01\x1B[1m\x02")?;
         }
         if spec.underline {
-            self.write_str("\x1B[4m")?;
+            self.write_str("\x01\x1B[4m\x02")?;
         }
         if let Some(ref c) = spec.fg_color {
             self.write_color(true, c, spec.intense)?;
@@ -1174,7 +1174,7 @@ impl<W: io::Write> WriteColor for Ansi<W> {
 
     #[inline]
     fn reset(&mut self) -> io::Result<()> {
-        self.write_str("\x1B[0m")
+        self.write_str("\x01\x1B[0m\x02")
     }
 
     #[inline]
@@ -1195,18 +1195,18 @@ impl<W: io::Write> Ansi<W> {
         macro_rules! write_intense {
             ($clr:expr) => {
                 if fg {
-                    self.write_str(concat!("\x1B[38;5;", $clr, "m"))
+                    self.write_str(concat!("\x01\x1B[38;5;", $clr, "m\x02"))
                 } else {
-                    self.write_str(concat!("\x1B[48;5;", $clr, "m"))
+                    self.write_str(concat!("\x01\x1B[48;5;", $clr, "m\x02"))
                 }
             }
         }
         macro_rules! write_normal {
             ($clr:expr) => {
                 if fg {
-                    self.write_str(concat!("\x1B[3", $clr, "m"))
+                    self.write_str(concat!("\x01\x1B[3", $clr, "m\x02"))
                 } else {
-                    self.write_str(concat!("\x1B[4", $clr, "m"))
+                    self.write_str(concat!("\x01\x1B[4", $clr, "m\x02"))
                 }
             }
         }
@@ -1215,12 +1215,14 @@ impl<W: io::Write> Ansi<W> {
                 // The loop generates at worst a literal of the form
                 // '255,255,255m' which is 12-bytes.
                 // The largest `pre` expression we currently use is 7 bytes.
-                // This gives us the maximum of 19-bytes for our work buffer.
+                // With 2 more bytes for non-printing escapes, This gives us
+                // the maximum of 21-bytes for our work buffer.
                 let pre_len = $pre.len();
                 assert!(pre_len <= 7);
-                let mut fmt = [0u8; 19];
-                fmt[..pre_len].copy_from_slice($pre);
-                let mut i = pre_len - 1;
+                let mut fmt = [0u8; 21];
+                fmt[0] = b'\x01';
+                fmt[1..=pre_len].copy_from_slice($pre);
+                let mut i = pre_len;
                 $(
                     let c1: u8 = ($code / 100) % 10;
                     let c2: u8 = ($code / 10) % 10;
@@ -1244,7 +1246,8 @@ impl<W: io::Write> Ansi<W> {
                 )+
 
                 fmt[i] = b'm';
-                self.write_all(&fmt[0..i+1])
+                fmt[i+1] = b'\x02';
+                self.write_all(&fmt[0..=i+1])
             }}
         }
         macro_rules! write_custom {
@@ -1879,17 +1882,17 @@ mod tests {
     fn test_var_ansi_write_rgb() {
         let mut buf = Ansi::new(vec![]);
         let _ = buf.write_color(true, &Color::Rgb(254, 253, 255), false);
-        assert_eq!(buf.0, b"\x1B[38;2;254;253;255m");
+        assert_eq!(buf.0, b"\x01\x1B[38;2;254;253;255m\x02");
     }
 
     #[test]
     fn test_var_ansi_write_256() {
         let mut buf = Ansi::new(vec![]);
         let _ = buf.write_color(false, &Color::Ansi256(7), false);
-        assert_eq!(buf.0, b"\x1B[48;5;7m");
+        assert_eq!(buf.0, b"\x01\x1B[48;5;7m\x02");
 
         let mut buf = Ansi::new(vec![]);
         let _ = buf.write_color(false, &Color::Ansi256(208), false);
-        assert_eq!(buf.0, b"\x1B[48;5;208m");
+        assert_eq!(buf.0, b"\x01\x1B[48;5;208m\x02");
     }
 }
