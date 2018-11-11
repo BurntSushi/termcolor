@@ -1221,7 +1221,7 @@ impl<W: io::Write> Ansi<W> {
                 assert!(pre_len <= 7);
                 let mut fmt = [0u8; 21];
                 fmt[0] = b'\x01';
-                fmt[1..=pre_len].copy_from_slice($pre);
+                fmt[1..pre_len+1].copy_from_slice($pre);
                 let mut i = pre_len;
                 $(
                     let c1: u8 = ($code / 100) % 10;
@@ -1247,7 +1247,7 @@ impl<W: io::Write> Ansi<W> {
 
                 fmt[i] = b'm';
                 fmt[i+1] = b'\x02';
-                self.write_all(&fmt[0..=i+1])
+                self.write_all(&fmt[0..i+2])
             }}
         }
         macro_rules! write_custom {
