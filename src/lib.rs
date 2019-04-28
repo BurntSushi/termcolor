@@ -73,6 +73,12 @@ bufwtr.print(&buffer)?;
 
 #[cfg(windows)]
 extern crate wincolor;
+#[cfg(test)]
+#[macro_use]
+extern crate doc_comment;
+
+#[cfg(test)]
+doctest!("../README.md");
 
 use std::env;
 use std::error;
