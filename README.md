@@ -58,12 +58,14 @@ except it is augmented with methods for coloring by the `WriteColor` trait.
 For example, to write some green text:
 
 ```rust
-use std::io::Write;
+use std::io::{self, Write};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-let mut stdout = StandardStream::stdout(ColorChoice::Always);
-stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-writeln!(&mut stdout, "green text!")?;
+fn write_green() -> io::Result<()> {
+    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
+    writeln!(&mut stdout, "green text!")
+}
 ```
 
 ### Example: using `BufferWriter`
@@ -75,12 +77,14 @@ implements `io::Write` and `termcolor::WriteColor`.
 This example shows how to print some green text to stderr.
 
 ```rust
-use std::io::Write;
+use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
-let mut bufwtr = BufferWriter::stderr(ColorChoice::Always);
-let mut buffer = bufwtr.buffer();
-buffer.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-writeln!(&mut buffer, "green text!")?;
-bufwtr.print(&buffer)?;
+fn write_green() -> io::Result<()> {
+    let mut bufwtr = BufferWriter::stderr(ColorChoice::Always);
+    let mut buffer = bufwtr.buffer();
+    buffer.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
+    writeln!(&mut buffer, "green text!")?;
+    bufwtr.print(&buffer)
+}
 ```
