@@ -1511,17 +1511,12 @@ impl ColorSpec {
         &self,
         console: &mut wincolor::Console,
     ) -> io::Result<()> {
-        use wincolor::Intense;
-
-        let intense = if self.intense { Intense::Yes } else { Intense::No };
-
-        let fg_color = self.fg_color.as_ref().and_then(|c| c.to_windows());
-        if let Some(color) = fg_color {
+        let fg_color = self.fg_color.and_then(|c| c.to_windows(self.intense));
+        if let Some((intense, color)) = fg_color {
             console.fg(intense, color)?;
         }
-
-        let bg_color = self.bg_color.as_ref().and_then(|c| c.to_windows());
-        if let Some(color) = bg_color {
+        let bg_color = self.bg_color.and_then(|c| c.to_windows(self.intense));
+        if let Some((intense, color)) = bg_color {
             console.bg(intense, color)?;
         }
         Ok(())
@@ -1569,20 +1564,43 @@ pub enum Color {
 impl Color {
     /// Translate this color to a wincolor::Color.
     #[cfg(windows)]
-    fn to_windows(&self) -> Option<wincolor::Color> {
-        match *self {
-            Color::Black => Some(wincolor::Color::Black),
-            Color::Blue => Some(wincolor::Color::Blue),
-            Color::Green => Some(wincolor::Color::Green),
-            Color::Red => Some(wincolor::Color::Red),
-            Color::Cyan => Some(wincolor::Color::Cyan),
-            Color::Magenta => Some(wincolor::Color::Magenta),
-            Color::Yellow => Some(wincolor::Color::Yellow),
-            Color::White => Some(wincolor::Color::White),
-            Color::Ansi256(_) => None,
-            Color::Rgb(_, _, _) => None,
+    fn to_windows(
+        self,
+        intense: bool,
+    ) -> Option<(wincolor::Intense, wincolor::Color)> {
+        use wincolor::Intense::{Yes, No};
+
+        let color = match self {
+            Color::Black => wincolor::Color::Black,
+            Color::Blue => wincolor::Color::Blue,
+            Color::Green => wincolor::Color::Green,
+            Color::Red => wincolor::Color::Red,
+            Color::Cyan => wincolor::Color::Cyan,
+            Color::Magenta => wincolor::Color::Magenta,
+            Color::Yellow => wincolor::Color::Yellow,
+            Color::White => wincolor::Color::White,
+            Color::Ansi256(0) => return Some((No, wincolor::Color::Black)),
+            Color::Ansi256(1) => return Some((No, wincolor::Color::Red)),
+            Color::Ansi256(2) => return Some((No, wincolor::Color::Green)),
+            Color::Ansi256(3) => return Some((No, wincolor::Color::Yellow)),
+            Color::Ansi256(4) => return Some((No, wincolor::Color::Blue)),
+            Color::Ansi256(5) => return Some((No, wincolor::Color::Magenta)),
+            Color::Ansi256(6) => return Some((No, wincolor::Color::Cyan)),
+            Color::Ansi256(7) => return Some((No, wincolor::Color::White)),
+            Color::Ansi256(8) => return Some((Yes, wincolor::Color::Black)),
+            Color::Ansi256(9) => return Some((Yes, wincolor::Color::Red)),
+            Color::Ansi256(10) => return Some((Yes, wincolor::Color::Green)),
+            Color::Ansi256(11) => return Some((Yes, wincolor::Color::Yellow)),
+            Color::Ansi256(12) => return Some((Yes, wincolor::Color::Blue)),
+            Color::Ansi256(13) => return Some((Yes, wincolor::Color::Magenta)),
+            Color::Ansi256(14) => return Some((Yes, wincolor::Color::Cyan)),
+            Color::Ansi256(15) => return Some((Yes, wincolor::Color::White)),
+            Color::Ansi256(_) => return None,
+            Color::Rgb(_, _, _) => return None,
             Color::__Nonexhaustive => unreachable!(),
-        }
+        };
+        let intense = if intense { Yes } else { No };
+        Some((intense, color))
     }
 
     /// Parses a numeric color string, either ANSI or RGB.
