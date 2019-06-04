@@ -1511,10 +1511,12 @@ impl ColorSpec {
         &self,
         console: &mut wincolor::Console,
     ) -> io::Result<()> {
-        if let Some((intense, color)) = self.fg_color.and_then(|c| c.to_windows(self.intense)) {
+        let fg_color = self.fg_color.and_then(|c| c.to_windows(self.intense));
+        if let Some((intense, color)) = fg_color {
             console.fg(intense, color)?;
         }
-        if let Some((intense, color)) = self.bg_color.and_then(|c| c.to_windows(self.intense)) {
+        let bg_color = self.bg_color.and_then(|c| c.to_windows(self.intense));
+        if let Some((intense, color)) = bg_color {
             console.bg(intense, color)?;
         }
         Ok(())
@@ -1562,7 +1564,10 @@ pub enum Color {
 impl Color {
     /// Translate this color to a wincolor::Color.
     #[cfg(windows)]
-    fn to_windows(self, intense: bool) -> Option<(wincolor::Intense, wincolor::Color)> {
+    fn to_windows(
+        self,
+        intense: bool,
+    ) -> Option<(wincolor::Intense, wincolor::Color)> {
         use wincolor::Intense::{Yes, No};
 
         let color = match self {
