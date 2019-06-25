@@ -1156,7 +1156,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
 
     #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        self.reset()?;
+        if !spec.no_reset {
+            self.reset()?;
+        }
         if spec.bold {
             self.write_str("\x1B[1m")?;
         }
@@ -1416,6 +1418,7 @@ pub struct ColorSpec {
     bold: bool,
     intense: bool,
     underline: bool,
+    no_reset: bool,
 }
 
 impl ColorSpec {
@@ -1465,6 +1468,19 @@ impl ColorSpec {
     /// Note that the underline setting has no effect in a Windows console.
     pub fn set_underline(&mut self, yes: bool) -> &mut ColorSpec {
         self.underline = yes;
+        self
+    }
+
+    /// Get whether no_reset is enabled or not.
+    ///
+    /// Note that the no_reset setting has no effect in a Windows console.
+    pub fn no_reset(&self) -> bool { self.no_reset }
+
+    /// Set whether to skip initial `reset` on `set_color`.
+    ///
+    /// Note that the no_reset setting has no effect in a Windows console.
+    pub fn set_no_reset(&mut self, yes: bool) -> &mut ColorSpec {
+        self.no_reset = yes;
         self
     }
 
