@@ -1162,7 +1162,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
 
     #[inline]
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        self.reset()?;
+        if spec.reset {
+            self.reset()?;
+        }
         if spec.bold {
             self.write_str("\x1B[1m")?;
         }
@@ -1418,7 +1420,7 @@ impl WriteColor for WindowsBuffer {
 }
 
 /// A color specification.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ColorSpec {
     fg_color: Option<Color>,
     bg_color: Option<Color>,
@@ -1426,6 +1428,21 @@ pub struct ColorSpec {
     intense: bool,
     underline: bool,
     italic: bool,
+    reset: bool,
+}
+
+impl Default for ColorSpec {
+    fn default() -> ColorSpec {
+        ColorSpec {
+            fg_color: None,
+            bg_color: None,
+            bold: false,
+            intense: false,
+            underline: false,
+            italic: false,
+            reset: true,
+        }
+    }
 }
 
 impl ColorSpec {
@@ -1488,6 +1505,31 @@ impl ColorSpec {
     /// Note that the underline setting has no effect in a Windows console.
     pub fn set_underline(&mut self, yes: bool) -> &mut ColorSpec {
         self.underline = yes;
+        self
+    }
+
+    /// Get whether reset is enabled or not.
+    ///
+    /// reset is enabled by default. When disabled and using ANSI escape
+    /// sequences, a "reset" code will be emitted every time a `ColorSpec`'s
+    /// settings are applied.
+    ///
+    /// Note that the reset setting has no effect in a Windows console.
+    pub fn reset(&self) -> bool { self.reset }
+
+    /// Set whether to reset the terminal whenever color settings are applied.
+    ///
+    /// reset is enabled by default. When disabled and using ANSI escape
+    /// sequences, a "reset" code will be emitted every time a `ColorSpec`'s
+    /// settings are applied.
+    ///
+    /// Typically this is useful if callers have a requirement to more
+    /// scrupulously manage the exact sequence of escape codes that are emitted
+    /// when using ANSI for colors.
+    ///
+    /// Note that the reset setting has no effect in a Windows console.
+    pub fn set_reset(&mut self, yes: bool) -> &mut ColorSpec {
+        self.reset = yes;
         self
     }
 
@@ -1844,7 +1886,7 @@ fn write_lossy_utf8<W: io::Write>(mut w: W, buf: &[u8]) -> io::Result<usize> {
 mod tests {
     use super::{
         Ansi, Color, ParseColorError, ParseColorErrorKind, StandardStream,
-        ColorSpec,
+        ColorSpec, WriteColor,
     };
 
     fn assert_is_send<T: Send>() {}
@@ -1925,6 +1967,24 @@ mod tests {
         let mut buf = Ansi::new(vec![]);
         let _ = buf.write_color(true, &Color::Rgb(254, 253, 255), false);
         assert_eq!(buf.0, b"\x1B[38;2;254;253;255m");
+    }
+
+    #[test]
+    fn test_reset() {
+        let spec = ColorSpec::new();
+        let mut buf = Ansi::new(vec![]);
+        buf.set_color(&spec).unwrap();
+        assert_eq!(buf.0, b"\x1B[0m");
+    }
+
+    #[test]
+    fn test_no_reset() {
+        let mut spec = ColorSpec::new();
+        spec.set_reset(false);
+
+        let mut buf = Ansi::new(vec![]);
+        buf.set_color(&spec).unwrap();
+        assert_eq!(buf.0, b"");
     }
 
     #[test]
