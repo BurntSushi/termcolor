@@ -10,7 +10,7 @@ homepage = "https://github.com/BurntSushi/termcolor/tree/master/wincolor"
 repository = "https://github.com/BurntSushi/termcolor/tree/master/wincolor"
 readme = "README.md"
 keywords = ["windows", "win", "color", "ansi", "console"]
-license = "Unlicense/MIT"
+license = "Unlicense OR MIT"
 
 [lib]
 name = "wincolor"
