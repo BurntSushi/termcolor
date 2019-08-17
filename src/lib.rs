@@ -1160,6 +1160,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         if spec.bold {
             self.write_str("\x1B[1m")?;
         }
+        if spec.italic {
+            self.write_str("\x1B[3m")?;
+        }
         if spec.underline {
             self.write_str("\x1B[4m")?;
         }
@@ -1416,6 +1419,7 @@ pub struct ColorSpec {
     bold: bool,
     intense: bool,
     underline: bool,
+    italic: bool,
 }
 
 impl ColorSpec {
@@ -1452,6 +1456,19 @@ impl ColorSpec {
     /// Note that the bold setting has no effect in a Windows console.
     pub fn set_bold(&mut self, yes: bool) -> &mut ColorSpec {
         self.bold = yes;
+        self
+    }
+
+    /// Get whether this is italic or not.
+    ///
+    /// Note that the italic setting has no effect in a Windows console.
+    pub fn italic(&self) -> bool { self.italic }
+
+    /// Set whether the text is italicized or not.
+    ///
+    /// Note that the italic setting has no effect in a Windows console.
+    pub fn set_italic(&mut self, yes: bool) -> &mut ColorSpec {
+        self.italic = yes;
         self
     }
 
