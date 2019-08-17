@@ -1512,6 +1512,7 @@ impl ColorSpec {
     pub fn is_none(&self) -> bool {
         self.fg_color.is_none() && self.bg_color.is_none()
             && !self.bold && !self.underline
+            && !self.italic && !self.intense
     }
 
     /// Clears this color specification so that it has no color/style settings.
@@ -1520,6 +1521,8 @@ impl ColorSpec {
         self.bg_color = None;
         self.bold = false;
         self.underline = false;
+        self.intense = false;
+        self.italic = false;
     }
 
     /// Writes this color spec to the given Windows console.
@@ -1835,6 +1838,7 @@ fn write_lossy_utf8<W: io::Write>(mut w: W, buf: &[u8]) -> io::Result<usize> {
 mod tests {
     use super::{
         Ansi, Color, ParseColorError, ParseColorErrorKind, StandardStream,
+        ColorSpec,
     };
 
     fn assert_is_send<T: Send>() {}
@@ -1926,5 +1930,48 @@ mod tests {
         let mut buf = Ansi::new(vec![]);
         let _ = buf.write_color(false, &Color::Ansi256(208), false);
         assert_eq!(buf.0, b"\x1B[48;5;208m");
+    }
+
+    fn all_attributes() -> Vec<ColorSpec> {
+        let mut result = vec![];
+        for fg in vec![None, Some(Color::Red)] {
+            for bg in vec![None, Some(Color::Red)] {
+                for bold in vec![false, true] {
+                    for underline in vec![false, true] {
+                        for intense in vec![false, true] {
+                            for italic in vec![false, true] {
+                                let mut color = ColorSpec::new();
+                                color.set_fg(fg);
+                                color.set_bg(bg);
+                                color.set_bold(bold);
+                                color.set_underline(underline);
+                                color.set_intense(intense);
+                                color.set_italic(italic);
+                                result.push(color);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    #[test]
+    fn test_is_none() {
+        for (i, color) in all_attributes().iter().enumerate() {
+            assert_eq!(i == 0, color.is_none(),
+                       "{:?} => {}", color, color.is_none())
+        }
+    }
+
+    #[test]
+    fn test_clear() {
+        for color in all_attributes() {
+            let mut color1 = color.clone();
+            color1.clear();
+            assert!(color1.is_none(),
+                    "{:?} => {:?}", color, color1);
+        }
     }
 }
