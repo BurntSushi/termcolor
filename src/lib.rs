@@ -74,6 +74,7 @@ bufwtr.print(&buffer)?;
 #[cfg(windows)]
 extern crate wincolor;
 
+#[cfg(not(windows))]
 extern crate atty;
 
 use std::env;
@@ -223,6 +224,7 @@ enum StandardStreamType {
     StderrBuffered,
 }
 
+#[cfg(not(windows))]
 impl StandardStreamType {
     fn has_color(&self) -> bool {
         match self {
