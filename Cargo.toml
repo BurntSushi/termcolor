@@ -19,3 +19,6 @@ bench = false
 
 [target.'cfg(windows)'.dependencies]
 wincolor = { version = "1", path = "wincolor" }
+
+[target.'cfg(not(windows))'.dependencies]
+atty = "0.2"

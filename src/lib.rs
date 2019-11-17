@@ -74,6 +74,8 @@ bufwtr.print(&buffer)?;
 #[cfg(windows)]
 extern crate wincolor;
 
+extern crate atty;
+
 use std::env;
 use std::error;
 use std::fmt;
@@ -219,6 +221,15 @@ enum StandardStreamType {
     Stderr,
     StdoutBuffered,
     StderrBuffered,
+}
+
+impl StandardStreamType {
+    fn has_color(&self) -> bool {
+        match self {
+            StandardStreamType::Stdout | StandardStreamType::StdoutBuffered => atty::is(atty::Stream::Stdout),
+            StandardStreamType::Stderr | StandardStreamType::StderrBuffered => atty::is(atty::Stream::Stderr),
+        }
+    }
 }
 
 enum IoStandardStream {
@@ -475,7 +486,7 @@ impl WriterInner<IoStandardStream> {
         sty: StandardStreamType,
         choice: ColorChoice,
     ) -> WriterInner<IoStandardStream> {
-        if choice.should_attempt_color() {
+        if choice.should_attempt_color() && sty.has_color() {
             WriterInner::Ansi(Ansi(IoStandardStream::new(sty)))
         } else {
             WriterInner::NoColor(NoColor(IoStandardStream::new(sty)))
