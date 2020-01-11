@@ -6,8 +6,7 @@ by interacting with the Windows console. Several convenient abstractions
 are provided for use in single-threaded or multi-threaded command line
 applications.
 
-[![Linux build status](https://api.travis-ci.org/BurntSushi/termcolor.png)](https://travis-ci.org/BurntSushi/termcolor)
-[![Windows build status](https://ci.appveyor.com/api/projects/status/github/BurntSushi/termcolor?svg=true)](https://ci.appveyor.com/project/BurntSushi/termcolor)
+[![Build status](https://github.com/BurntSushi/termcolor/workflows/ci/badge.svg)](https://github.com/BurntSushi/termcolor/actions)
 [![](https://img.shields.io/crates/v/termcolor.svg)](https://crates.io/crates/termcolor)
 
 Dual-licensed under MIT or the [UNLICENSE](http://unlicense.org).
@@ -22,13 +21,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-termcolor = "1"
-```
-
-and this to your crate root:
-
-```rust
-extern crate termcolor;
+termcolor = "1.1"
 ```
 
 ### Organization
@@ -88,6 +81,25 @@ fn write_green() -> io::Result<()> {
     bufwtr.print(&buffer)
 }
 ```
+
+### Automatic color selection
+
+When building a writer with termcolor, the caller must provide a
+[`ColorChoice`](https://docs.rs/termcolor/1.0.5/termcolor/enum.ColorChoice.html)
+selection. When the color choice is `Auto`, termcolor will attempt to determine
+whether colors should be enabled by inspecting the environment. Currently,
+termcolor will inspect the `TERM` and `NO_COLOR` environment variables:
+
+* If `NO_COLOR` is set to any value, then colors will be suppressed.
+* If `TERM` is set to `dumb`, then colors will be suppressed.
+* In non-Windows environments, if `TERM` is not set, then colors will be
+  suppressed.
+
+This decision procedure may change over time.
+
+Currently, `termcolor` does not attempt to detect whether a tty is present or
+not. To achieve that, please use the [`atty`](https://crates.io/crates/atty)
+crate.
 
 ### Minimum Rust version policy
 
