@@ -47,6 +47,14 @@ writeln!(&mut stdout, "green text!")?;
 # Ok(()) }
 ```
 
+Note that any text written to the terminal now will be colored
+green when using ANSI escape sequences, even if it is written via
+stderr, and even if stderr had previously been set to `Color::Red`.
+Users will need to manage any color changes themselves by calling
+[`WriteColor::set_color`](trait.WriteColor.html#tymethod.set_color), and this
+may include calling [`WriteColor::reset`](trait.WriteColor.html#tymethod.reset)
+before the program exits to a shell.
+
 # Example: using `BufferWriter`
 
 A `BufferWriter` can create buffers and write buffers to stdout or stderr. It
