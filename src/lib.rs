@@ -164,8 +164,8 @@ pub enum ColorChoice {
     /// than emitting ANSI color codes.
     AlwaysAnsi,
     /// Try to use colors, but don't force the issue. If the console isn't
-    /// available on Windows, or if TERM=dumb, for example, then don't use
-    /// colors.
+    /// available on Windows, or if TERM=dumb, or if `NO_COLOR` is defined, for
+    /// example, then don't use colors.
     Auto,
     /// Never emit colors.
     Never,
@@ -173,31 +173,51 @@ pub enum ColorChoice {
 
 impl ColorChoice {
     /// Returns true if we should attempt to write colored output.
-    #[cfg(not(windows))]
     fn should_attempt_color(&self) -> bool {
         match *self {
             ColorChoice::Always => true,
             ColorChoice::AlwaysAnsi => true,
             ColorChoice::Never => false,
-            ColorChoice::Auto => match env::var("TERM") {
-                Err(_) => false,
-                Ok(k) => k != "dumb",
-            },
+            ColorChoice::Auto => self.env_allows_color(),
         }
     }
 
-    /// Returns true if we should attempt to write colored output.
-    #[cfg(windows)]
-    fn should_attempt_color(&self) -> bool {
-        match *self {
-            ColorChoice::Always => true,
-            ColorChoice::AlwaysAnsi => true,
-            ColorChoice::Never => false,
-            ColorChoice::Auto => match env::var("TERM") {
-                Err(_) => true,
-                Ok(k) => k != "dumb",
-            },
+    #[cfg(not(windows))]
+    fn env_allows_color(&self) -> bool {
+        match env::var_os("TERM") {
+            // If TERM isn't set, then we are in a weird environment that
+            // probably doesn't support colors.
+            None => return false,
+            Some(k) => {
+                if k == "dumb" {
+                    return false;
+                }
+            }
         }
+        // If TERM != dumb, then the only way we don't allow colors at this
+        // point is if NO_COLOR is set.
+        if env::var_os("NO_COLOR").is_some() {
+            return false;
+        }
+        true
+    }
+
+    #[cfg(windows)]
+    fn env_allows_color(&self) -> bool {
+        // On Windows, if TERM isn't set, then we shouldn't automatically
+        // assume that colors aren't allowed. This is unlike Unix environments
+        // where TERM is more rigorously set.
+        if let Some(k) = env::var_os("TERM") {
+            if k == "dumb" {
+                return false;
+            }
+        }
+        // If TERM != dumb, then the only way we don't allow colors at this
+        // point is if NO_COLOR is set.
+        if env::var_os("NO_COLOR").is_some() {
+            return false;
+        }
+        true
     }
 
     /// Returns true if this choice should forcefully use ANSI color codes.
