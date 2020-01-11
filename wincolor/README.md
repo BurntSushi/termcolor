@@ -1,3 +1,14 @@
+## **This crate has reached its end-of-life and is now deprecated.**
+
+This crate was rolled into the
+[`winapi-util`](https://crates.io/crate/winapi-util)
+crate since `wincolor` is quite small and didn't otherwise have a good reason
+for living life as a distinct crate.
+
+The
+[`console`](https://docs.rs/winapi-util/0.1.3/x86_64-pc-windows-msvc/winapi_util/console/index.html)
+module of `winapi-util` is a drop-in replacement for `wincolor`.
+
 wincolor
 ========
 A simple Windows specific API for controlling text color in a Windows console.
