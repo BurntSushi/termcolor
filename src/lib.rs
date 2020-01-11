@@ -71,12 +71,8 @@ bufwtr.print(&buffer)?;
 
 #![deny(missing_docs)]
 
-#[cfg(windows)]
-extern crate winapi_util;
 #[cfg(test)]
-#[macro_use]
-extern crate doc_comment;
-
+use doc_comment::doctest;
 #[cfg(test)]
 doctest!("../README.md");
 
@@ -265,7 +261,7 @@ impl IoStandardStream {
         }
     }
 
-    fn lock(&self) -> IoStandardStreamLock {
+    fn lock(&self) -> IoStandardStreamLock<'_> {
         match *self {
             IoStandardStream::Stdout(ref s) => {
                 IoStandardStreamLock::StdoutLock(s.lock())
@@ -416,14 +412,14 @@ impl StandardStream {
     ///
     /// This method is **not reentrant**. It may panic if `lock` is called
     /// while a `StandardStreamLock` is still alive.
-    pub fn lock(&self) -> StandardStreamLock {
+    pub fn lock(&self) -> StandardStreamLock<'_> {
         StandardStreamLock::from_stream(self)
     }
 }
 
 impl<'a> StandardStreamLock<'a> {
     #[cfg(not(windows))]
-    fn from_stream(stream: &StandardStream) -> StandardStreamLock {
+    fn from_stream(stream: &StandardStream) -> StandardStreamLock<'_> {
         let locked = match *stream.wtr.get_ref() {
             WriterInner::NoColor(ref w) => {
                 WriterInnerLock::NoColor(NoColor(w.0.lock()))
@@ -1854,7 +1850,7 @@ impl error::Error for ParseColorError {
 }
 
 impl fmt::Display for ParseColorError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ParseColorErrorKind::*;
         match self.kind {
             InvalidName => write!(

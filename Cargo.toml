@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["windows", "win", "color", "ansi", "console"]
 license = "Unlicense OR MIT"
 exclude = ["/.travis.yml", "/appveyor.yml", "/ci/**"]
+edition = "2018"
 
 [lib]
 name = "termcolor"
