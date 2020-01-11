@@ -72,7 +72,7 @@ bufwtr.print(&buffer)?;
 #![deny(missing_docs)]
 
 #[cfg(windows)]
-extern crate wincolor;
+extern crate winapi_util;
 #[cfg(test)]
 #[macro_use]
 extern crate doc_comment;
@@ -88,6 +88,9 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(windows)]
 use std::sync::{Mutex, MutexGuard};
+
+#[cfg(windows)]
+use winapi_util::console as wincon;
 
 /// This trait describes the behavior of writers that support colored output.
 pub trait WriteColor: io::Write {
@@ -357,7 +360,7 @@ enum WriterInner<W> {
     #[cfg(windows)]
     Windows {
         wtr: W,
-        console: Mutex<wincolor::Console>,
+        console: Mutex<wincon::Console>,
     },
 }
 
@@ -375,7 +378,7 @@ enum WriterInnerLock<'a, W> {
     #[cfg(windows)]
     Windows {
         wtr: W,
-        console: MutexGuard<'a, wincolor::Console>,
+        console: MutexGuard<'a, wincon::Console>,
     },
 }
 
@@ -509,10 +512,10 @@ impl WriterInner<IoStandardStream> {
         choice: ColorChoice,
     ) -> WriterInner<IoStandardStream> {
         let mut con = match sty {
-            StandardStreamType::Stdout => wincolor::Console::stdout(),
-            StandardStreamType::Stderr => wincolor::Console::stderr(),
-            StandardStreamType::StdoutBuffered => wincolor::Console::stdout(),
-            StandardStreamType::StderrBuffered => wincolor::Console::stderr(),
+            StandardStreamType::Stdout => wincon::Console::stdout(),
+            StandardStreamType::Stderr => wincon::Console::stderr(),
+            StandardStreamType::StdoutBuffered => wincon::Console::stdout(),
+            StandardStreamType::StderrBuffered => wincon::Console::stderr(),
         };
         let is_console_virtual = con
             .as_mut()
@@ -794,7 +797,7 @@ pub struct BufferWriter {
     separator: Option<Vec<u8>>,
     color_choice: ColorChoice,
     #[cfg(windows)]
-    console: Option<Mutex<wincolor::Console>>,
+    console: Option<Mutex<wincon::Console>>,
 }
 
 impl BufferWriter {
@@ -824,10 +827,10 @@ impl BufferWriter {
     #[cfg(windows)]
     fn create(sty: StandardStreamType, choice: ColorChoice) -> BufferWriter {
         let mut con = match sty {
-            StandardStreamType::Stdout => wincolor::Console::stdout(),
-            StandardStreamType::Stderr => wincolor::Console::stderr(),
-            StandardStreamType::StdoutBuffered => wincolor::Console::stdout(),
-            StandardStreamType::StderrBuffered => wincolor::Console::stderr(),
+            StandardStreamType::Stdout => wincon::Console::stdout(),
+            StandardStreamType::Stderr => wincon::Console::stderr(),
+            StandardStreamType::StdoutBuffered => wincon::Console::stdout(),
+            StandardStreamType::StderrBuffered => wincon::Console::stderr(),
         }
         .ok();
         let is_console_virtual = con
@@ -1428,7 +1431,7 @@ impl WindowsBuffer {
     /// for coloring.
     fn print(
         &self,
-        console: &mut wincolor::Console,
+        console: &mut wincon::Console,
         stream: &mut LossyStandardStream<IoStandardStreamLock>,
     ) -> io::Result<()> {
         let mut last = 0;
@@ -1664,10 +1667,7 @@ impl ColorSpec {
 
     /// Writes this color spec to the given Windows console.
     #[cfg(windows)]
-    fn write_console(
-        &self,
-        console: &mut wincolor::Console,
-    ) -> io::Result<()> {
+    fn write_console(&self, console: &mut wincon::Console) -> io::Result<()> {
         let fg_color = self.fg_color.and_then(|c| c.to_windows(self.intense));
         if let Some((intense, color)) = fg_color {
             console.fg(intense, color)?;
@@ -1719,41 +1719,39 @@ pub enum Color {
 }
 
 impl Color {
-    /// Translate this color to a wincolor::Color.
+    /// Translate this color to a wincon::Color.
     #[cfg(windows)]
     fn to_windows(
         self,
         intense: bool,
-    ) -> Option<(wincolor::Intense, wincolor::Color)> {
-        use wincolor::Intense::{No, Yes};
+    ) -> Option<(wincon::Intense, wincon::Color)> {
+        use wincon::Intense::{No, Yes};
 
         let color = match self {
-            Color::Black => wincolor::Color::Black,
-            Color::Blue => wincolor::Color::Blue,
-            Color::Green => wincolor::Color::Green,
-            Color::Red => wincolor::Color::Red,
-            Color::Cyan => wincolor::Color::Cyan,
-            Color::Magenta => wincolor::Color::Magenta,
-            Color::Yellow => wincolor::Color::Yellow,
-            Color::White => wincolor::Color::White,
-            Color::Ansi256(0) => return Some((No, wincolor::Color::Black)),
-            Color::Ansi256(1) => return Some((No, wincolor::Color::Red)),
-            Color::Ansi256(2) => return Some((No, wincolor::Color::Green)),
-            Color::Ansi256(3) => return Some((No, wincolor::Color::Yellow)),
-            Color::Ansi256(4) => return Some((No, wincolor::Color::Blue)),
-            Color::Ansi256(5) => return Some((No, wincolor::Color::Magenta)),
-            Color::Ansi256(6) => return Some((No, wincolor::Color::Cyan)),
-            Color::Ansi256(7) => return Some((No, wincolor::Color::White)),
-            Color::Ansi256(8) => return Some((Yes, wincolor::Color::Black)),
-            Color::Ansi256(9) => return Some((Yes, wincolor::Color::Red)),
-            Color::Ansi256(10) => return Some((Yes, wincolor::Color::Green)),
-            Color::Ansi256(11) => return Some((Yes, wincolor::Color::Yellow)),
-            Color::Ansi256(12) => return Some((Yes, wincolor::Color::Blue)),
-            Color::Ansi256(13) => {
-                return Some((Yes, wincolor::Color::Magenta))
-            }
-            Color::Ansi256(14) => return Some((Yes, wincolor::Color::Cyan)),
-            Color::Ansi256(15) => return Some((Yes, wincolor::Color::White)),
+            Color::Black => wincon::Color::Black,
+            Color::Blue => wincon::Color::Blue,
+            Color::Green => wincon::Color::Green,
+            Color::Red => wincon::Color::Red,
+            Color::Cyan => wincon::Color::Cyan,
+            Color::Magenta => wincon::Color::Magenta,
+            Color::Yellow => wincon::Color::Yellow,
+            Color::White => wincon::Color::White,
+            Color::Ansi256(0) => return Some((No, wincon::Color::Black)),
+            Color::Ansi256(1) => return Some((No, wincon::Color::Red)),
+            Color::Ansi256(2) => return Some((No, wincon::Color::Green)),
+            Color::Ansi256(3) => return Some((No, wincon::Color::Yellow)),
+            Color::Ansi256(4) => return Some((No, wincon::Color::Blue)),
+            Color::Ansi256(5) => return Some((No, wincon::Color::Magenta)),
+            Color::Ansi256(6) => return Some((No, wincon::Color::Cyan)),
+            Color::Ansi256(7) => return Some((No, wincon::Color::White)),
+            Color::Ansi256(8) => return Some((Yes, wincon::Color::Black)),
+            Color::Ansi256(9) => return Some((Yes, wincon::Color::Red)),
+            Color::Ansi256(10) => return Some((Yes, wincon::Color::Green)),
+            Color::Ansi256(11) => return Some((Yes, wincon::Color::Yellow)),
+            Color::Ansi256(12) => return Some((Yes, wincon::Color::Blue)),
+            Color::Ansi256(13) => return Some((Yes, wincon::Color::Magenta)),
+            Color::Ansi256(14) => return Some((Yes, wincon::Color::Cyan)),
+            Color::Ansi256(15) => return Some((Yes, wincon::Color::White)),
             Color::Ansi256(_) => return None,
             Color::Rgb(_, _, _) => return None,
             Color::__Nonexhaustive => unreachable!(),
@@ -1915,8 +1913,8 @@ impl<W: io::Write> LossyStandardStream<W> {
 
     #[cfg(windows)]
     fn new(wtr: W) -> LossyStandardStream<W> {
-        let is_console = wincolor::Console::stdout().is_ok()
-            || wincolor::Console::stderr().is_ok();
+        let is_console = wincon::Console::stdout().is_ok()
+            || wincon::Console::stderr().is_ok();
         LossyStandardStream { wtr: wtr, is_console: is_console }
     }
 

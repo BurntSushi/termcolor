@@ -2,9 +2,7 @@
 name = "wincolor"
 version = "1.0.2"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
-description = """
-A simple Windows specific API for controlling text color in a Windows console.
-"""
+description = "DEPRECATED. Use winapi-util instead."
 documentation = "https://docs.rs/wincolor"
 homepage = "https://github.com/BurntSushi/termcolor/tree/master/wincolor"
 repository = "https://github.com/BurntSushi/termcolor/tree/master/wincolor"
