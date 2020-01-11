@@ -75,6 +75,46 @@ writeln!(&mut buffer, "green text!")?;
 bufwtr.print(&buffer)?;
 # Ok(()) }
 ```
+
+# Detecting presence of a terminal
+
+In many scenarios when using color, one often wants to enable colors
+automatically when writing to a terminal and disable colors automatically when
+writing to anything else. The typical way to achieve this in Unix environments
+is via libc's
+[`isatty`](http://man7.org/linux/man-pages/man3/isatty.3.html)
+function.
+Unfortunately, this notoriously does not work well in Windows environments. To
+work around that, the currently recommended solution is to use the
+[`atty`](https://crates.io/crates/atty)
+crate, which goes out of its way to get this as right as possible in Windows
+environments.
+
+For example, in a command line application that exposes a `--color` flag,
+your logic for how to enable colors might look like this:
+
+```rust,ignore
+use atty;
+use termcolor::{ColorChoice, StandardStream};
+
+let preference = argv.get_flag("color").unwrap_or("auto");
+let choice = match preference {
+    "always" => ColorChoice::Always,
+    "ansi" => ColorChoice::AlwaysAnsi,
+    "auto" => {
+        if atty::is(atty::Stream::Stdout) {
+            ColorChoice::Auto
+        } else {
+            ColorChoice::Never
+        }
+    }
+    _ => ColorChoice::Never,
+};
+let stdout = StandardStream::stdout(choice);
+// ... write to stdout
+```
+
+Currently, `termcolor` does not provide anything to do this for you.
 */
 
 #![deny(missing_docs)]
