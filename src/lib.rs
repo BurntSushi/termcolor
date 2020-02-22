@@ -1596,8 +1596,8 @@ impl ColorSpec {
     }
 
     /// Set the foreground color.
-    pub fn set_fg(&mut self, color: Option<Color>) -> &mut ColorSpec {
-        self.fg_color = color;
+    pub fn set_fg(&mut self, color: impl Into<Option<Color>>) -> &mut ColorSpec {
+        self.fg_color = color.into();
         self
     }
 
@@ -1607,8 +1607,8 @@ impl ColorSpec {
     }
 
     /// Set the background color.
-    pub fn set_bg(&mut self, color: Option<Color>) -> &mut ColorSpec {
-        self.bg_color = color;
+    pub fn set_bg(&mut self, color: impl Into<Option<Color>>) -> &mut ColorSpec {
+        self.bg_color = color.into();
         self
     }
 
