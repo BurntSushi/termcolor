@@ -212,7 +212,7 @@ pub enum ColorChoice {
     /// than emitting ANSI color codes.
     AlwaysAnsi,
     /// Try to use colors, but don't force the issue. If the console isn't
-    /// available on Windows, or if TERM=dumb, or if `NO_COLOR` is defined, for
+    /// available on Windows, or if TERM=dumb or xterm-mono, or if `NO_COLOR` is defined, for
     /// example, then don't use colors.
     Auto,
     /// Never emit colors.
@@ -235,19 +235,12 @@ impl ColorChoice {
         match env::var_os("TERM") {
             // If TERM isn't set, then we are in a weird environment that
             // probably doesn't support colors.
-            None => return false,
-            Some(k) => {
-                if k == "dumb" {
-                    return false;
-                }
-            }
+            None => false,
+            Some(ref term) if term == "dumb" || term == "xterm-mono" => false,
+            // If TERM != dumb or xterm-mono, then the only way we don't allow colors at this
+            // point is if NO_COLOR is set.
+            _ => env::var_os("NO_COLOR").is_none(),
         }
-        // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
-        }
-        true
     }
 
     #[cfg(windows)]
@@ -255,17 +248,12 @@ impl ColorChoice {
         // On Windows, if TERM isn't set, then we shouldn't automatically
         // assume that colors aren't allowed. This is unlike Unix environments
         // where TERM is more rigorously set.
-        if let Some(k) = env::var_os("TERM") {
-            if k == "dumb" {
-                return false;
-            }
+        match env::var_os("TERM") {
+            Some(ref term) if term == "dumb" || term == "xterm-mono" => false,
+            // If TERM != dumb or xterm-mono, then the only way we don't allow colors at this
+            // point is if NO_COLOR is set.
+            _ => env::var_os("NO_COLOR").is_none(),
         }
-        // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
-        }
-        true
     }
 
     /// Returns true if this choice should forcefully use ANSI color codes.
