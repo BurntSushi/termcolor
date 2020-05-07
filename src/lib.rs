@@ -119,9 +119,9 @@ Currently, `termcolor` does not provide anything to do this for you.
 
 #![deny(missing_docs)]
 
-#[cfg(test)]
+#[cfg(doctest)]
 use doc_comment::doctest;
-#[cfg(test)]
+#[cfg(doctest)]
 doctest!("../README.md");
 
 use std::env;
