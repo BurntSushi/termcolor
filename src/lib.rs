@@ -1306,6 +1306,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         if spec.bold {
             self.write_str("\x1B[1m")?;
         }
+        if spec.dimmed {
+            self.write_str("\x1B[2m")?;
+        }
         if spec.italic {
             self.write_str("\x1B[3m")?;
         }
@@ -1566,6 +1569,7 @@ pub struct ColorSpec {
     bold: bool,
     intense: bool,
     underline: bool,
+    dimmed: bool,
     italic: bool,
     reset: bool,
 }
@@ -1578,6 +1582,7 @@ impl Default for ColorSpec {
             bold: false,
             intense: false,
             underline: false,
+            dimmed: false,
             italic: false,
             reset: true,
         }
@@ -1624,6 +1629,21 @@ impl ColorSpec {
     /// Note that the bold setting has no effect in a Windows console.
     pub fn set_bold(&mut self, yes: bool) -> &mut ColorSpec {
         self.bold = yes;
+        self
+    }
+
+    /// Get whether this is dimmed or not.
+    ///
+    /// Note that the dimmed setting has no effect in a Windows console.
+    pub fn dimmed(&self) -> bool {
+        self.dimmed
+    }
+
+    /// Set whether the text is dimmed or not.
+    ///
+    /// Note that the dimmed setting has no effect in a Windows console.
+    pub fn set_dimmed(&mut self, yes: bool) -> &mut ColorSpec {
+        self.dimmed = yes;
         self
     }
 
@@ -1715,6 +1735,7 @@ impl ColorSpec {
             && self.bg_color.is_none()
             && !self.bold
             && !self.underline
+            && !self.dimmed
             && !self.italic
             && !self.intense
     }
@@ -1726,6 +1747,7 @@ impl ColorSpec {
         self.bold = false;
         self.underline = false;
         self.intense = false;
+        self.dimmed = false;
         self.italic = false;
     }
 
@@ -2180,14 +2202,17 @@ mod tests {
                     for underline in vec![false, true] {
                         for intense in vec![false, true] {
                             for italic in vec![false, true] {
-                                let mut color = ColorSpec::new();
-                                color.set_fg(fg);
-                                color.set_bg(bg);
-                                color.set_bold(bold);
-                                color.set_underline(underline);
-                                color.set_intense(intense);
-                                color.set_italic(italic);
-                                result.push(color);
+                                for dimmed in vec![false, true] {
+                                    let mut color = ColorSpec::new();
+                                    color.set_fg(fg);
+                                    color.set_bg(bg);
+                                    color.set_bold(bold);
+                                    color.set_underline(underline);
+                                    color.set_intense(intense);
+                                    color.set_dimmed(dimmed);
+                                    color.set_italic(italic);
+                                    result.push(color);
+                                }
                             }
                         }
                     }
