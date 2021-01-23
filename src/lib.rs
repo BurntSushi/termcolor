@@ -1450,6 +1450,20 @@ impl<W: io::Write> Ansi<W> {
     }
 }
 
+impl WriteColor for io::Sink {
+    fn supports_color(&self) -> bool {
+        false
+    }
+
+    fn set_color(&mut self, _: &ColorSpec) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn reset(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 /// An in-memory buffer that provides Windows console coloring.
 ///
 /// This doesn't actually communicate with the Windows console. Instead, it
