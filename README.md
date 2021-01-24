@@ -85,7 +85,7 @@ fn write_green() -> io::Result<()> {
 ### Automatic color selection
 
 When building a writer with termcolor, the caller must provide a
-[`ColorChoice`](https://docs.rs/termcolor/*/termcolor/enum.ColorChoice.html)
+[`ColorChoice`](https://docs.rs/termcolor/1.*/termcolor/enum.ColorChoice.html)
 selection. When the color choice is `Auto`, termcolor will attempt to determine
 whether colors should be enabled by inspecting the environment. Currently,
 termcolor will inspect the `TERM` and `NO_COLOR` environment variables:

@@ -6,7 +6,7 @@ crate since `wincolor` is quite small and didn't otherwise have a good reason
 for living life as a distinct crate.
 
 The
-[`console`](https://docs.rs/winapi-util/*/x86_64-pc-windows-msvc/winapi_util/console/index.html)
+[`console`](https://docs.rs/winapi-util/0.1.*/x86_64-pc-windows-msvc/winapi_util/console/index.html)
 module of `winapi-util` is a drop-in replacement for `wincolor`.
 
 wincolor
