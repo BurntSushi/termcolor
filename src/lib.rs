@@ -219,6 +219,26 @@ pub enum ColorChoice {
     Never,
 }
 
+impl Default for ColorChoice {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+impl FromStr for ColorChoice {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "always" => Ok(Self::Always),
+            "always-ansi" => Ok(Self::AlwaysAnsi),
+            "never" => Ok(Self::Never),
+            "auto" => Ok(Self::Auto),
+            _ => Err(()),
+        }
+    }
+}
+
 impl ColorChoice {
     /// Returns true if we should attempt to write colored output.
     fn should_attempt_color(&self) -> bool {
