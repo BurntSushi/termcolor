@@ -99,18 +99,10 @@ use atty;
 use termcolor::{ColorChoice, StandardStream};
 
 let preference = argv.get_flag("color").unwrap_or("auto");
-let choice = match preference {
-    "always" => ColorChoice::Always,
-    "ansi" => ColorChoice::AlwaysAnsi,
-    "auto" => {
-        if atty::is(atty::Stream::Stdout) {
-            ColorChoice::Auto
-        } else {
-            ColorChoice::Never
-        }
-    }
-    _ => ColorChoice::Never,
-};
+let mut choice = preference.parse::<ColorChoice>()?;
+if choice == ColorChoice::Auto && !atty::is(atty::Stream::Stdout) {
+    choice = ColorChoice::Never;
+}
 let stdout = StandardStream::stdout(choice);
 // ... write to stdout
 ```
@@ -204,6 +196,13 @@ impl<T: ?Sized + WriteColor> WriteColor for Box<T> {
 }
 
 /// ColorChoice represents the color preferences of an end user.
+///
+/// The `Default` implementation for this type will select `Auto`, which tries
+/// to do the right thing based on the current environment.
+///
+/// The `FromStr` implementation for this type converts a lowercase kebab-case
+/// string of the variant name to the corresponding variant. Any other string
+/// results in an error.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ColorChoice {
     /// Try very hard to emit colors. This includes emitting ANSI colors
@@ -218,6 +217,29 @@ pub enum ColorChoice {
     Auto,
     /// Never emit colors.
     Never,
+}
+
+/// The default is `Auto`.
+impl Default for ColorChoice {
+    fn default() -> ColorChoice {
+        ColorChoice::Auto
+    }
+}
+
+impl FromStr for ColorChoice {
+    type Err = ColorChoiceParseError;
+
+    fn from_str(s: &str) -> Result<ColorChoice, ColorChoiceParseError> {
+        match s.to_lowercase().as_str() {
+            "always" => Ok(ColorChoice::Always),
+            "always-ansi" => Ok(ColorChoice::AlwaysAnsi),
+            "never" => Ok(ColorChoice::Never),
+            "auto" => Ok(ColorChoice::Auto),
+            unknown => Err(ColorChoiceParseError {
+                unknown_choice: unknown.to_string(),
+            }),
+        }
+    }
 }
 
 impl ColorChoice {
@@ -289,6 +311,25 @@ impl ColorChoice {
                 }
             }
         }
+    }
+}
+
+/// An error that occurs when parsing a `ColorChoice` fails.
+#[derive(Clone, Debug)]
+pub struct ColorChoiceParseError {
+    unknown_choice: String,
+}
+
+impl std::error::Error for ColorChoiceParseError {}
+
+impl fmt::Display for ColorChoiceParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "unrecognized color choice '{}': valid choices are: \
+             always, always-ansi, never, auto",
+            self.unknown_choice,
+        )
     }
 }
 
