@@ -1586,6 +1586,7 @@ pub struct ColorSpec {
     dimmed: bool,
     italic: bool,
     reset: bool,
+    strikethrough: bool,
 }
 
 impl Default for ColorSpec {
@@ -1599,6 +1600,7 @@ impl Default for ColorSpec {
             dimmed: false,
             italic: false,
             reset: true,
+            strikethrough: false,
         }
     }
 }
@@ -1691,6 +1693,21 @@ impl ColorSpec {
         self
     }
 
+    /// Get whether this is strikethrough or not.
+    ///
+    /// Note that the strikethrough setting has no effect in a Windows console.
+    pub fn strikethrough(&self) -> bool {
+        self.strikethrough
+    }
+
+    /// Set whether the text is strikethrough or not.
+    ///
+    /// Note that the strikethrough setting has no effect in a Windows console.
+    pub fn set_strikethrough(&mut self, yes: bool) -> &mut ColorSpec {
+        self.strikethrough = yes;
+        self
+    }
+
     /// Get whether reset is enabled or not.
     ///
     /// reset is enabled by default. When disabled and using ANSI escape
@@ -1752,6 +1769,7 @@ impl ColorSpec {
             && !self.dimmed
             && !self.italic
             && !self.intense
+            && !self.strikethrough
     }
 
     /// Clears this color specification so that it has no color/style settings.
@@ -1763,6 +1781,7 @@ impl ColorSpec {
         self.intense = false;
         self.dimmed = false;
         self.italic = false;
+        self.strikethrough = false;
     }
 
     /// Writes this color spec to the given Windows console.
