@@ -1315,6 +1315,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         if spec.underline {
             self.write_str("\x1B[4m")?;
         }
+        if spec.strikethrough {
+            self.write_str("\x1B[9m")?;
+        }
         if let Some(ref c) = spec.fg_color {
             self.write_color(true, c, spec.intense)?;
         }
@@ -2235,16 +2238,19 @@ mod tests {
                     for underline in vec![false, true] {
                         for intense in vec![false, true] {
                             for italic in vec![false, true] {
-                                for dimmed in vec![false, true] {
-                                    let mut color = ColorSpec::new();
-                                    color.set_fg(fg);
-                                    color.set_bg(bg);
-                                    color.set_bold(bold);
-                                    color.set_underline(underline);
-                                    color.set_intense(intense);
-                                    color.set_dimmed(dimmed);
-                                    color.set_italic(italic);
-                                    result.push(color);
+                                for strikethrough in vec![false, true] {
+                                    for dimmed in vec![false, true] {
+                                        let mut color = ColorSpec::new();
+                                        color.set_fg(fg);
+                                        color.set_bg(bg);
+                                        color.set_bold(bold);
+                                        color.set_underline(underline);
+                                        color.set_intense(intense);
+                                        color.set_italic(italic);
+                                        color.set_dimmed(dimmed);
+                                        color.set_strikethrough(strikethrough);
+                                        result.push(color);
+                                    }
                                 }
                             }
                         }
