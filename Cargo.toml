@@ -18,6 +18,13 @@ edition = "2018"
 name = "termcolor"
 bench = false
 
+[features]
+default = ["auto"]
+auto = ["concolor-control/auto"]
+
+[dependencies]
+concolor-control = { version = "0.0.6", default-features = false }
+
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1.3"
 

@@ -124,7 +124,6 @@ Currently, `termcolor` does not provide anything to do this for you.
 // #[cfg(doctest)]
 // doctest!("../README.md");
 
-use std::env;
 use std::error;
 use std::fmt;
 use std::io::{self, Write};
@@ -221,51 +220,13 @@ pub enum ColorChoice {
 
 impl ColorChoice {
     /// Returns true if we should attempt to write colored output.
-    fn should_attempt_color(&self) -> bool {
+    fn should_attempt_color(&self, stream: concolor_control::Stream) -> bool {
         match *self {
             ColorChoice::Always => true,
             ColorChoice::AlwaysAnsi => true,
             ColorChoice::Never => false,
-            ColorChoice::Auto => self.env_allows_color(),
+            ColorChoice::Auto => concolor_control::get(stream).color(),
         }
-    }
-
-    #[cfg(not(windows))]
-    fn env_allows_color(&self) -> bool {
-        match env::var_os("TERM") {
-            // If TERM isn't set, then we are in a weird environment that
-            // probably doesn't support colors.
-            None => return false,
-            Some(k) => {
-                if k == "dumb" {
-                    return false;
-                }
-            }
-        }
-        // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
-        }
-        true
-    }
-
-    #[cfg(windows)]
-    fn env_allows_color(&self) -> bool {
-        // On Windows, if TERM isn't set, then we shouldn't automatically
-        // assume that colors aren't allowed. This is unlike Unix environments
-        // where TERM is more rigorously set.
-        if let Some(k) = env::var_os("TERM") {
-            if k == "dumb" {
-                return false;
-            }
-        }
-        // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
-        }
-        true
     }
 
     /// Returns true if this choice should forcefully use ANSI color codes.
@@ -273,20 +234,12 @@ impl ColorChoice {
     /// It's possible that ANSI is still the correct choice even if this
     /// returns false.
     #[cfg(windows)]
-    fn should_ansi(&self) -> bool {
+    fn should_ansi(&self, stream: concolor_control::Stream) -> bool {
         match *self {
             ColorChoice::Always => false,
             ColorChoice::AlwaysAnsi => true,
             ColorChoice::Never => false,
-            ColorChoice::Auto => {
-                match env::var("TERM") {
-                    Err(_) => false,
-                    // cygwin doesn't seem to support ANSI escape sequences
-                    // and instead has its own variety. However, the Windows
-                    // console API may be available.
-                    Ok(k) => k != "dumb" && k != "cygwin",
-                }
-            }
+            ColorChoice::Auto => concolor_control::get(stream).ansi_color(),
         }
     }
 }
@@ -295,11 +248,27 @@ impl ColorChoice {
 /// separate types, which makes it difficult to abstract over them. We use
 /// some simple internal enum types to work around this.
 
+#[derive(Copy, Clone)]
 enum StandardStreamType {
     Stdout,
     Stderr,
     StdoutBuffered,
     StderrBuffered,
+}
+
+impl StandardStreamType {
+    fn to_concolor(self) -> concolor_control::Stream {
+        match self {
+            StandardStreamType::Stdout => concolor_control::Stream::Stdout,
+            StandardStreamType::Stderr => concolor_control::Stream::Stderr,
+            StandardStreamType::StdoutBuffered => {
+                concolor_control::Stream::Stdout
+            }
+            StandardStreamType::StderrBuffered => {
+                concolor_control::Stream::Stderr
+            }
+        }
+    }
 }
 
 enum IoStandardStream {
@@ -558,7 +527,7 @@ impl WriterInner<IoStandardStream> {
         sty: StandardStreamType,
         choice: ColorChoice,
     ) -> WriterInner<IoStandardStream> {
-        if choice.should_attempt_color() {
+        if choice.should_attempt_color(sty.to_concolor()) {
             WriterInner::Ansi(Ansi(IoStandardStream::new(sty)))
         } else {
             WriterInner::NoColor(NoColor(IoStandardStream::new(sty)))
@@ -581,12 +550,8 @@ impl WriterInner<IoStandardStream> {
             StandardStreamType::StdoutBuffered => wincon::Console::stdout(),
             StandardStreamType::StderrBuffered => wincon::Console::stderr(),
         };
-        let is_console_virtual = con
-            .as_mut()
-            .map(|con| con.set_virtual_terminal_processing(true).is_ok())
-            .unwrap_or(false);
-        if choice.should_attempt_color() {
-            if choice.should_ansi() || is_console_virtual {
+        if choice.should_attempt_color(sty.to_concolor()) {
+            if choice.should_ansi(sty.to_concolor()) {
                 WriterInner::Ansi(Ansi(IoStandardStream::new(sty)))
             } else if let Ok(console) = con {
                 WriterInner::Windows {
@@ -1033,7 +998,7 @@ impl Buffer {
     /// Create a new buffer with the given color settings.
     #[cfg(not(windows))]
     fn new(choice: ColorChoice) -> Buffer {
-        if choice.should_attempt_color() {
+        if choice.should_attempt_color(concolor_control::Stream::Either) {
             Buffer::ansi()
         } else {
             Buffer::no_color()
@@ -1049,8 +1014,9 @@ impl Buffer {
     /// sequences are used instead.
     #[cfg(windows)]
     fn new(choice: ColorChoice, console: bool) -> Buffer {
-        if choice.should_attempt_color() {
-            if !console || choice.should_ansi() {
+        if choice.should_attempt_color(concolor_control::Stream::Either) {
+            if !console || choice.should_ansi(concolor_control::Stream::Either)
+            {
                 Buffer::ansi()
             } else {
                 Buffer::console()
