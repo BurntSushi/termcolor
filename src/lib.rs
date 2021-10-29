@@ -1866,7 +1866,8 @@ impl Color {
         // corresponding to one of 256 colors.
         //
         // The "rgb" format is a triple of numbers (decimal or hex) delimited
-        // by a comma corresponding to one of 256^3 colors.
+        // by a comma corresponding to one of 256^3 colors or #rrggbb string
+        // in the hex format.
 
         fn parse_number(s: &str) -> Option<u8> {
             use std::u8;
@@ -1880,7 +1881,21 @@ impl Color {
 
         let codes: Vec<&str> = s.split(',').collect();
         if codes.len() == 1 {
-            if let Some(n) = parse_number(&codes[0]) {
+            if codes[0].starts_with('#') {
+                use std::u8;
+                if let (Some(r), Some(g), Some(b)) = (
+                    u8::from_str_radix(&codes[0][1..3], 16).ok(),
+                    u8::from_str_radix(&codes[0][3..5], 16).ok(),
+                    u8::from_str_radix(&codes[0][5..7], 16).ok(),
+                ) {
+                    Ok(Color::Rgb(r, g, b))
+                } else {
+                    Err(ParseColorError {
+                        kind: ParseColorErrorKind::InvalidRgb,
+                        given: s.to_string(),
+                    })
+                }
+            } else if let Some(n) = parse_number(&codes[0]) {
                 Ok(Color::Ansi256(n))
             } else {
                 if s.chars().all(|c| c.is_digit(16)) {
@@ -2137,6 +2152,9 @@ mod tests {
 
         let color = "0x33,0x66,0xFF".parse::<Color>();
         assert_eq!(color, Ok(Color::Rgb(0x33, 0x66, 0xFF)));
+
+        let color = "#FF6633".parse::<Color>();
+        assert_eq!(color, Ok(Color::Rgb(0xFF, 0x66, 0x33)));
     }
 
     #[test]
