@@ -1799,6 +1799,7 @@ impl ColorSpec {
 /// 2. A single 8-bit integer, in either decimal or hexadecimal format.
 /// 3. A triple of 8-bit integers separated by a comma, where each integer is
 ///    in decimal or hexadecimal format.
+/// 4. #rrggbb string where is integer is in hexadecimal format.
 ///
 /// Hexadecimal numbers are written with a `0x` prefix.
 #[allow(missing_docs)]
@@ -1883,18 +1884,19 @@ impl Color {
         if codes.len() == 1 {
             if codes[0].starts_with('#') {
                 use std::u8;
-                if let (Some(r), Some(g), Some(b)) = (
-                    u8::from_str_radix(&codes[0][1..3], 16).ok(),
-                    u8::from_str_radix(&codes[0][3..5], 16).ok(),
-                    u8::from_str_radix(&codes[0][5..7], 16).ok(),
-                ) {
-                    Ok(Color::Rgb(r, g, b))
-                } else {
-                    Err(ParseColorError {
-                        kind: ParseColorErrorKind::InvalidRgb,
-                        given: s.to_string(),
-                    })
+                if codes[0].len() == 7 {
+                    if let (Ok(r), Ok(g), Ok(b)) = (
+                        u8::from_str_radix(&codes[0][1..3], 16),
+                        u8::from_str_radix(&codes[0][3..5], 16),
+                        u8::from_str_radix(&codes[0][5..7], 16),
+                    ) {
+                        return Ok(Color::Rgb(r, g, b));
+                    }
                 }
+                Err(ParseColorError {
+                    kind: ParseColorErrorKind::InvalidRgb,
+                    given: s.to_string(),
+                })
             } else if let Some(n) = parse_number(&codes[0]) {
                 Ok(Color::Ansi256(n))
             } else {
@@ -2153,8 +2155,17 @@ mod tests {
         let color = "0x33,0x66,0xFF".parse::<Color>();
         assert_eq!(color, Ok(Color::Rgb(0x33, 0x66, 0xFF)));
 
+        let color = "0xCC,0xaa,0xff".parse::<Color>();
+        assert_eq!(color, Ok(Color::Rgb(0xCC, 0xAA, 0xFF)));
+
+        let color = "0xCC,0xaa,0xff".parse::<Color>();
+        assert_eq!(color, Ok(Color::Rgb(0xCC, 0xAA, 0xFF)));
+
         let color = "#FF6633".parse::<Color>();
         assert_eq!(color, Ok(Color::Rgb(0xFF, 0x66, 0x33)));
+
+        let color = "#ffCCaa".parse::<Color>();
+        assert_eq!(color, Ok(Color::Rgb(0xFF, 0xCC, 0xAA)));
     }
 
     #[test]
@@ -2165,6 +2176,15 @@ mod tests {
             Err(ParseColorError {
                 kind: ParseColorErrorKind::InvalidRgb,
                 given: "0,0,256".to_string(),
+            })
+        );
+
+        let color = "0,0,aaa".parse::<Color>();
+        assert_eq!(
+            color,
+            Err(ParseColorError {
+                kind: ParseColorErrorKind::InvalidRgb,
+                given: "0,0,aaa".to_string(),
             })
         );
     }
@@ -2180,12 +2200,48 @@ mod tests {
             })
         );
 
+        let color = "#ffCC001".parse::<Color>();
+        assert_eq!(
+            color,
+            Err(ParseColorError {
+                kind: ParseColorErrorKind::InvalidRgb,
+                given: "#ffCC001".to_string()
+            })
+        );
+
+        let color = "#00CC1".parse::<Color>();
+        assert_eq!(
+            color,
+            Err(ParseColorError {
+                kind: ParseColorErrorKind::InvalidRgb,
+                given: "#00CC1".to_string()
+            })
+        );
+
         let color = "not_a_color".parse::<Color>();
         assert_eq!(
             color,
             Err(ParseColorError {
                 kind: ParseColorErrorKind::InvalidName,
                 given: "not_a_color".to_string(),
+            })
+        );
+
+        let color = "#00ggee".parse::<Color>();
+        assert_eq!(
+            color,
+            Err(ParseColorError {
+                kind: ParseColorErrorKind::InvalidRgb,
+                given: "#00ggee".to_string(),
+            })
+        );
+
+        let color = "#00gg😜".parse::<Color>();
+        assert_eq!(
+            color,
+            Err(ParseColorError {
+                kind: ParseColorErrorKind::InvalidRgb,
+                given: "#00gg😜".to_string(),
             })
         );
     }
