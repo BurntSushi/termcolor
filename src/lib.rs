@@ -1799,9 +1799,35 @@ impl ColorSpec {
 /// 2. A single 8-bit integer, in either decimal or hexadecimal format.
 /// 3. A triple of 8-bit integers separated by a comma, where each integer is
 ///    in decimal or hexadecimal format.
-/// 4. #rrggbb string where is integer is in hexadecimal format.
+/// 4. A `#` followed by 6 hexadecimal digits of any case, with each octet
+///    representing red, green and blue, respectively.
 ///
 /// Hexadecimal numbers are written with a `0x` prefix.
+///
+/// ## Example
+/// ```
+/// use termcolor::Color;
+///
+/// let color = "red".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Red));
+///
+/// let color = "32".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Ansi256(32)));
+///
+/// // Note that also lowercase 0xaa is allowed
+/// let color = "0xAA".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Ansi256(0xAA)));
+///
+/// let color = "0,128,255".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Rgb(0, 128, 255)));
+///
+/// let color = "0x0,0xFF,0x0".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Rgb(0, 0xFF, 0)));
+///
+/// // Note that also lowercase #ff6633 is allowed
+/// let color = "#FF6633".parse::<Color>();
+/// assert_eq!(color, Ok(Color::Rgb(0xFF, 0x66, 0x33)));
+/// ```
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Color {
