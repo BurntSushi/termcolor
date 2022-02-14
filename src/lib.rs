@@ -1287,6 +1287,11 @@ impl<W: io::Write> io::Write for Ansi<W> {
     }
 
     #[inline]
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.0.write_all(buf)
+    }
+
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.0.flush()
     }
