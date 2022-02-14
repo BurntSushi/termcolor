@@ -1340,6 +1340,17 @@ impl<W: io::Write> io::Write for Ansi<W> {
         self.0.write(buf)
     }
 
+    // Adding this method here is not required because it has a default impl,
+    // but it seems to provide a perf improvement in some cases when using
+    // a `BufWriter` with lots of writes.
+    //
+    // See https://github.com/BurntSushi/termcolor/pull/56 for more details
+    // and a minimized example.
+    #[inline]
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.0.write_all(buf)
+    }
+
     #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.0.flush()
