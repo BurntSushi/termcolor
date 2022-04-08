@@ -21,6 +21,11 @@ Add this to your `Cargo.toml`:
 termcolor = "1.1"
 ```
 
+## Cargo Features
+
+ * `serde` – Add support for (de-)serialization of the `Color` and
+   `ColorChoice` enums.
+
 ### Organization
 
 The `WriteColor` trait extends the `io::Write` trait with methods for setting
