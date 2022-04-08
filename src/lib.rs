@@ -124,12 +124,16 @@ Currently, `termcolor` does not provide anything to do this for you.
 // #[cfg(doctest)]
 // doctest!("../README.md");
 
-use std::env;
-use std::error;
-use std::fmt;
-use std::io::{self, Write};
-use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+use std::{
+    env, error, fmt,
+    io::{self, Write},
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
+
 #[cfg(windows)]
 use std::sync::{Mutex, MutexGuard};
 
@@ -202,8 +206,10 @@ impl<T: ?Sized + WriteColor> WriteColor for Box<T> {
     }
 }
 
+
 /// ColorChoice represents the color preferences of an end user.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ColorChoice {
     /// Try very hard to emit colors. This includes emitting ANSI colors
     /// on Windows if the console API is unavailable.
@@ -1803,6 +1809,7 @@ impl ColorSpec {
 /// Hexadecimal numbers are written with a `0x` prefix.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Color {
     Black,
     Blue,
