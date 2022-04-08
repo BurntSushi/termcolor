@@ -1,5 +1,5 @@
-termcolor
-=========
+# `termcolor`
+
 A simple cross platform library for writing colored text to a terminal. This
 library writes colored text either using standard ANSI escape sequences or
 by interacting with the Windows console. Several convenient abstractions
@@ -8,12 +8,9 @@ applications.
 
 [![Build status](https://github.com/BurntSushi/termcolor/workflows/ci/badge.svg)](https://github.com/BurntSushi/termcolor/actions)
 [![](https://img.shields.io/crates/v/termcolor.svg)](https://crates.io/crates/termcolor)
+[![Documentation](https://docs.rs/termcolor/badge.svg)](https://docs.rs/termcolor)
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org/).
-
-### Documentation
-
-[https://docs.rs/termcolor](https://docs.rs/termcolor)
 
 ### Usage
 
@@ -44,7 +41,7 @@ also prevents interleaving of buffer output.
 `io::Write`. These types are useful when you know exactly what you need. An
 analogous type for the Windows console is not provided since it cannot exist.
 
-### Example: using `StandardStream`
+### Example Using `StandardStream`
 
 The `StandardStream` type in this crate works similarly to `std::io::Stdout`,
 except it is augmented with methods for coloring by the `WriteColor` trait.
@@ -61,7 +58,7 @@ fn write_green() -> io::Result<()> {
 }
 ```
 
-### Example: using `BufferWriter`
+### Example Using `BufferWriter`
 
 A `BufferWriter` can create buffers and write buffers to stdout or stderr. It
 does *not* implement `io::Write` or `WriteColor` itself. Instead, `Buffer`
@@ -82,7 +79,7 @@ fn write_green() -> io::Result<()> {
 }
 ```
 
-### Automatic color selection
+### Automatic Color Selection
 
 When building a writer with termcolor, the caller must provide a
 [`ColorChoice`](https://docs.rs/termcolor/1.*/termcolor/enum.ColorChoice.html)
@@ -101,7 +98,7 @@ Currently, `termcolor` does not attempt to detect whether a tty is present or
 not. To achieve that, please use the [`atty`](https://crates.io/crates/atty)
 crate.
 
-### Minimum Rust version policy
+### Minimum Rust Version Policy
 
 This crate's minimum supported `rustc` version is `1.34.0`.
 
