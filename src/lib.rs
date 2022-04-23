@@ -221,17 +221,17 @@ pub enum ColorChoice {
 
 impl ColorChoice {
     /// Returns true if we should attempt to write colored output.
-    fn should_attempt_color(&self) -> bool {
-        match *self {
+    fn should_attempt_color(self) -> bool {
+        match self {
             ColorChoice::Always => true,
             ColorChoice::AlwaysAnsi => true,
             ColorChoice::Never => false,
-            ColorChoice::Auto => self.env_allows_color(),
+            ColorChoice::Auto => Self::env_allows_color(),
         }
     }
 
     #[cfg(not(windows))]
-    fn env_allows_color(&self) -> bool {
+    fn env_allows_color() -> bool {
         match env::var_os("TERM") {
             // If TERM isn't set, then we are in a weird environment that
             // probably doesn't support colors.
@@ -251,7 +251,7 @@ impl ColorChoice {
     }
 
     #[cfg(windows)]
-    fn env_allows_color(&self) -> bool {
+    fn env_allows_color() -> bool {
         // On Windows, if TERM isn't set, then we shouldn't automatically
         // assume that colors aren't allowed. This is unlike Unix environments
         // where TERM is more rigorously set.
@@ -273,8 +273,8 @@ impl ColorChoice {
     /// It's possible that ANSI is still the correct choice even if this
     /// returns false.
     #[cfg(windows)]
-    fn should_ansi(&self) -> bool {
-        match *self {
+    fn should_ansi(self) -> bool {
+        match self {
             ColorChoice::Always => false,
             ColorChoice::AlwaysAnsi => true,
             ColorChoice::Never => false,
@@ -908,7 +908,7 @@ impl BufferWriter {
         }
         let stream = LossyStandardStream::new(IoStandardStream::new(sty));
         BufferWriter {
-            stream: stream,
+            stream,
             printed: AtomicBool::new(false),
             separator: None,
             color_choice: choice,
@@ -1398,7 +1398,7 @@ impl<W: io::Write> Ansi<W> {
                 )+
 
                 fmt[i] = b'm';
-                self.write_all(&fmt[0..i+1])
+                self.write_all(&fmt[0..=i])
             }}
         }
         macro_rules! write_custom {
@@ -1882,18 +1882,16 @@ impl Color {
         if codes.len() == 1 {
             if let Some(n) = parse_number(&codes[0]) {
                 Ok(Color::Ansi256(n))
+            } else if s.chars().all(|c| c.is_digit(16)) {
+                Err(ParseColorError {
+                    kind: ParseColorErrorKind::InvalidAnsi256,
+                    given: s.to_string(),
+                })
             } else {
-                if s.chars().all(|c| c.is_digit(16)) {
-                    Err(ParseColorError {
-                        kind: ParseColorErrorKind::InvalidAnsi256,
-                        given: s.to_string(),
-                    })
-                } else {
-                    Err(ParseColorError {
-                        kind: ParseColorErrorKind::InvalidName,
-                        given: s.to_string(),
-                    })
-                }
+                Err(ParseColorError {
+                    kind: ParseColorErrorKind::InvalidName,
+                    given: s.to_string(),
+                })
             }
         } else if codes.len() == 3 {
             let mut v = vec![];
@@ -1906,7 +1904,7 @@ impl Color {
             }
             Ok(Color::Rgb(v[0], v[1], v[2]))
         } else {
-            Err(if s.contains(",") {
+            Err(if s.contains(',') {
                 ParseColorError {
                     kind: ParseColorErrorKind::InvalidRgb,
                     given: s.to_string(),
@@ -2008,14 +2006,14 @@ struct LossyStandardStream<W> {
 impl<W: io::Write> LossyStandardStream<W> {
     #[cfg(not(windows))]
     fn new(wtr: W) -> LossyStandardStream<W> {
-        LossyStandardStream { wtr: wtr }
+        LossyStandardStream { wtr }
     }
 
     #[cfg(windows)]
     fn new(wtr: W) -> LossyStandardStream<W> {
         let is_console = wincon::Console::stdout().is_ok()
             || wincon::Console::stderr().is_ok();
-        LossyStandardStream { wtr: wtr, is_console: is_console }
+        LossyStandardStream { wtr, is_console }
     }
 
     #[cfg(not(windows))]
@@ -2025,7 +2023,7 @@ impl<W: io::Write> LossyStandardStream<W> {
 
     #[cfg(windows)]
     fn wrap<Q: io::Write>(&self, wtr: Q) -> LossyStandardStream<Q> {
-        LossyStandardStream { wtr: wtr, is_console: self.is_console }
+        LossyStandardStream { wtr, is_console: self.is_console }
     }
 
     fn get_ref(&self) -> &W {
