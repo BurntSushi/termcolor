@@ -1837,6 +1837,13 @@ pub struct ColorSpec {
 
 impl Default for ColorSpec {
     fn default() -> ColorSpec {
+        ColorSpec::new()
+    }
+}
+
+impl ColorSpec {
+    /// Create a new color specification that has no colors or styles.
+    pub const fn new() -> ColorSpec {
         ColorSpec {
             fg_color: None,
             bg_color: None,
@@ -1849,15 +1856,9 @@ impl Default for ColorSpec {
             strikethrough: false,
         }
     }
-}
-
-impl ColorSpec {
-    /// Create a new color specification that has no colors or styles.
-    pub fn new() -> ColorSpec {
-        ColorSpec::default()
-    }
 
     /// Get the foreground color.
+    // TODO: Make this const when MSVR is 1.48
     pub fn fg(&self) -> Option<&Color> {
         self.fg_color.as_ref()
     }
@@ -1869,6 +1870,7 @@ impl ColorSpec {
     }
 
     /// Get the background color.
+    // TODO: Make this const when MSVR is 1.48
     pub fn bg(&self) -> Option<&Color> {
         self.bg_color.as_ref()
     }
@@ -1882,7 +1884,7 @@ impl ColorSpec {
     /// Get whether this is bold or not.
     ///
     /// Note that the bold setting has no effect in a Windows console.
-    pub fn bold(&self) -> bool {
+    pub const fn bold(&self) -> bool {
         self.bold
     }
 
@@ -1897,7 +1899,7 @@ impl ColorSpec {
     /// Get whether this is dimmed or not.
     ///
     /// Note that the dimmed setting has no effect in a Windows console.
-    pub fn dimmed(&self) -> bool {
+    pub const fn dimmed(&self) -> bool {
         self.dimmed
     }
 
@@ -1912,7 +1914,7 @@ impl ColorSpec {
     /// Get whether this is italic or not.
     ///
     /// Note that the italic setting has no effect in a Windows console.
-    pub fn italic(&self) -> bool {
+    pub const fn italic(&self) -> bool {
         self.italic
     }
 
@@ -1927,7 +1929,7 @@ impl ColorSpec {
     /// Get whether this is underline or not.
     ///
     /// Note that the underline setting has no effect in a Windows console.
-    pub fn underline(&self) -> bool {
+    pub const fn underline(&self) -> bool {
         self.underline
     }
 
@@ -1942,7 +1944,7 @@ impl ColorSpec {
     /// Get whether this is strikethrough or not.
     ///
     /// Note that the strikethrough setting has no effect in a Windows console.
-    pub fn strikethrough(&self) -> bool {
+    pub const fn strikethrough(&self) -> bool {
         self.strikethrough
     }
 
@@ -1961,7 +1963,7 @@ impl ColorSpec {
     /// settings are applied.
     ///
     /// Note that the reset setting has no effect in a Windows console.
-    pub fn reset(&self) -> bool {
+    pub const fn reset(&self) -> bool {
         self.reset
     }
 
@@ -1989,7 +1991,7 @@ impl ColorSpec {
     ///
     /// On Windows systems, this will output the ANSI escape sequence
     /// that will print a brighter version of the color specified.
-    pub fn intense(&self) -> bool {
+    pub const fn intense(&self) -> bool {
         self.intense
     }
 
