@@ -130,7 +130,6 @@ use std::fmt;
 use std::io::{self, Write};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(windows)]
 use std::sync::{Mutex, MutexGuard};
 
 #[cfg(windows)]
@@ -230,6 +229,27 @@ impl ColorChoice {
         }
     }
 
+    /// Returns true if this is an `Always` choice.
+    fn always_wants_color(&self) -> bool {
+        match *self {
+            ColorChoice::Always => true,
+            ColorChoice::AlwaysAnsi => true,
+            ColorChoice::Never => false,
+            ColorChoice::Auto => false,
+        }
+    }
+
+    /// Maps `Always` to `AlwaysAnsi`, `Auto` to `Never`, and leaves others
+    /// untouched.
+    fn map_to_always(&self) -> ColorChoice {
+        match *self {
+            ColorChoice::Always | ColorChoice::AlwaysAnsi
+                => ColorChoice::AlwaysAnsi,
+            ColorChoice::Never | ColorChoice::Auto
+                => ColorChoice::Never,
+        }
+    }
+
     #[cfg(not(windows))]
     fn env_allows_color(&self) -> bool {
         match env::var_os("TERM") {
@@ -300,6 +320,7 @@ enum StandardStreamType {
     Stderr,
     StdoutBuffered,
     StderrBuffered,
+    Generic(Box<dyn Write + Send>),
 }
 
 enum IoStandardStream {
@@ -307,6 +328,7 @@ enum IoStandardStream {
     Stderr(io::Stderr),
     StdoutBuffered(io::BufWriter<io::Stdout>),
     StderrBuffered(io::BufWriter<io::Stderr>),
+    Generic(Mutex<Box<dyn Write + Send>>),
 }
 
 impl IoStandardStream {
@@ -326,6 +348,9 @@ impl IoStandardStream {
                 let wtr = io::BufWriter::new(io::stderr());
                 IoStandardStream::StderrBuffered(wtr)
             }
+            StandardStreamType::Generic(wtr) => {
+                IoStandardStream::Generic(Mutex::new(wtr))
+            }
         }
     }
 
@@ -336,6 +361,10 @@ impl IoStandardStream {
             }
             IoStandardStream::Stderr(ref s) => {
                 IoStandardStreamLock::StderrLock(s.lock())
+            }
+            IoStandardStream::Generic(ref s) => {
+                let guard = s.lock().expect("unable to lock a generic stream");
+                IoStandardStreamLock::GenericLock(guard)
             }
             IoStandardStream::StdoutBuffered(_)
             | IoStandardStream::StderrBuffered(_) => {
@@ -355,6 +384,10 @@ impl io::Write for IoStandardStream {
             IoStandardStream::Stderr(ref mut s) => s.write(b),
             IoStandardStream::StdoutBuffered(ref mut s) => s.write(b),
             IoStandardStream::StderrBuffered(ref mut s) => s.write(b),
+            IoStandardStream::Generic(_) => {
+                // Another case forbidden by the public API.
+                panic!("cannot write to an unlocked generic stream")
+            }
         }
     }
 
@@ -365,6 +398,9 @@ impl io::Write for IoStandardStream {
             IoStandardStream::Stderr(ref mut s) => s.flush(),
             IoStandardStream::StdoutBuffered(ref mut s) => s.flush(),
             IoStandardStream::StderrBuffered(ref mut s) => s.flush(),
+            IoStandardStream::Generic(_) => {
+                panic!("cannot flush an unlocked generic stream")
+            }
         }
     }
 }
@@ -374,6 +410,7 @@ impl io::Write for IoStandardStream {
 enum IoStandardStreamLock<'a> {
     StdoutLock(io::StdoutLock<'a>),
     StderrLock(io::StderrLock<'a>),
+    GenericLock(MutexGuard<'a, Box<dyn Write + Send>>),
 }
 
 impl<'a> io::Write for IoStandardStreamLock<'a> {
@@ -382,6 +419,7 @@ impl<'a> io::Write for IoStandardStreamLock<'a> {
         match *self {
             IoStandardStreamLock::StdoutLock(ref mut s) => s.write(b),
             IoStandardStreamLock::StderrLock(ref mut s) => s.write(b),
+            IoStandardStreamLock::GenericLock(ref mut s) => s.write(b),
         }
     }
 
@@ -390,6 +428,7 @@ impl<'a> io::Write for IoStandardStreamLock<'a> {
         match *self {
             IoStandardStreamLock::StdoutLock(ref mut s) => s.flush(),
             IoStandardStreamLock::StderrLock(ref mut s) => s.flush(),
+            IoStandardStreamLock::GenericLock(ref mut s) => s.flush(),
         }
     }
 }
@@ -470,6 +509,23 @@ impl StandardStream {
     /// the `WriteColor` trait.
     pub fn stderr(choice: ColorChoice) -> StandardStream {
         let wtr = WriterInner::create(StandardStreamType::Stderr, choice);
+        StandardStream { wtr: LossyStandardStream::new(wtr) }
+    }
+
+    /// Create a new `StandardStream` with the given color preferences that
+    /// writes to a custom writer. You should always use `stdout` or `stderr`
+    /// instead when writing to the real standard output or standard error.
+    ///
+    /// With `ColorChoice::Never` and `ColorChoice::Auto`, no coloring will be
+    /// output. With `ColorChoice::Always` and `ColorChoice::AlwaysAnsi`, color
+    /// will be output as ANSI escape sequences, even on Windows.
+    ///
+    /// The specific color/style settings can be configured when writing via
+    /// the `WriteColor` trait.
+    pub fn generic(wtr: Box<dyn Write + Send>, choice: ColorChoice)
+        -> StandardStream {
+        let wtr = WriterInner::create_generic(StandardStreamType::Generic(wtr),
+                                              choice);
         StandardStream { wtr: LossyStandardStream::new(wtr) }
     }
 
@@ -600,6 +656,20 @@ impl WriterInner<IoStandardStream> {
             WriterInner::NoColor(NoColor(IoStandardStream::new(sty)))
         }
     }
+
+    /// Create a new inner writer for a non-standard stream with the given
+    /// color preferences.
+    fn create_generic(
+        sty: StandardStreamType,
+        choice: ColorChoice,
+    ) -> WriterInner<IoStandardStream> {
+        if choice.always_wants_color() {
+            WriterInner::Ansi(Ansi(IoStandardStream::new(sty)))
+        } else {
+            WriterInner::NoColor(NoColor(IoStandardStream::new(sty)))
+        }
+    }
+
 }
 
 impl io::Write for StandardStream {
@@ -916,6 +986,43 @@ impl BufferWriter {
         }
     }
 
+    /// Create a new `BufferWriter` that writes to a *custom* stream with the
+    /// given color preferences.
+    ///
+    /// The specific color/style settings can be configured when writing to
+    /// the buffers themselves.
+    #[cfg(not(windows))]
+    fn create_generic(sty: StandardStreamType, choice: ColorChoice)
+    -> BufferWriter {
+        let stream = IoStandardStream::new(sty);
+        let stream = LossyStandardStream::new_generic(stream);
+        BufferWriter {
+            stream,
+            printed: AtomicBool::new(false),
+            separator: None,
+            color_choice: choice.map_to_always(),
+        }
+    }
+
+    /// Create a new `BufferWriter` that writes to a *custom* stream with the
+    /// given color preferences.
+    ///
+    /// The specific color/style settings can be configured when writing to
+    /// the buffers themselves.
+    #[cfg(windows)]
+    fn create_generic(sty: StandardStreamType, choice: ColorChoice)
+    -> BufferWriter {
+        let stream = IoStandardStream::new(sty);
+        let stream = LossyStandardStream::new_generic(stream);
+        BufferWriter {
+            stream,
+            printed: AtomicBool::new(false),
+            separator: None,
+            color_choice: choice.map_to_always(),
+            console: None,
+        }
+    }
+
     /// Create a new `BufferWriter` that writes to stdout with the given
     /// color preferences.
     ///
@@ -938,6 +1045,21 @@ impl BufferWriter {
     /// the buffers themselves.
     pub fn stderr(choice: ColorChoice) -> BufferWriter {
         BufferWriter::create(StandardStreamType::Stderr, choice)
+    }
+
+    /// Create a new `BufferWriter` that writes to the given generic Write
+    /// implementation. You should always use `stdout` or `stderr` instead when
+    /// writing to the real standard output or standard error.
+    ///
+    /// With `ColorChoice::Never` and `ColorChoice::Auto`, no coloring will be
+    /// output. With `ColorChoice::Always` and `ColorChoice::AlwaysAnsi`, color
+    /// will be output as ANSI escape sequences, even on Windows.
+    ///
+    /// The specific color/style settings can be configured when writing to
+    /// the buffers themselves.
+    pub fn generic(wtr: Box<dyn Write + Send>, choice: ColorChoice)
+    -> BufferWriter {
+        BufferWriter::create_generic(StandardStreamType::Generic(wtr), choice)
     }
 
     /// If set, the separator given is printed between buffers. By default, no
@@ -2016,6 +2138,16 @@ impl<W: io::Write> LossyStandardStream<W> {
         let is_console = wincon::Console::stdout().is_ok()
             || wincon::Console::stderr().is_ok();
         LossyStandardStream { wtr: wtr, is_console: is_console }
+    }
+
+    #[cfg(not(windows))]
+    fn new_generic(wtr: W) -> LossyStandardStream<W> {
+        LossyStandardStream { wtr: wtr }
+    }
+
+    #[cfg(windows)]
+    fn new_generic(wtr: W) -> LossyStandardStream<W> {
+        LossyStandardStream { wtr: wtr, is_console: false }
     }
 
     #[cfg(not(windows))]
