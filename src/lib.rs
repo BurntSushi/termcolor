@@ -243,9 +243,9 @@ impl ColorChoice {
             }
         }
         // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
+        // point is if NO_COLOR is set to a non-empty value.
+        if let Some(k) = env::var_os("NO_COLOR") {
+            return k.is_empty();
         }
         true
     }
@@ -261,9 +261,9 @@ impl ColorChoice {
             }
         }
         // If TERM != dumb, then the only way we don't allow colors at this
-        // point is if NO_COLOR is set.
-        if env::var_os("NO_COLOR").is_some() {
-            return false;
+        // point is if NO_COLOR is set to a non-empty value.
+        if let Some(k) = env::var_os("NO_COLOR") {
+            return k.is_empty();
         }
         true
     }
