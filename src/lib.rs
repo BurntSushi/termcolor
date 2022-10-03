@@ -1590,6 +1590,13 @@ pub struct ColorSpec {
 
 impl Default for ColorSpec {
     fn default() -> ColorSpec {
+        ColorSpec::new()
+    }
+}
+
+impl ColorSpec {
+    /// Create a new color specification that has no colors or styles.
+    pub const fn new() -> ColorSpec {
         ColorSpec {
             fg_color: None,
             bg_color: None,
@@ -1600,13 +1607,6 @@ impl Default for ColorSpec {
             italic: false,
             reset: true,
         }
-    }
-}
-
-impl ColorSpec {
-    /// Create a new color specification that has no colors or styles.
-    pub fn new() -> ColorSpec {
-        ColorSpec::default()
     }
 
     /// Get the foreground color.
