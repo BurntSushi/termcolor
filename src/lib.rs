@@ -1315,6 +1315,9 @@ impl<W: io::Write> WriteColor for Ansi<W> {
         if spec.underline {
             self.write_str("\x1B[4m")?;
         }
+        if spec.strikethrough {
+            self.write_str("\x1B[9m")?;
+        }
         if let Some(ref c) = spec.fg_color {
             self.write_color(true, c, spec.intense)?;
         }
@@ -1586,6 +1589,7 @@ pub struct ColorSpec {
     dimmed: bool,
     italic: bool,
     reset: bool,
+    strikethrough: bool,
 }
 
 impl Default for ColorSpec {
@@ -1599,6 +1603,7 @@ impl Default for ColorSpec {
             dimmed: false,
             italic: false,
             reset: true,
+            strikethrough: false,
         }
     }
 }
@@ -1691,6 +1696,21 @@ impl ColorSpec {
         self
     }
 
+    /// Get whether this is strikethrough or not.
+    ///
+    /// Note that the strikethrough setting has no effect in a Windows console.
+    pub fn strikethrough(&self) -> bool {
+        self.strikethrough
+    }
+
+    /// Set whether the text is strikethrough or not.
+    ///
+    /// Note that the strikethrough setting has no effect in a Windows console.
+    pub fn set_strikethrough(&mut self, yes: bool) -> &mut ColorSpec {
+        self.strikethrough = yes;
+        self
+    }
+
     /// Get whether reset is enabled or not.
     ///
     /// reset is enabled by default. When disabled and using ANSI escape
@@ -1752,6 +1772,7 @@ impl ColorSpec {
             && !self.dimmed
             && !self.italic
             && !self.intense
+            && !self.strikethrough
     }
 
     /// Clears this color specification so that it has no color/style settings.
@@ -1763,6 +1784,7 @@ impl ColorSpec {
         self.intense = false;
         self.dimmed = false;
         self.italic = false;
+        self.strikethrough = false;
     }
 
     /// Writes this color spec to the given Windows console.
@@ -2216,16 +2238,19 @@ mod tests {
                     for underline in vec![false, true] {
                         for intense in vec![false, true] {
                             for italic in vec![false, true] {
-                                for dimmed in vec![false, true] {
-                                    let mut color = ColorSpec::new();
-                                    color.set_fg(fg);
-                                    color.set_bg(bg);
-                                    color.set_bold(bold);
-                                    color.set_underline(underline);
-                                    color.set_intense(intense);
-                                    color.set_dimmed(dimmed);
-                                    color.set_italic(italic);
-                                    result.push(color);
+                                for strikethrough in vec![false, true] {
+                                    for dimmed in vec![false, true] {
+                                        let mut color = ColorSpec::new();
+                                        color.set_fg(fg);
+                                        color.set_bg(bg);
+                                        color.set_bold(bold);
+                                        color.set_underline(underline);
+                                        color.set_intense(intense);
+                                        color.set_italic(italic);
+                                        color.set_dimmed(dimmed);
+                                        color.set_strikethrough(strikethrough);
+                                        result.push(color);
+                                    }
                                 }
                             }
                         }
