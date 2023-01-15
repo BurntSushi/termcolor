@@ -1,4 +1,3 @@
-#![deny(missing_debug_implementations)]
 /*!
 This crate provides a cross platform abstraction for writing colored text to
 a terminal. Colors are written using either ANSI escape sequences or by
@@ -110,7 +109,7 @@ let stdout = StandardStream::stdout(choice);
 Currently, `termcolor` does not provide anything to do this for you.
 */
 
-#![deny(missing_docs)]
+#![deny(missing_debug_implementations, missing_docs)]
 
 // #[cfg(doctest)]
 // use doc_comment::doctest;
@@ -958,7 +957,7 @@ impl BufferWriter {
         }
         let stream = LossyStandardStream::new(IoStandardStream::new(sty));
         BufferWriter {
-            stream: stream,
+            stream,
             printed: AtomicBool::new(false),
             separator: None,
             color_choice: choice,
@@ -2096,14 +2095,14 @@ struct LossyStandardStream<W> {
 impl<W: io::Write> LossyStandardStream<W> {
     #[cfg(not(windows))]
     fn new(wtr: W) -> LossyStandardStream<W> {
-        LossyStandardStream { wtr: wtr }
+        LossyStandardStream { wtr }
     }
 
     #[cfg(windows)]
     fn new(wtr: W) -> LossyStandardStream<W> {
         let is_console = wincon::Console::stdout().is_ok()
             || wincon::Console::stderr().is_ok();
-        LossyStandardStream { wtr: wtr, is_console: is_console }
+        LossyStandardStream { wtr, is_console }
     }
 
     #[cfg(not(windows))]
@@ -2113,7 +2112,7 @@ impl<W: io::Write> LossyStandardStream<W> {
 
     #[cfg(windows)]
     fn wrap<Q: io::Write>(&self, wtr: Q) -> LossyStandardStream<Q> {
-        LossyStandardStream { wtr: wtr, is_console: self.is_console }
+        LossyStandardStream { wtr, is_console: self.is_console }
     }
 
     fn get_ref(&self) -> &W {
