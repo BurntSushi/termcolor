@@ -1,3 +1,4 @@
+#![deny(missing_debug_implementations)]
 /*!
 This crate provides a cross platform abstraction for writing colored text to
 a terminal. Colors are written using either ANSI escape sequences or by
@@ -302,6 +303,7 @@ enum StandardStreamType {
     StderrBuffered,
 }
 
+#[derive(Debug)]
 enum IoStandardStream {
     Stdout(io::Stdout),
     Stderr(io::Stderr),
@@ -371,6 +373,7 @@ impl io::Write for IoStandardStream {
 
 // Same rigmarole for the locked variants of the standard streams.
 
+#[derive(Debug)]
 enum IoStandardStreamLock<'a> {
     StdoutLock(io::StdoutLock<'a>),
     StderrLock(io::StderrLock<'a>),
@@ -396,6 +399,7 @@ impl<'a> io::Write for IoStandardStreamLock<'a> {
 
 /// Satisfies `io::Write` and `WriteColor`, and supports optional coloring
 /// to either of the standard output streams, stdout and stderr.
+#[derive(Debug)]
 pub struct StandardStream {
     wtr: LossyStandardStream<WriterInner<IoStandardStream>>,
 }
@@ -407,17 +411,20 @@ pub struct StandardStream {
 ///
 /// The lifetime `'a` refers to the lifetime of the corresponding
 /// `StandardStream`.
+#[derive(Debug)]
 pub struct StandardStreamLock<'a> {
     wtr: LossyStandardStream<WriterInnerLock<'a, IoStandardStreamLock<'a>>>,
 }
 
 /// Like `StandardStream`, but does buffered writing.
+#[derive(Debug)]
 pub struct BufferedStandardStream {
     wtr: LossyStandardStream<WriterInner<IoStandardStream>>,
 }
 
 /// WriterInner is a (limited) generic representation of a writer. It is
 /// limited because W should only ever be stdout/stderr on Windows.
+#[derive(Debug)]
 enum WriterInner<W> {
     NoColor(NoColor<W>),
     Ansi(Ansi<W>),
@@ -430,6 +437,7 @@ enum WriterInner<W> {
 
 /// WriterInnerLock is a (limited) generic representation of a writer. It is
 /// limited because W should only ever be stdout/stderr on Windows.
+#[derive(Debug)]
 enum WriterInnerLock<'a, W> {
     NoColor(NoColor<W>),
     Ansi(Ansi<W>),
@@ -855,6 +863,7 @@ impl<'a, W: io::Write> WriteColor for WriterInnerLock<'a, W> {
 ///
 /// It is intended for a `BufferWriter` to be put in an `Arc` and written to
 /// from multiple threads simultaneously.
+#[derive(Debug)]
 pub struct BufferWriter {
     stream: LossyStandardStream<IoStandardStream>,
     printed: AtomicBool,
@@ -1013,9 +1022,11 @@ impl BufferWriter {
 /// method, which will take color preferences and the environment into
 /// account. However, buffers can also be manually created using `no_color`,
 /// `ansi` or `console` (on Windows).
+#[derive(Debug)]
 pub struct Buffer(BufferInner);
 
 /// BufferInner is an enumeration of different buffer types.
+#[derive(Debug)]
 enum BufferInner {
     /// No coloring information should be applied. This ignores all coloring
     /// directives.
@@ -1195,6 +1206,7 @@ impl WriteColor for Buffer {
 }
 
 /// Satisfies `WriteColor` but ignores all color options.
+#[derive(Debug)]
 pub struct NoColor<W>(W);
 
 impl<W: Write> NoColor<W> {
@@ -1255,6 +1267,7 @@ impl<W: io::Write> WriteColor for NoColor<W> {
 }
 
 /// Satisfies `WriteColor` using standard ANSI escape sequences.
+#[derive(Debug)]
 pub struct Ansi<W>(W);
 
 impl<W: Write> Ansi<W> {
@@ -1999,6 +2012,7 @@ impl FromStr for Color {
     }
 }
 
+#[derive(Debug)]
 struct LossyStandardStream<W> {
     wtr: W,
     #[cfg(windows)]
