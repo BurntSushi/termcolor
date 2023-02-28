@@ -98,7 +98,7 @@ termcolor will inspect the `TERM` and `NO_COLOR` environment variables:
 This decision procedure may change over time.
 
 Currently, `termcolor` does not attempt to detect whether a tty is present or
-not. To achieve that, please use the [`atty`](https://crates.io/crates/atty)
+not. To achieve that, please use the [`is-terminal`](https://crates.io/crates/is-terminal)
 crate.
 
 ### Minimum Rust version policy
