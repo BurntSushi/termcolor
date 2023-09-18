@@ -85,21 +85,21 @@ is via libc's
 [`isatty`](https://man7.org/linux/man-pages/man3/isatty.3.html)
 function.
 Unfortunately, this notoriously does not work well in Windows environments. To
-work around that, the currently recommended solution is to use the
-[`atty`](https://crates.io/crates/atty)
-crate, which goes out of its way to get this as right as possible in Windows
-environments.
+work around that, the recommended solution is to use the standard library's
+[`IsTerminal`](https://doc.rust-lang.org/std/io/trait.IsTerminal.html) trait.
+It goes out of its way to get it as right as possible in Windows environments.
 
 For example, in a command line application that exposes a `--color` flag,
 your logic for how to enable colors might look like this:
 
-```rust,ignore
-use atty;
+```ignore
+use std::io::IsTerminal;
+
 use termcolor::{ColorChoice, StandardStream};
 
 let preference = argv.get_flag("color").unwrap_or("auto");
 let mut choice = preference.parse::<ColorChoice>()?;
-if choice == ColorChoice::Auto && !atty::is(atty::Stream::Stdout) {
+if choice == ColorChoice::Auto && !std::io::stdin().is_terminal() {
     choice = ColorChoice::Never;
 }
 let stdout = StandardStream::stdout(choice);
