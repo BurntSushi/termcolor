@@ -18,7 +18,6 @@ Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org/).
 ### Usage
 
 Run `cargo add termcolor` to add this dependency to your `Cargo.toml` file.
-```
 
 ### Organization
 
@@ -93,10 +92,9 @@ termcolor will inspect the `TERM` and `NO_COLOR` environment variables:
 
 This decision procedure may change over time.
 
-Currently, `termcolor` does not attempt to detect whether
-a tty is present or not. To achieve that, please use the
-[`std::io::IsTerminal`](https://doc.rust-lang.org/std/io/trait.IsTerminal.html)
-crate.
+Currently, `termcolor` does not attempt to detect whether a tty is present or
+not. To achieve that, please use
+[`std::io::IsTerminal`](https://doc.rust-lang.org/std/io/trait.IsTerminal.html).
 
 ### Minimum Rust version policy
 
