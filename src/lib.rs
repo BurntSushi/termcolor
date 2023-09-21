@@ -113,10 +113,10 @@ Currently, `termcolor` does not provide anything to do this for you.
 
 #![deny(missing_debug_implementations, missing_docs)]
 
-// #[cfg(doctest)]
-// use doc_comment::doctest;
-// #[cfg(doctest)]
-// doctest!("../README.md");
+#[cfg(doctest)]
+use doc_comment::doctest;
+#[cfg(doctest)]
+doctest!("../README.md");
 
 use std::env;
 use std::error;
