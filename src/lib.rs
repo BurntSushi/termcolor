@@ -1179,11 +1179,11 @@ impl BufferWriter {
 /// method, which will take color preferences and the environment into
 /// account. However, buffers can also be manually created using `no_color`,
 /// `ansi` or `console` (on Windows).
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Buffer(BufferInner);
 
 /// BufferInner is an enumeration of different buffer types.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum BufferInner {
     /// No coloring information should be applied. This ignores all coloring
     /// directives.
@@ -1383,7 +1383,7 @@ impl WriteColor for Buffer {
 }
 
 /// Satisfies `WriteColor` but ignores all color options.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NoColor<W>(W);
 
 impl<W: Write> NoColor<W> {
@@ -1454,7 +1454,7 @@ impl<W: io::Write> WriteColor for NoColor<W> {
 }
 
 /// Satisfies `WriteColor` using standard ANSI escape sequences.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Ansi<W>(W);
 
 impl<W: Write> Ansi<W> {
