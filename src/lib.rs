@@ -1837,6 +1837,13 @@ pub struct ColorSpec {
 
 impl Default for ColorSpec {
     fn default() -> ColorSpec {
+        ColorSpec::new()
+    }
+}
+
+impl ColorSpec {
+    /// Create a new color specification that has no colors or styles.
+    pub const fn new() -> ColorSpec {
         ColorSpec {
             fg_color: None,
             bg_color: None,
@@ -1849,16 +1856,9 @@ impl Default for ColorSpec {
             strikethrough: false,
         }
     }
-}
-
-impl ColorSpec {
-    /// Create a new color specification that has no colors or styles.
-    pub fn new() -> ColorSpec {
-        ColorSpec::default()
-    }
 
     /// Get the foreground color.
-    pub fn fg(&self) -> Option<&Color> {
+    pub const fn fg(&self) -> Option<&Color> {
         self.fg_color.as_ref()
     }
 
@@ -1868,8 +1868,14 @@ impl ColorSpec {
         self
     }
 
+    /// Set the foreground color.
+    pub const fn with_fg(mut self, color: Option<Color>) -> ColorSpec {
+        self.fg_color = color;
+        self
+    }
+
     /// Get the background color.
-    pub fn bg(&self) -> Option<&Color> {
+    pub const fn bg(&self) -> Option<&Color> {
         self.bg_color.as_ref()
     }
 
@@ -1879,10 +1885,16 @@ impl ColorSpec {
         self
     }
 
+    /// Set the background color.
+    pub const fn with_bg(mut self, color: Option<Color>) -> ColorSpec {
+        self.bg_color = color;
+        self
+    }
+
     /// Get whether this is bold or not.
     ///
     /// Note that the bold setting has no effect in a Windows console.
-    pub fn bold(&self) -> bool {
+    pub const fn bold(&self) -> bool {
         self.bold
     }
 
@@ -1894,10 +1906,18 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether the text is bolded or not.
+    ///
+    /// Note that the bold setting has no effect in a Windows console.
+    pub const fn with_bold(mut self, yes: bool) -> ColorSpec {
+        self.bold = yes;
+        self
+    }
+
     /// Get whether this is dimmed or not.
     ///
     /// Note that the dimmed setting has no effect in a Windows console.
-    pub fn dimmed(&self) -> bool {
+    pub const fn dimmed(&self) -> bool {
         self.dimmed
     }
 
@@ -1909,10 +1929,18 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether the text is dimmed or not.
+    ///
+    /// Note that the dimmed setting has no effect in a Windows console.
+    pub const fn with_dimmed(mut self, yes: bool) -> ColorSpec {
+        self.dimmed = yes;
+        self
+    }
+
     /// Get whether this is italic or not.
     ///
     /// Note that the italic setting has no effect in a Windows console.
-    pub fn italic(&self) -> bool {
+    pub const fn italic(&self) -> bool {
         self.italic
     }
 
@@ -1924,10 +1952,18 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether the text is italicized or not.
+    ///
+    /// Note that the italic setting has no effect in a Windows console.
+    pub const fn with_italic(mut self, yes: bool) -> ColorSpec {
+        self.italic = yes;
+        self
+    }
+
     /// Get whether this is underline or not.
     ///
     /// Note that the underline setting has no effect in a Windows console.
-    pub fn underline(&self) -> bool {
+    pub const fn underline(&self) -> bool {
         self.underline
     }
 
@@ -1939,10 +1975,18 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether the text is underlined or not.
+    ///
+    /// Note that the underline setting has no effect in a Windows console.
+    pub const fn with_underline(mut self, yes: bool) -> ColorSpec {
+        self.underline = yes;
+        self
+    }
+
     /// Get whether this is strikethrough or not.
     ///
     /// Note that the strikethrough setting has no effect in a Windows console.
-    pub fn strikethrough(&self) -> bool {
+    pub const fn strikethrough(&self) -> bool {
         self.strikethrough
     }
 
@@ -1954,6 +1998,14 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether the text is strikethrough or not.
+    ///
+    /// Note that the strikethrough setting has no effect in a Windows console.
+    pub const fn with_strikethrough(mut self, yes: bool) -> ColorSpec {
+        self.strikethrough = yes;
+        self
+    }
+
     /// Get whether reset is enabled or not.
     ///
     /// reset is enabled by default. When disabled and using ANSI escape
@@ -1961,7 +2013,7 @@ impl ColorSpec {
     /// settings are applied.
     ///
     /// Note that the reset setting has no effect in a Windows console.
-    pub fn reset(&self) -> bool {
+    pub const fn reset(&self) -> bool {
         self.reset
     }
 
@@ -1981,6 +2033,14 @@ impl ColorSpec {
         self
     }
 
+    /// Set whether to reset the terminal whenever color settings are applied.
+    ///
+    /// See [ColorSpec::set_reset].
+    pub const fn with_reset(mut self, yes: bool) -> ColorSpec {
+        self.reset = yes;
+        self
+    }
+
     /// Get whether this is intense or not.
     ///
     /// On Unix-like systems, this will output the ANSI escape sequence
@@ -1989,7 +2049,7 @@ impl ColorSpec {
     ///
     /// On Windows systems, this will output the ANSI escape sequence
     /// that will print a brighter version of the color specified.
-    pub fn intense(&self) -> bool {
+    pub const fn intense(&self) -> bool {
         self.intense
     }
 
@@ -2002,6 +2062,14 @@ impl ColorSpec {
     /// On Windows systems, this will output the ANSI escape sequence
     /// that will print a brighter version of the color specified.
     pub fn set_intense(&mut self, yes: bool) -> &mut ColorSpec {
+        self.intense = yes;
+        self
+    }
+
+    /// Set whether the text is intense or not.
+    ///
+    /// See [ColorSpec::set_intense].
+    pub const fn with_intense(mut self, yes: bool) -> ColorSpec {
         self.intense = yes;
         self
     }
@@ -2568,5 +2636,17 @@ mod tests {
             buf.0,
             b"\x1B]8;;https://example.com\x1B\\label\x1B]8;;\x1B\\".to_vec()
         );
+    }
+
+    #[test]
+    fn const_colorspec() {
+        const BOLD_RED: ColorSpec = ColorSpec::new()
+            .with_fg(Some(Color::Red))
+            .with_bold(true)
+            .with_intense(true);
+        const IS_BOLD: bool = BOLD_RED.bold();
+        const IS_INTENSE: bool = BOLD_RED.intense();
+        assert!(IS_BOLD);
+        assert!(IS_INTENSE);
     }
 }
