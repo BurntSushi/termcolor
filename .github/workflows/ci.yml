@@ -18,7 +18,7 @@ jobs:
           rust: 1.60.0
         - build: pinned-win
           os: windows-latest
-          rust: 1.60.0
+          rust: 1.72.0
         - build: stable
           os: ubuntu-latest
           rust: stable
