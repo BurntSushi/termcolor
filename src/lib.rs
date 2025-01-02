@@ -101,7 +101,7 @@ use termcolor::{ColorChoice, StandardStream};
 
 let preference = argv.get_flag("color").unwrap_or("auto");
 let mut choice = preference.parse::<ColorChoice>()?;
-if choice == ColorChoice::Auto && !std::io::stdin().is_terminal() {
+if choice == ColorChoice::Auto && !std::io::stdout().is_terminal() {
     choice = ColorChoice::Never;
 }
 let stdout = StandardStream::stdout(choice);
